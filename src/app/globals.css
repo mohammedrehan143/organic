@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: 'Bebas Neue', Impact, sans-serif;
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Merriweather', Georgia, serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #252525;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom button styles matching floridamilk.com */
+.btn-motive {
+  background-color: #feef30;
+  color: #252525;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+.btn-motive:hover {
+  background-color: #f0df01;
+  transform: translateY(-1px);
+}
+.btn-motive:active {
+  background-color: #d8c901;
+  transform: translateY(0);
+}
+
+.btn-violet {
+  background-color: #7059a6;
+  color: #ffffff;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+.btn-violet:hover {
+  background-color: #5d4791;
+  transform: translateY(-1px);
+}
+
+.btn-red {
+  background-color: #b2101c;
+  color: #ffffff;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+.btn-red:hover {
+  background-color: #930c16;
+  transform: translateY(-1px);
+}
+
+.btn-blkborder {
+  border: 2px solid #252525;
+  background-color: transparent;
+  color: #252525;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+.btn-blkborder:hover {
+  background-color: #252525;
+  color: #ffffff;
+}
+
+/* 80mm Thermal Receipt Print Styling */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 8px;
+    font-size: 11px;
+    background: white;
+    color: black;
+    box-shadow: none;
+  }
+}
+
+/* Pulse animation for SOS emergency alert */
+@keyframes sosPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(220, 38, 38, 0);
+  }
+}
+
+.animate-sos-pulse {
+  animation: sosPulse 1.5s infinite;
+}
+
+/* Strobe flash for KDS full-screen 5s red takeover */
+@keyframes hazardStrobe {
+  0%, 100% {
+    background-color: rgba(185, 28, 28, 0.96);
+  }
+  50% {
+    background-color: rgba(127, 29, 29, 0.98);
+  }
+}
+
+.animate-hazard-strobe {
+  animation: hazardStrobe 0.8s ease-in-out infinite;
+}
