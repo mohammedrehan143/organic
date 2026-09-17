@@ -7,6 +7,7 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { MenuDetailModal } from '@/components/MenuDetailModal';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal';
+import { LocationModal } from '@/components/LocationModal';
 
 export const metadata: Metadata = {
   title: 'Zafiroo Organic Store | Farm-Fresh Pure A2 Milk, Artisan Dairy & Wholesome Goods',
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#43670F',
+  themeColor: '#173612',
 };
 
 export default function RootLayout({
@@ -38,13 +39,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-white text-[#252525] font-sans antialiased selection:bg-[#FEEF30] selection:text-black">
+      <body className="min-h-screen flex flex-col bg-white text-[#173612] font-sans antialiased selection:bg-[#FEEF30] selection:text-[#173612]">
         <OrderProvider>
           <ZafirooNavbar />
           <main className="flex-1">{children}</main>
           <ZafirooFooter />
 
           {/* Global slide-over drawers & popups */}
+          <LocationModal />
           <CartDrawer />
           <CheckoutModal />
           <MenuDetailModal />

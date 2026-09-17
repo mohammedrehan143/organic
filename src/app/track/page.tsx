@@ -16,9 +16,6 @@ import {
   MessageCircle,
   ShieldCheck,
   Printer,
-  ChevronRight,
-  Store,
-  MapPin,
   RefreshCw,
 } from 'lucide-react';
 import { generateWhatsAppOtpLink, generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
@@ -30,7 +27,7 @@ function TrackPageContent() {
   const tokenParam = searchParams.get('token');
   const phoneParam = searchParams.get('phone');
 
-  const { orders, findOrderByIdOrPhone } = useOrder();
+  const { orders } = useOrder();
 
   const [searchQuery, setSearchQuery] = useState(tokenParam || phoneParam || '');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -92,16 +89,17 @@ function TrackPageContent() {
 
   // 5-Stage Stepper calculation
   const stages = [
-    { key: 'new', label: 'Order Received', icon: Clock, desc: 'Kitchen notified' },
-    { key: 'preparing', label: 'Chef Preparing', icon: ChefHat, desc: 'Crafting fresh' },
-    { key: 'ready', label: 'Thermal Packaged', icon: PackageCheck, desc: 'Heat-locked' },
+    { key: 'new', label: 'Order Received', shortLabel: 'Received', icon: Clock, desc: 'Farm dispatch alerted' },
+    { key: 'preparing', label: 'Fresh Harvest Packed', shortLabel: 'Packed', icon: ChefHat, desc: 'Cold insulation' },
+    { key: 'ready', label: 'Seal Verified', shortLabel: 'Verified', icon: PackageCheck, desc: 'Quality checked' },
     {
       key: 'delivering',
-      label: selectedOrder?.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Counter',
+      label: selectedOrder?.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Farm Hub',
+      shortLabel: selectedOrder?.deliveryMethod === 'delivery' ? 'On Way' : 'Ready',
       icon: Bike,
-      desc: selectedOrder?.deliveryMethod === 'delivery' ? 'Courier en route' : 'Counter ready',
+      desc: selectedOrder?.deliveryMethod === 'delivery' ? 'Rider en route' : 'Counter ready',
     },
-    { key: 'completed', label: 'Delivered & Enjoyed', icon: CheckCircle2, desc: 'Complete' },
+    { key: 'completed', label: 'Delivered & Enjoyed', shortLabel: 'Delivered', icon: CheckCircle2, desc: 'Completed' },
   ];
 
   const statusMap: Record<string, number> = {
@@ -137,24 +135,24 @@ function TrackPageContent() {
       : '';
 
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen py-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8 text-[#173612]">
       {/* Title & Lookup Header */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cream-100 border border-banhmi-gold/30 text-banhmi-red text-xs font-bold uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#ECF5DE] border border-[#CBE0A3] text-[#173612] text-xs font-bold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>Live Kitchen Logistics</span>
+          <span>Live Farm Store Logistics</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-espresso-950 tracking-tight">
-          Track Your Artisan Order
+        <h1 className="text-3xl sm:text-5xl font-black text-[#0F240B] font-bebas tracking-tight">
+          Track Your Organic Farm Order
         </h1>
-        <p className="text-xs sm:text-sm text-espresso-600">
-          Enter your 10-digit phone number or order token ID to inspect real-time preparation and courier status.
+        <p className="text-xs sm:text-sm text-[#173612]/80">
+          Enter your 10-digit mobile number or order token ID to view real-time chilled packaging & delivery progress.
         </p>
 
-        {/* Search Input */}
+        {/* Search Input with aligned button layout */}
         <div className="pt-2 flex items-center justify-center gap-2 max-w-md mx-auto">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-espresso-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Phone (e.g. 98865) or Token"
@@ -163,13 +161,13 @@ function TrackPageContent() {
                 setSearchQuery(e.target.value);
                 handleSearch(e.target.value);
               }}
-              className="w-full pl-10 pr-4 py-3 rounded-2xl border border-cream-300 bg-white text-xs text-espresso-900 focus:outline-none focus:border-banhmi-red shadow-sm"
+              className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612] shadow-sm"
             />
           </div>
           <button
             onClick={handleManualRefresh}
-            className={`p-3 rounded-2xl bg-white border border-cream-300 text-espresso-700 hover:bg-cream-50 shadow-sm transition ${
-              isRefreshing ? 'animate-spin text-banhmi-red' : ''
+            className={`p-3.5 rounded-2xl bg-white border-2 border-gray-200 text-[#173612] hover:bg-[#F5FAF0] shadow-sm transition ${
+              isRefreshing ? 'animate-spin text-[#173612]' : ''
             }`}
             title="Refresh Order Status"
           >
@@ -180,15 +178,15 @@ function TrackPageContent() {
         {/* If multiple orders found under same phone */}
         {matchingOrders.length > 1 && (
           <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
-            <span className="text-xs text-espresso-600 font-semibold">Active Orders:</span>
+            <span className="text-xs text-[#385A2A] font-bold">Active Orders:</span>
             {matchingOrders.map((o) => (
               <button
                 key={o.id}
                 onClick={() => setSelectedOrder(o)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold border transition ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
                   selectedOrder?.id === o.id
-                    ? 'bg-banhmi-red text-cream-50 border-banhmi-red shadow-sm'
-                    : 'bg-white text-espresso-800 border-cream-300 hover:border-banhmi-gold'
+                    ? 'bg-[#173612] text-white border-[#173612] shadow-sm'
+                    : 'bg-white text-[#173612] border-gray-200 hover:border-[#173612]'
                 }`}
               >
                 #{o.tokenId} ({o.status})
@@ -199,64 +197,64 @@ function TrackPageContent() {
       </div>
 
       {!selectedOrder ? (
-        <div className="p-12 text-center bg-white rounded-3xl border border-cream-200 shadow-warm-sm space-y-3">
-          <Clock className="w-10 h-10 text-espresso-400 mx-auto" />
-          <h3 className="text-base font-bold text-espresso-900">No matching order found</h3>
-          <p className="text-xs text-espresso-600 max-w-sm mx-auto">
-            Please verify your phone number or token ID, or place a new order from our artisan menu.
+        <div className="p-12 text-center bg-white rounded-3xl border border-[#EAF3E4] shadow-sm space-y-3">
+          <Clock className="w-10 h-10 text-gray-400 mx-auto" />
+          <h3 className="text-base font-bold text-[#0F240B]">No matching order found</h3>
+          <p className="text-xs text-[#173612]/70 max-w-sm mx-auto">
+            Please verify your phone number or token ID, or place a new order from our organic shop.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Main Status Header Card */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-white p-4 sm:p-8 rounded-3xl border border-[#EAF3E4] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="text-xs font-bold uppercase tracking-widest text-banhmi-gold">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
                   Token #{selectedOrder.tokenId}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cream-100 text-banhmi-red border border-cream-300">
-                  {selectedOrder.deliveryMethod === 'delivery' ? 'Home Delivery' : 'Studio Pickup'}
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ECF5DE] text-[#173612] border border-[#CBE0A3]">
+                  {selectedOrder.deliveryMethod === 'delivery' ? 'Direct Farm Delivery' : 'Farm Hub Pickup'}
                 </span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-espresso-950 capitalize mt-1">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#0F240B] capitalize mt-1 font-bebas tracking-wide">
                 {selectedOrder.status === 'delivering'
                   ? selectedOrder.deliveryMethod === 'delivery'
                     ? 'Courier En Route'
-                    : 'Ready At Counter'
+                    : 'Ready At Farm Hub'
                   : selectedOrder.status === 'ready'
-                  ? 'Therma-Core Packaged'
+                  ? 'Cold-Packaged & Sealed'
                   : selectedOrder.status === 'preparing'
-                  ? 'Chefs Crafting'
+                  ? 'Fresh Bottling & Packing'
                   : selectedOrder.status === 'completed'
                   ? 'Delivered & Enjoyed'
                   : 'Order Confirmed'}
               </h2>
-              <p className="text-xs text-espresso-600 mt-1">
+              <p className="text-xs text-[#173612]/80 mt-1">
                 Estimated Delivery Window:{' '}
-                <strong className="text-espresso-900">{selectedOrder.estimatedTime}</strong>
+                <strong className="text-[#0F240B] font-bold">{selectedOrder.estimatedTime}</strong>
               </p>
             </div>
 
             <button
               onClick={() => setBillModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-cream-300 hover:bg-cream-50 text-espresso-800 text-xs font-bold transition shadow-sm"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-gray-200 hover:bg-[#F5FAF0] text-[#173612] text-xs font-bold transition shadow-sm"
             >
-              <Printer className="w-4 h-4 text-banhmi-red" />
+              <Printer className="w-4 h-4 text-[#173612]" />
               <span>Print 80mm Bill Receipt</span>
             </button>
           </div>
 
           {/* 5-Stage Stepper Pipeline */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-espresso-900">
+          <div className="bg-white p-4 sm:p-8 rounded-3xl border border-[#EAF3E4] shadow-sm space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
               Fulfillment Pipeline
             </h3>
 
             <div className="relative pt-2 pb-1">
-              <div className="absolute top-6 left-6 right-6 h-1 bg-cream-200 -z-0">
+              <div className="absolute top-6 left-6 right-6 h-1.5 bg-gray-100 -z-0">
                 <div
-                  className="h-full bg-banhmi-red transition-all duration-500 rounded-full"
+                  className="h-full bg-[#173612] transition-all duration-500 rounded-full"
                   style={{
                     width: `${Math.min(100, Math.max(0, (currentStep / (stages.length - 1)) * 100))}%`,
                   }}
@@ -274,26 +272,27 @@ function TrackPageContent() {
                       <div
                         className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${
                           isCurrent
-                            ? 'bg-banhmi-red text-cream-50 ring-4 ring-banhmi-gold/40 scale-110 shadow-warm-md'
+                            ? 'bg-[#173612] text-white ring-4 ring-[#feef30]/70 scale-110 shadow-md'
                             : isPassed
-                            ? 'bg-banhmi-red text-cream-50'
-                            : 'bg-cream-100 text-espresso-400 border border-cream-300'
+                            ? 'bg-[#173612] text-white'
+                            : 'bg-gray-100 text-gray-400 border border-gray-200'
                         }`}
                       >
                         <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-bold mt-2.5 leading-tight ${
+                        className={`text-[9px] xs:text-[10px] sm:text-xs font-bold mt-2 leading-tight ${
                           isCurrent
-                            ? 'text-banhmi-red font-black'
+                            ? 'text-[#0F240B] font-black'
                             : isPassed
-                            ? 'text-espresso-900'
-                            : 'text-espresso-400'
+                            ? 'text-[#173612]'
+                            : 'text-gray-400'
                         }`}
                       >
-                        {stage.label}
+                        <span className="hidden xs:inline">{stage.label}</span>
+                        <span className="xs:hidden">{stage.shortLabel}</span>
                       </span>
-                      <span className="hidden sm:block text-[9px] text-espresso-500 mt-0.5">
+                      <span className="hidden sm:block text-[9px] text-gray-500 mt-0.5">
                         {stage.desc}
                       </span>
                     </div>
@@ -304,25 +303,25 @@ function TrackPageContent() {
           </div>
 
           {/* Doorstep Verification OTP Card */}
-          <div className="p-6 sm:p-7 bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-500/10 rounded-3xl border-2 border-amber-300 shadow-warm-sm flex flex-col sm:flex-row items-center justify-between gap-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-900 shrink-0">
-                <ShieldCheck className="w-8 h-8 text-amber-700" />
+          <div className="p-4 sm:p-7 bg-[#F5FAF0] rounded-3xl border-2 border-[#CBE0A3] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#feef30] border-2 border-[#173612] flex items-center justify-center text-[#173612] shrink-0">
+                <ShieldCheck className="w-8 h-8 fill-[#173612] text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-widest text-amber-900">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#385A2A]">
                     Doorstep Verification OTP
                   </span>
-                  <span className="text-[10px] bg-amber-200/80 text-amber-950 font-bold px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] bg-[#feef30] text-[#173612] font-black px-2 py-0.5 rounded-full border border-[#173612]/20">
                     Strict DB Validation
                   </span>
                 </div>
-                <p className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-espresso-950 mt-1">
+                <p className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-[#0F240B] mt-1">
                   {selectedOrder.deliveryOtp}
                 </p>
-                <p className="text-xs text-espresso-700 mt-1">
-                  Give this code to your courier partner only when handing over the package.
+                <p className="text-xs text-[#173612]/80 mt-1">
+                  Give this code to your courier partner only after verifying your chilled package.
                 </p>
               </div>
             </div>
@@ -331,28 +330,28 @@ function TrackPageContent() {
               href={whatsappOtpUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-sm transition active:scale-95 shrink-0"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white rounded-2xl text-xs font-bold shadow-md transition active:scale-95 shrink-0"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4 text-[#feef30]" />
               <span>Send to my WhatsApp</span>
             </a>
           </div>
 
           {/* Assigned Rider Card */}
           {selectedOrder.riderName && (
-            <div className="p-6 bg-white rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="p-6 bg-white rounded-3xl border border-[#EAF3E4] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-banhmi-card border border-banhmi-gold/40 flex items-center justify-center text-xl shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#F5FAF0] border border-[#CBE0A3] flex items-center justify-center text-xl shrink-0">
                   🛵
                 </div>
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-banhmi-gold">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
                     Designated Courier Partner
                   </span>
-                  <h4 className="text-base font-bold text-espresso-950">
+                  <h4 className="text-base font-bold text-[#0F240B]">
                     {selectedOrder.riderName}
                   </h4>
-                  <p className="text-xs text-espresso-600 font-mono">
+                  <p className="text-xs text-[#173612]/70 font-mono">
                     {selectedOrder.riderPhone}
                   </p>
                 </div>
@@ -361,7 +360,7 @@ function TrackPageContent() {
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <a
                   href={`tel:${selectedOrder.riderPhone}`}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 rounded-xl text-xs font-bold transition shadow-sm"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#173612] hover:bg-[#0F240B] text-white rounded-xl text-xs font-bold transition shadow-sm"
                 >
                   <Phone className="w-3.5 h-3.5" />
                   <span>Call Courier</span>
@@ -372,9 +371,9 @@ function TrackPageContent() {
                     href={whatsappRiderPinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-bold transition"
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#ECF5DE] hover:bg-[#E2F0CF] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition"
                   >
-                    <MessageCircle className="w-3.5 h-3.5" />
+                    <MessageCircle className="w-3.5 h-3.5 text-[#173612]" />
                     <span>Share Location Pin</span>
                   </a>
                 )}
@@ -383,51 +382,53 @@ function TrackPageContent() {
           )}
 
           {/* Order Details & Items Card */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-espresso-900">
+          <div className="bg-white p-4 sm:p-8 rounded-3xl border border-[#EAF3E4] shadow-sm space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
               Order Summary & Destination
             </h4>
 
-            <div className="p-3.5 bg-cream-50 rounded-2xl border border-cream-200 text-xs text-espresso-800 space-y-1">
+            <div className="p-4 bg-[#F5FAF0] rounded-2xl border border-[#CBE0A3] text-xs text-[#173612] space-y-1.5">
               <p>
-                <strong>Delivery To:</strong> {selectedOrder.customer.name} ({selectedOrder.customer.phone})
+                <strong className="text-[#0F240B]">Delivery To:</strong> {selectedOrder.customer.name} ({selectedOrder.customer.phone})
               </p>
               <p>
-                <strong>1-Line Destination:</strong> {selectedOrder.customer.address}
+                <strong className="text-[#0F240B]">Destination Address:</strong> {selectedOrder.customer.address}
               </p>
               {selectedOrder.customer.deliveryInstructions && (
-                <p className="text-espresso-600 italic">
+                <p className="text-[#385A2A] italic">
                   <strong>Notes:</strong> &quot;{selectedOrder.customer.deliveryInstructions}&quot;
                 </p>
               )}
             </div>
 
-            <div className="divide-y divide-cream-100 pt-2">
+            <div className="divide-y divide-gray-100 pt-2">
               {selectedOrder.items.map((ci) => (
                 <div key={ci.id} className="py-3 flex justify-between items-center text-xs">
                   <div>
-                    <span className="font-bold text-espresso-950">
+                    <span className="font-bold text-[#0F240B]">
                       {ci.quantity}x {ci.menuItem.name}
                     </span>
                     {ci.selectedOptions && Object.keys(ci.selectedOptions).length > 0 && (
-                      <p className="text-[10px] text-espresso-500 mt-0.5">
+                      <p className="text-[10px] text-[#385A2A] mt-0.5">
                         {Object.values(ci.selectedOptions).join(', ')}
                       </p>
                     )}
                   </div>
-                  <span className="font-bold text-espresso-900">₹{ci.itemTotal}</span>
+                  <span className="font-bold text-[#0F240B]">₹{ci.itemTotal}</span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-3 border-t border-cream-200 space-y-1 text-xs text-espresso-700">
+            <div className="pt-3 border-t border-gray-200 space-y-1.5 text-xs text-[#173612]">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{selectedOrder.subtotal}</span>
               </div>
               <div className="flex justify-between">
                 <span>Delivery Fee</span>
-                <span>{selectedOrder.deliveryFee === 0 ? 'FREE' : `₹${selectedOrder.deliveryFee}`}</span>
+                <span className={selectedOrder.deliveryFee === 0 ? 'text-emerald-700 font-bold' : ''}>
+                  {selectedOrder.deliveryFee === 0 ? 'FREE' : `₹${selectedOrder.deliveryFee}`}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>GST (5%)</span>
@@ -439,9 +440,9 @@ function TrackPageContent() {
                   <span>₹{selectedOrder.tip}</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-black text-espresso-950 pt-2 border-t border-cream-200">
+              <div className="flex justify-between text-base font-black text-[#0F240B] pt-2 border-t border-gray-200 font-bebas text-lg">
                 <span>Total Paid ({selectedOrder.paymentMethod})</span>
-                <span className="text-banhmi-red">₹{selectedOrder.total.toFixed(2)}</span>
+                <span>₹{selectedOrder.total.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -471,7 +472,7 @@ function TrackPageContent() {
 
 export default function TrackPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-xs text-espresso-600">Loading order tracker...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-xs text-[#173612]">Loading order tracker...</div>}>
       <TrackPageContent />
     </Suspense>
   );

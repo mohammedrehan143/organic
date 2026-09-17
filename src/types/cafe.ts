@@ -1,5 +1,19 @@
 export type DietaryType = 'veg' | 'non-veg' | 'vegan' | 'egg';
 
+export interface UserLocation {
+  formattedAddress: string;
+  shortAddress: string;
+  road?: string;
+  houseNumber?: string;
+  building?: string;
+  suburb?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  lat: number;
+  lng: number;
+}
+
 export interface CustomizationOptions {
   milk?: string[];
   temperature?: string[];

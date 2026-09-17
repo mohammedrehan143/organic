@@ -140,22 +140,22 @@ export default function InTheKitchenPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#252525]">
+    <div className="min-h-screen bg-white text-[#173612]">
       {/* 1. Header Banner */}
-      <header className="py-20 px-6 bg-[#FAF9F6] border-b border-gray-200 text-center">
+      <header className="py-12 sm:py-20 px-4 sm:px-6 bg-[#FAF9F6] border-b border-[#EAF3E4] text-center">
         <div className="max-w-4xl mx-auto space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-[#FEEF30] border-2 border-[#252525] p-2 flex items-center justify-center shadow-md">
-              <ChefHat className="w-8 h-8 text-[#252525]" />
+            <div className="w-16 h-16 rounded-full bg-[#FEEF30] border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
+              <ChefHat className="w-8 h-8 text-[#173612]" />
             </div>
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#75791B]">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
             Nourishing Recipes & Culinary Delights
           </span>
-          <h1 className="text-4xl sm:text-6xl font-black uppercase text-[#252525] font-bebas tracking-tight">
+          <h1 className="text-4xl sm:text-6xl font-black uppercase text-[#0F240B] font-bebas tracking-tight">
             In The Kitchen
           </h1>
-          <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto font-serif leading-relaxed">
+          <p className="text-base sm:text-lg text-[#173612] max-w-2xl mx-auto font-serif leading-relaxed">
             Wholesome recipes crafted with pure A2 farm milk, cultured butter, and fresh seasonal ingredients from our dairy farmers.
           </p>
 
@@ -165,10 +165,10 @@ export default function InTheKitchenPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCat(cat)}
-                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition ${
+                className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition ${
                   selectedCat === cat
-                    ? 'bg-[#252525] text-[#FEEF30] shadow'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                    ? 'bg-[#173612] text-[#FEEF30] shadow'
+                    : 'bg-[#F5FAF0] border border-[#CBE0A3] text-[#173612] hover:bg-[#EAF3E4]'
                 }`}
               >
                 {cat}
@@ -179,10 +179,10 @@ export default function InTheKitchenPage() {
       </header>
 
       {/* 2. Featured Recipe Spotlight (Florida Milk Layout) */}
-      <section className="py-20 px-6 max-w-7xl mx-auto border-b border-gray-200">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto border-b border-[#EAF3E4]">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           {/* Photo with Florida Milk Bottle & Seal Emblem */}
-          <div className="lg:col-span-6 relative aspect-square sm:aspect-[4/3] rounded-3xl overflow-hidden shadow-xl border border-gray-200 bg-gray-100">
+          <div className="lg:col-span-6 relative aspect-square sm:aspect-[4/3] rounded-3xl overflow-hidden shadow-xl border border-[#EAF3E4] bg-gray-100">
             <img
               src={activeRecipe.image}
               alt={activeRecipe.title}
@@ -195,7 +195,7 @@ export default function InTheKitchenPage() {
                 className="w-full h-auto object-contain"
               />
             </div>
-            <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[#252525] shadow">
+            <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-bold text-[#173612] shadow border border-[#173612]/20">
               {activeRecipe.servings} • {activeRecipe.prepTime}
             </div>
           </div>
@@ -204,32 +204,32 @@ export default function InTheKitchenPage() {
           <div className="lg:col-span-6 space-y-6">
             <div>
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-sm font-bold uppercase tracking-wider text-[#75791B]">
+                <span className="text-sm font-bold uppercase tracking-wider text-[#43670F]">
                   Featured
                 </span>
-                <span className="text-3xl font-black uppercase text-[#252525] font-bebas">
+                <span className="text-3xl font-black uppercase text-[#0F240B] font-bebas">
                   Farmhouse Recipe
                 </span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-[#b2101c] font-bebas leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-[#0F240B] font-bebas leading-tight">
                 {activeRecipe.title}
               </h2>
-              <p className="text-xs text-gray-500 mt-1">Recipe by {activeRecipe.author}</p>
+              <p className="text-xs text-[#385A2A] mt-1 font-semibold">Recipe by {activeRecipe.author}</p>
             </div>
 
-            <p className="text-sm sm:text-base text-gray-700 leading-relaxed font-serif">
+            <p className="text-sm sm:text-base text-[#173612] leading-relaxed font-serif">
               {activeRecipe.description}
             </p>
 
             {/* Ingredients */}
-            <div className="bg-[#FAF9F6] p-5 rounded-2xl border border-gray-200 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+            <div className="bg-[#F5FAF0] p-5 rounded-2xl border border-[#CBE0A3] space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
                 Ingredients:
               </h3>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-800">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#173612] font-semibold">
                 {activeRecipe.ingredients.map((ing, i) => (
                   <li key={i} className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#43670F]" />
+                    <span className="w-2 h-2 rounded-full bg-[#43670F]" />
                     <span>{ing}</span>
                   </li>
                 ))}
@@ -238,30 +238,30 @@ export default function InTheKitchenPage() {
 
             {/* Preparation Steps */}
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
                 Preparation Steps:
               </h3>
-              <ol className="space-y-2 text-xs text-gray-600 list-decimal pl-4 leading-relaxed">
+              <ol className="space-y-2 text-xs text-[#173612]/90 list-decimal pl-4 leading-relaxed font-medium">
                 {activeRecipe.instructions.map((step, idx) => (
                   <li key={idx}>{step}</li>
                 ))}
               </ol>
             </div>
 
-            {/* Order Ingredients Button */}
-            <div className="pt-2 flex items-center gap-4">
+            {/* Order Ingredients Button with aligned layout */}
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 onClick={() => handleAddIngredients(activeRecipe)}
-                className="btn-red px-8 py-3.5 rounded text-sm font-bold uppercase tracking-wider shadow flex items-center gap-2 transition"
+                className="btn-red px-6 sm:px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition text-center"
               >
                 {addedMsg ? (
                   <>
-                    <Check className="w-4 h-4" />
+                    <Check className="w-4 h-4 text-white" />
                     <span>Ingredients Added To Basket!</span>
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-4 h-4" />
+                    <ShoppingBag className="w-4 h-4 text-white" />
                     <span>Order Farm Ingredients</span>
                   </>
                 )}
@@ -269,7 +269,7 @@ export default function InTheKitchenPage() {
 
               <Link
                 href="/menu"
-                className="btn-blkborder px-7 py-3.5 rounded text-sm font-bold uppercase tracking-wider transition"
+                className="btn-blkborder px-6 sm:px-7 py-3.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider transition text-center flex items-center justify-center"
               >
                 Shop All Dairy
               </Link>
@@ -279,12 +279,12 @@ export default function InTheKitchenPage() {
       </section>
 
       {/* 3. Recipe Cards Grid */}
-      <section className="py-20 px-6 max-w-7xl mx-auto space-y-10">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto space-y-8 sm:space-y-10">
         <div className="text-center max-w-2xl mx-auto space-y-2">
-          <h2 className="text-3xl sm:text-5xl font-black uppercase text-[#252525] font-bebas">
+          <h2 className="text-3xl sm:text-5xl font-black uppercase text-[#0F240B] font-bebas">
             More Farmhouse Kitchen Recipes
           </h2>
-          <p className="text-sm text-gray-600">Select any recipe above to view full preparation details.</p>
+          <p className="text-sm text-[#173612]">Select any recipe above to view full preparation details.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -295,7 +295,7 @@ export default function InTheKitchenPage() {
                 setActiveRecipe(r);
                 window.scrollTo({ top: 350, behavior: 'smooth' });
               }}
-              className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition cursor-pointer flex flex-col justify-between group hover:-translate-y-1"
+              className="bg-white rounded-2xl overflow-hidden border border-[#EAF3E4] shadow-sm hover:shadow-xl transition cursor-pointer flex flex-col justify-between group hover:-translate-y-1"
             >
               <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
                 <img
@@ -303,22 +303,22 @@ export default function InTheKitchenPage() {
                   alt={r.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute top-3 left-3 bg-white/90 text-[#252525] px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                <div className="absolute top-3 left-3 bg-white/95 text-[#173612] px-2.5 py-1 rounded-full text-[10px] font-bold uppercase shadow">
                   {r.category}
                 </div>
               </div>
 
               <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
                 <div>
-                  <h3 className="font-bold text-base text-[#252525] font-serif group-hover:text-[#43670F] transition line-clamp-1">
+                  <h3 className="font-bold text-base text-[#0F240B] font-serif group-hover:text-[#43670F] transition line-clamp-1">
                     {r.title}
                   </h3>
-                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">{r.description}</p>
+                  <p className="text-xs text-[#173612]/80 mt-1 line-clamp-2">{r.description}</p>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-                  <span>{r.prepTime}</span>
-                  <span className="font-bold text-[#b2101c] group-hover:underline">View Recipe →</span>
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-[#385A2A]">
+                  <span className="font-mono">{r.prepTime}</span>
+                  <span className="font-bold text-[#173612] group-hover:underline">View Recipe →</span>
                 </div>
               </div>
             </div>

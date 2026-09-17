@@ -8,7 +8,6 @@ import {
   Sparkles,
   Plus,
   Clock,
-  Star,
   Check,
   Milk,
   Egg,
@@ -16,22 +15,20 @@ import {
   Flame,
   IceCream,
   GlassWater,
-  Apple,
+  MapPin,
+  ChevronDown,
 } from 'lucide-react';
-import Image from 'next/image';
 
 const CATEGORIES = [
   { id: 'All', label: 'All Farm Goods', icon: Sparkles },
-  { id: 'Organic Milk & Dairy', label: 'Milk & Dairy', icon: Milk },
-  { id: 'Farm Fresh Eggs & Poultry', label: 'Eggs & Poultry', icon: Egg },
-  { id: 'Artisan Bakery', label: 'Artisan Bakery', icon: Croissant },
-  { id: 'Raw Honey & Spreads', label: 'Honey & Spreads', icon: Flame },
-  { id: 'Cold Pressed Beverages', label: 'Cold-Pressed', icon: GlassWater },
-  { id: 'Artisan Desserts', label: 'Farm Desserts', icon: IceCream },
+  { id: 'Organic Milk', label: 'Organic Milk', icon: Milk },
+  { id: 'Eggs', label: 'All Eggs', icon: Egg },
+  { id: 'Nati Eggs', label: 'Nati Eggs (Desi)', icon: Egg },
+  { id: 'Normal Eggs', label: 'Normal Eggs (Farm)', icon: Egg },
 ];
 
 export default function MenuPage() {
-  const { menuItems, setSelectedMenuDetail, addToCart } = useOrder();
+  const { menuItems, setSelectedMenuDetail, addToCart, userLocation, setLocationModalOpen } = useOrder();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non-veg' | 'vegan'>('all');
@@ -46,8 +43,14 @@ export default function MenuPage() {
   const filteredItems = useMemo(() => {
     return menuItems.filter((item) => {
       // Category match
-      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'All') {
+        if (selectedCategory === 'Eggs') {
+          if (item.category !== 'Nati Eggs' && item.category !== 'Normal Eggs') {
+            return false;
+          }
+        } else if (item.category !== selectedCategory) {
+          return false;
+        }
       }
 
       // Dietary match
@@ -77,23 +80,44 @@ export default function MenuPage() {
   }, [menuItems, selectedCategory, dietaryFilter, searchQuery]);
 
   return (
-    <div className="min-h-screen pb-24 bg-[#FAF9F6]">
-      {/* Header Banner matching Florida Milk Clean Style */}
-      <div className="bg-white border-b border-gray-200 py-10 px-6">
+    <div className="min-h-screen pb-24 bg-[#F5FAF0]/30 text-[#173612]">
+      {/* Location Bar at top of Catalog */}
+      <div className="bg-[#ECF5DE] border-b border-[#CBE0A3] py-2 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <MapPin className="w-3.5 h-3.5 text-[#173612] shrink-0" />
+            <span className="text-[#385A2A] font-semibold hidden sm:inline">Delivering fresh items to:</span>
+            <span className="text-[#385A2A] font-semibold sm:hidden">To:</span>
+            <span className="font-bold text-[#0F240B] truncate">
+              {userLocation ? userLocation.shortAddress : 'Auto-detecting delivery hub...'}
+            </span>
+          </div>
+          <button
+            onClick={() => setLocationModalOpen(true)}
+            className="font-bold text-[#173612] underline hover:text-[#43670F] transition shrink-0 ml-2"
+          >
+            <span className="hidden sm:inline">Change Location</span>
+            <span className="sm:hidden">Change</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Header Banner */}
+      <div className="bg-white border-b border-[#EAF3E4] py-8 sm:py-10 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#43670F]" />
-                <span className="text-xs font-bold uppercase tracking-widest text-[#75791B]">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#173612]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
                   Certified Pure & Local
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-[#252525] uppercase tracking-tight mt-1 font-bebas">
+              <h1 className="text-3xl sm:text-5xl font-black text-[#0F240B] uppercase tracking-tight mt-1 font-bebas">
                 Zafiroo Organic Farm Catalog
               </h1>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1 font-sans">
-                Wholesome A2 pasture milk, slow-churned cultured butter, Vedic ghee, and farm-fresh harvest.
+              <p className="text-xs sm:text-sm text-[#173612]/80 mt-1 font-sans">
+                Wholesome pure A2 pasture milk and farm-fresh pasture-raised brown eggs.
               </p>
             </div>
 
@@ -102,15 +126,15 @@ export default function MenuPage() {
               <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search A2 milk, butter, ghee, eggs..."
+                placeholder="Search pure milk, fresh eggs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-300 bg-white text-xs text-[#252525] focus:outline-none focus:border-[#43670F] shadow-sm font-medium"
+                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-300 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612] shadow-sm"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
                 >
                   ✕
                 </button>
@@ -118,8 +142,8 @@ export default function MenuPage() {
             </div>
           </div>
 
-          {/* Horizontal Category Pill Filter */}
-          <div className="pt-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {/* Horizontal Category Pill Filter with fixed button layout */}
+          <div className="pt-4 flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;
               const isSelected = selectedCategory === cat.id;
@@ -127,10 +151,10 @@ export default function MenuPage() {
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
                     isSelected
-                      ? 'bg-[#252525] text-[#FEEF30] shadow-md scale-105'
-                      : 'bg-gray-100 hover:bg-gray-200 text-[#252525]'
+                      ? 'bg-[#173612] text-[#FEEF30] shadow-md scale-105'
+                      : 'bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -140,17 +164,17 @@ export default function MenuPage() {
             })}
           </div>
 
-          {/* Dietary Filter Buttons */}
-          <div className="flex items-center gap-2 pt-1 text-xs">
-            <span className="text-gray-500 font-medium">Filter:</span>
-            {(['all', 'veg', 'vegan', 'non-veg'] as const).map((filter) => (
+          {/* Dietary Filter Buttons with balanced layout */}
+          <div className="flex items-center gap-2 pt-1 text-xs flex-wrap">
+            <span className="text-[#385A2A] font-bold">Filter:</span>
+            {(['all', 'veg', 'non-veg'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setDietaryFilter(filter)}
-                className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider capitalize transition ${
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider capitalize transition ${
                   dietaryFilter === filter
-                    ? 'bg-[#43670F] text-white'
-                    : 'bg-gray-200/70 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-[#173612] text-white shadow-sm'
+                    : 'bg-[#F5FAF0] text-[#173612] border border-[#CBE0A3] hover:bg-[#EAF3E4]'
                 }`}
               >
                 {filter === 'all' ? 'All Types' : filter}
@@ -161,27 +185,27 @@ export default function MenuPage() {
       </div>
 
       {/* Product Catalog Grid */}
-      <div className="max-w-7xl mx-auto px-6 pt-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
         {filteredItems.length === 0 ? (
           <div className="text-center py-20 space-y-3">
-            <p className="text-base font-bold text-gray-600">No organic items match your filter.</p>
+            <p className="text-base font-bold text-[#173612]">No organic items match your filter.</p>
             <button
               onClick={() => {
                 setSelectedCategory('All');
                 setSearchQuery('');
                 setDietaryFilter('all');
               }}
-              className="btn-motive px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider"
+              className="btn-motive px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider"
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto gap-6 sm:gap-8">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                className="bg-white rounded-2xl overflow-hidden border border-[#EAF3E4] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
               >
                 {/* Photo & badges */}
                 <div
@@ -193,11 +217,11 @@ export default function MenuPage() {
                     alt={item.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-3 left-3 bg-[#43670F] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
+                  <div className="absolute top-3 left-3 bg-[#173612] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
                     100% Organic
                   </div>
                   {item.signature && (
-                    <div className="absolute top-3 right-3 bg-[#FEEF30] text-[#252525] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
+                    <div className="absolute top-3 right-3 bg-[#FEEF30] text-[#173612] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-[#173612]/20">
                       Farm Classic
                     </div>
                   )}
@@ -206,16 +230,16 @@ export default function MenuPage() {
                 {/* Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#75791B]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
                       {item.category}
                     </span>
                     <h3
                       onClick={() => setSelectedMenuDetail(item)}
-                      className="text-lg font-bold text-[#252525] mt-1 hover:text-[#43670F] transition cursor-pointer"
+                      className="text-lg font-bold text-[#0F240B] mt-1 hover:text-[#43670F] transition cursor-pointer"
                     >
                       {item.name}
                     </h3>
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#173612]/80 mt-2 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
@@ -226,7 +250,7 @@ export default function MenuPage() {
                       {item.tasteNotes.slice(0, 3).map((note, idx) => (
                         <span
                           key={idx}
-                          className="text-[10px] px-2.5 py-0.5 bg-gray-100 text-gray-800 rounded-md border border-gray-200"
+                          className="text-[10px] px-2.5 py-0.5 bg-[#F5FAF0] text-[#173612] rounded-md border border-[#CBE0A3] font-semibold"
                         >
                           {note}
                         </span>
@@ -234,29 +258,35 @@ export default function MenuPage() {
                     </div>
                   )}
 
-                  {/* Price & Add to Cart */}
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                  {/* Price & Add to Cart with balanced button layout */}
+                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
                     <div>
-                      <span className="text-[10px] text-gray-400 uppercase font-semibold block">Price</span>
-                      <span className="text-2xl font-black text-[#252525] font-bebas">{item.price}</span>
+                      <span className="text-[10px] text-[#385A2A] uppercase font-bold block">Price</span>
+                      <span className="text-2xl font-black text-[#0F240B] font-bebas">{item.price}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setSelectedMenuDetail(item)}
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-[#252525] rounded-xl text-xs font-bold transition active:scale-95"
+                        className="h-10 px-4 bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center"
                       >
                         Customize
                       </button>
                       <button
                         onClick={() => handleQuickAdd(item)}
-                        className="p-2.5 btn-motive text-[#252525] rounded-xl shadow-sm transition active:scale-95"
+                        className="h-10 px-4 btn-motive text-[#173612] rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs"
                         title="Add to Farm Basket"
                       >
                         {addedId === item.id ? (
-                          <Check className="w-4 h-4 text-black" />
+                          <>
+                            <Check className="w-4 h-4 text-[#173612]" />
+                            <span>Added</span>
+                          </>
                         ) : (
-                          <Plus className="w-4 h-4" />
+                          <>
+                            <Plus className="w-4 h-4" />
+                            <span>Add</span>
+                          </>
                         )}
                       </button>
                     </div>

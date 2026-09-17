@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { Star, Check, Printer, MessageSquareHeart } from 'lucide-react';
+import { Star, MessageSquareHeart, Check, Printer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-interface OrderCompletionFeedbackProps {
+interface FeedbackProps {
   orderId: string;
   initialRating?: number;
   initialTags?: string[];
@@ -14,12 +14,12 @@ interface OrderCompletionFeedbackProps {
 }
 
 const COMPLIMENT_TAGS = [
-  '⚡ Super Fast Delivery',
-  '🔥 Piping Hot & Fresh',
-  '📦 Artisan Thermal Packaging',
-  '🤤 Delicious Flavour',
-  '🛵 Courteous Rider',
-  '✨ Perfect Portions',
+  '🥛 Ultra Fresh Milk',
+  '❄️ Chilled to Doorstep',
+  '⏱️ Speedy Farm Dispatch',
+  '📦 Tamper-Proof Sealed',
+  '🧈 Rich Creamy Texture',
+  '🌱 Pure Organic Taste',
 ];
 
 export function OrderCompletionFeedback({
@@ -28,13 +28,13 @@ export function OrderCompletionFeedback({
   initialTags = [],
   initialNote = '',
   onOpenBill,
-}: OrderCompletionFeedbackProps) {
+}: FeedbackProps) {
   const { submitOrderFeedback } = useOrder();
   const [rating, setRating] = useState(initialRating);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTags);
   const [note, setNote] = useState(initialNote);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(!!initialRating);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -55,16 +55,16 @@ export function OrderCompletionFeedback({
   };
 
   return (
-    <div className="p-6 bg-white rounded-3xl border border-cream-200 shadow-warm-sm space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 bg-white rounded-3xl border border-[#EAF3E4] shadow-sm space-y-4 sm:space-y-5 text-[#173612]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <MessageSquareHeart className="w-5 h-5 text-banhmi-red" />
-          <h3 className="font-bold text-espresso-900 text-base">Rate Your Experience</h3>
+          <MessageSquareHeart className="w-5 h-5 text-[#173612] shrink-0" />
+          <h3 className="font-bold text-[#0F240B] text-sm sm:text-base">Rate Your Organic Farm Experience</h3>
         </div>
         {onOpenBill && (
           <button
             onClick={onOpenBill}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cream-300 hover:bg-cream-50 text-espresso-800 text-xs font-semibold transition"
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 hover:bg-[#F5FAF0] text-[#173612] text-xs font-semibold transition"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Thermal Bill</span>
@@ -77,9 +77,9 @@ export function OrderCompletionFeedback({
           <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-2">
             <Check className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-bold text-emerald-900">Thank You For Your Feedback!</h4>
+          <h4 className="text-sm font-bold text-emerald-900">Thank You For Supporting Local Dairy Farms!</h4>
           <p className="text-xs text-emerald-700">
-            Your review helps our chefs and riders constantly elevate your artisan experience.
+            Your review helps our dedicated farmers and dispatch couriers maintain highest purity standards.
           </p>
         </div>
       ) : (
@@ -101,7 +101,7 @@ export function OrderCompletionFeedback({
                     className={`w-8 h-8 transition-colors ${
                       active
                         ? 'fill-amber-400 text-amber-400'
-                        : 'text-cream-300 stroke-1'
+                        : 'text-gray-300 stroke-1'
                     }`}
                   />
                 </button>
@@ -111,8 +111,8 @@ export function OrderCompletionFeedback({
 
           {/* Compliment Chips */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-espresso-700 text-center">
-              What made your experience wonderful?
+            <label className="block text-xs font-bold text-[#173612] text-center">
+              What made your farm delivery special?
             </label>
             <div className="flex flex-wrap justify-center gap-2 pt-1">
               {COMPLIMENT_TAGS.map((tag) => {
@@ -122,10 +122,10 @@ export function OrderCompletionFeedback({
                     key={tag}
                     type="button"
                     onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition ${
                       isSelected
-                        ? 'bg-banhmi-red text-cream-50 border-banhmi-red shadow-sm'
-                        : 'bg-cream-50 text-espresso-700 border-cream-300 hover:border-banhmi-gold'
+                        ? 'bg-[#173612] text-white border-[#173612] shadow-sm'
+                        : 'bg-[#F5FAF0] text-[#173612] border-[#CBE0A3] hover:bg-[#EAF3E4]'
                     }`}
                   >
                     {tag}
@@ -139,10 +139,10 @@ export function OrderCompletionFeedback({
           <div>
             <textarea
               rows={2}
-              placeholder="Add a personalized chef note or message for the courier..."
+              placeholder="Add a farm appreciation note or message for the rider..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full p-3 rounded-xl border border-cream-300 bg-cream-50 text-xs text-espresso-900 focus:outline-none focus:border-banhmi-red"
+              className="w-full p-3 rounded-xl border border-gray-300 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612]"
             />
           </div>
 
@@ -150,9 +150,9 @@ export function OrderCompletionFeedback({
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full py-3 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold text-xs rounded-xl shadow-warm-sm transition"
+            className="w-full py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition"
           >
-            Submit Artisan Review
+            Submit Farm Review
           </button>
         </div>
       )}

@@ -12,64 +12,134 @@
     --font-mono: 'Space Mono', monospace;
   }
 
-  body {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
     background-color: #FFFFFF;
-    color: #252525;
+    color: #173612;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #0F240B;
+  }
+
+  p {
+    color: inherit;
   }
 }
 
-/* Custom button styles matching floridamilk.com */
+/* Custom button styles matching Zafiroo & Florida Milk */
 .btn-motive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background-color: #feef30;
-  color: #252525;
+  color: #173612;
   font-weight: 700;
-  transition: all 0.25s ease;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px -2px rgba(23, 54, 18, 0.15);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
 }
 .btn-motive:hover {
   background-color: #f0df01;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(23, 54, 18, 0.2);
 }
 .btn-motive:active {
   background-color: #d8c901;
-  transform: translateY(0);
+  transform: scale(0.98);
+}
+
+.btn-darkgreen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #173612;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px -2px rgba(23, 54, 18, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+.btn-darkgreen:hover {
+  background-color: #0F240B;
+  color: #feef30;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px -2px rgba(23, 54, 18, 0.35);
+}
+.btn-darkgreen:active {
+  transform: scale(0.98);
 }
 
 .btn-violet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background-color: #7059a6;
   color: #ffffff;
   font-weight: 700;
-  transition: all 0.25s ease;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 .btn-violet:hover {
   background-color: #5d4791;
   transform: translateY(-1px);
 }
+.btn-violet:active {
+  transform: scale(0.98);
+}
 
 .btn-red {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background-color: #b2101c;
   color: #ffffff;
   font-weight: 700;
-  transition: all 0.25s ease;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 .btn-red:hover {
   background-color: #930c16;
   transform: translateY(-1px);
 }
+.btn-red:active {
+  transform: scale(0.98);
+}
 
 .btn-blkborder {
-  border: 2px solid #252525;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid #173612;
   background-color: transparent;
-  color: #252525;
+  color: #173612;
   font-weight: 700;
-  transition: all 0.25s ease;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 .btn-blkborder:hover {
-  background-color: #252525;
+  background-color: #173612;
   color: #ffffff;
+  transform: translateY(-1px);
+}
+.btn-blkborder:active {
+  transform: scale(0.98);
 }
 
 /* 80mm Thermal Receipt Print Styling */

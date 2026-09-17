@@ -9,6 +9,7 @@ import {
   DeliveryAgent,
   SosAlert,
   SosReason,
+  UserLocation,
 } from '@/types/cafe';
 import {
   INITIAL_MENU_ITEMS,
@@ -18,14 +19,23 @@ import {
   CAFE_METADATA,
 } from '@/data/cafeData';
 import { isSupabaseConfigured, supabase, formatDbOrderToModel } from '@/lib/supabase';
+import { getCurrentLocationAddress } from '@/lib/location';
 
 // Local storage keys
 const CART_STORAGE_KEY = 'atelier_lambre_cart_v1';
 const ORDERS_STORAGE_KEY = 'atelier_lambre_orders_v1';
 const SOS_STORAGE_KEY = 'zafiroo_sos_alerts_v1';
 const KITCHEN_PIN_KEY = 'zafiroo_kitchen_pin_v1';
+const USER_LOCATION_KEY = 'zafiroo_user_location_v1';
 
 export interface OrderContextType {
+  // Location Auto-Setter
+  userLocation: UserLocation | null;
+  isDetectingLocation: boolean;
+  locationModalOpen: boolean;
+  setLocationModalOpen: (open: boolean) => void;
+  setUserLocation: (loc: UserLocation) => void;
+  autoDetectLocation: () => Promise<UserLocation | null>;
   // Menu
   menuItems: MenuItem[];
   loadingMenu: boolean;
@@ -95,6 +105,54 @@ export interface OrderContextType {
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
+  // Location Auto-Setter state
+  const [userLocation, setUserLocationState] = useState<UserLocation | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+
+  const setUserLocation = useCallback((loc: UserLocation) => {
+    setUserLocationState(loc);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(USER_LOCATION_KEY, JSON.stringify(loc));
+      } catch (e) {
+        console.warn('Error saving user location:', e);
+      }
+    }
+  }, []);
+
+  const autoDetectLocation = useCallback(async (): Promise<UserLocation | null> => {
+    setIsDetectingLocation(true);
+    try {
+      const loc = await getCurrentLocationAddress();
+      const short =
+        loc.suburb || loc.road || loc.building || loc.city || 'Detected Location';
+      const cityPart = loc.city ? `, ${loc.city}` : '';
+      const shortFormatted = `${short}${cityPart}`;
+
+      const newLoc: UserLocation = {
+        formattedAddress: loc.formattedAddress,
+        shortAddress: shortFormatted,
+        road: loc.road,
+        houseNumber: loc.houseNumber,
+        building: loc.building,
+        suburb: loc.suburb,
+        city: loc.city,
+        state: loc.state,
+        postcode: loc.postcode,
+        lat: loc.lat,
+        lng: loc.lng,
+      };
+      setUserLocation(newLoc);
+      return newLoc;
+    } catch (e) {
+      console.warn('Auto-detect location error:', e);
+      return null;
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  }, [setUserLocation]);
+
   // Menu state
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [loadingMenu, setLoadingMenu] = useState(false);
@@ -240,6 +298,30 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const savedPin = localStorage.getItem(KITCHEN_PIN_KEY);
       if (savedPin) {
         setKitchenPin(savedPin);
+      }
+
+      // 5. Delivery Location
+      const savedLocation = localStorage.getItem(USER_LOCATION_KEY);
+      if (savedLocation) {
+        try {
+          setUserLocationState(JSON.parse(savedLocation));
+        } catch (e) {
+          console.warn('Error parsing saved location:', e);
+        }
+      } else {
+        // Default initial hub location
+        const defaultLoc: UserLocation = {
+          formattedAddress: 'Zafiroo Organic Farm Hub, 14 Green Meadow Way, Indiranagar, Bengaluru, KA 560038',
+          shortAddress: 'Indiranagar, Bengaluru',
+          suburb: 'Indiranagar',
+          city: 'Bengaluru',
+          state: 'Karnataka',
+          postcode: '560038',
+          lat: 12.9784,
+          lng: 77.6408,
+        };
+        setUserLocationState(defaultLoc);
+        localStorage.setItem(USER_LOCATION_KEY, JSON.stringify(defaultLoc));
       }
     } catch (err) {
       console.warn('Error reading from local storage:', err);
@@ -596,6 +678,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   return (
     <OrderContext.Provider
       value={{
+        userLocation,
+        isDetectingLocation,
+        locationModalOpen,
+        setLocationModalOpen,
+        setUserLocation,
+        autoDetectLocation,
         menuItems,
         loadingMenu,
         refreshMenu,

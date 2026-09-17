@@ -41,7 +41,10 @@ import {
   RefreshCw,
   Send,
   Sparkles,
+  ArrowLeft,
+  Home,
 } from 'lucide-react';
+import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
 import { generateWhatsAppOtpLink, generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
@@ -290,7 +293,19 @@ export default function AdminPage() {
   // If not authenticated, render Admin Login Modal
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center p-6 bg-banhmi-bg">
+      <div className="min-h-[85vh] flex flex-col items-center justify-center p-6 bg-banhmi-bg">
+        {/* Top Back Link */}
+        <div className="w-full max-w-md mb-3 flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#173612] hover:text-[#0F240B] bg-white px-3.5 py-1.5 rounded-full border border-[#CBE0A3] shadow-sm hover:shadow transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Website</span>
+          </Link>
+          <span className="text-[11px] font-bold text-[#385A2A]">Zafiroo Kitchen & KDS</span>
+        </div>
+
         <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-cream-200 shadow-warm-xl space-y-6">
           <div className="text-center space-y-2">
             <div className="w-14 h-14 bg-banhmi-card border border-banhmi-gold/40 text-banhmi-red rounded-2xl flex items-center justify-center mx-auto shadow-sm">
@@ -339,6 +354,17 @@ export default function AdminPage() {
               Authenticate & Enter
             </button>
           </form>
+
+          {/* Bottom Return Button */}
+          <div className="pt-2 border-t border-cream-100 text-center">
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-2 text-xs font-bold text-[#173612] hover:text-[#0F240B] transition py-2 px-4 rounded-xl hover:bg-[#F5FAF0] w-full"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Return to Customer Website</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -476,8 +502,18 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Tab Switcher & Logout */}
-          <div className="flex items-center gap-2">
+          {/* Back to Website, Tab Switcher & Logout */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-[#FEEF30] hover:text-[#173612] text-cream-100 font-bold text-xs transition border border-white/20 shadow-sm cursor-pointer"
+              title="Return to Customer Store Website"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Back to Website</span>
+              <span className="sm:hidden">Website</span>
+            </Link>
+
             <div className="flex items-center bg-espresso-900 p-1 rounded-2xl border border-cream-800">
               <button
                 onClick={() => setActiveTab('kds')}
@@ -518,7 +554,7 @@ export default function AdminPage() {
 
             <button
               onClick={() => setIsAuthenticated(false)}
-              className="p-2.5 rounded-xl bg-espresso-900 hover:bg-rose-950 text-cream-300 hover:text-rose-400 border border-cream-800 transition"
+              className="p-2.5 rounded-xl bg-espresso-900 hover:bg-rose-950 text-cream-300 hover:text-rose-400 border border-cream-800 transition cursor-pointer"
               title="Lock / Logout"
             >
               <LogOut className="w-4 h-4" />
