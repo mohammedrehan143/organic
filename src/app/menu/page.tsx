@@ -13,7 +13,6 @@ import {
   Egg,
   Croissant,
   Flame,
-  IceCream,
   GlassWater,
   MapPin,
   ChevronDown,
@@ -21,10 +20,10 @@ import {
 
 const CATEGORIES = [
   { id: 'All', label: 'All Farm Goods', icon: Sparkles },
-  { id: 'Organic Milk', label: 'Organic Milk', icon: Milk },
-  { id: 'Eggs', label: 'All Eggs', icon: Egg },
+  { id: 'Organic Milk', label: 'Organic Milk (Glass Bottle)', icon: Milk },
+  { id: 'Organic Ghee', label: 'Organic Ghee', icon: Sparkles },
+  { id: 'Normal Eggs', label: 'Normal White Eggs', icon: Egg },
   { id: 'Nati Eggs', label: 'Nati Eggs (Desi)', icon: Egg },
-  { id: 'Normal Eggs', label: 'Normal Eggs (Farm)', icon: Egg },
 ];
 
 export default function MenuPage() {
@@ -110,14 +109,14 @@ export default function MenuPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#173612]" />
                 <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
-                  Certified Pure & Local
+                  Certified Pure & Local • 🚚 Free Delivery For All Products
                 </span>
               </div>
               <h1 className="text-3xl sm:text-5xl font-black text-[#0F240B] uppercase tracking-tight mt-1 font-bebas">
                 Zafiroo Organic Farm Catalog
               </h1>
               <p className="text-xs sm:text-sm text-[#173612]/80 mt-1 font-sans">
-                Wholesome pure A2 pasture milk and farm-fresh pasture-raised brown eggs.
+                Pure A2 milk in glass bottles, normal white eggs in 12 & 30 packs, and organic farm goods with 100% Free Doorstep Delivery.
               </p>
             </div>
 
@@ -153,7 +152,7 @@ export default function MenuPage() {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
                     isSelected
-                      ? 'bg-[#173612] text-[#FEEF30] shadow-md scale-105'
+                      ? 'bg-[#173612] text-white shadow-md scale-105'
                       : 'bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3]'
                   }`}
                 >
@@ -210,19 +209,30 @@ export default function MenuPage() {
                 {/* Photo & badges */}
                 <div
                   onClick={() => setSelectedMenuDetail(item)}
-                  className="relative w-full h-56 bg-gray-100 cursor-pointer overflow-hidden group"
+                  className="relative w-full aspect-square bg-[#FAF9F6] cursor-pointer overflow-hidden group"
                 >
                   <img
                     src={item.image}
                     alt={item.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-3 left-3 bg-[#173612] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
-                    100% Organic
+                  <div className="absolute top-3 left-3 bg-[#173612] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-white/30">
+                    Free Delivery
                   </div>
-                  {item.signature && (
-                    <div className="absolute top-3 right-3 bg-[#FEEF30] text-[#173612] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-[#173612]/20">
+
+                  {!item.isAvailable ? (
+                    <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow animate-pulse">
+                      Out of Stock
+                    </div>
+                  ) : item.signature ? (
+                    <div className="absolute top-3 right-3 bg-white text-[#173612] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-[#173612]/20">
                       Farm Classic
+                    </div>
+                  ) : null}
+
+                  {item.category === 'Organic Milk' && (
+                    <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
+                      Sterilized Glass Bottle
                     </div>
                   )}
                 </div>
@@ -230,9 +240,14 @@ export default function MenuPage() {
                 {/* Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
-                      {item.category}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
+                        {item.category}
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        Free Delivery
+                      </span>
+                    </div>
                     <h3
                       onClick={() => setSelectedMenuDetail(item)}
                       className="text-lg font-bold text-[#0F240B] mt-1 hover:text-[#43670F] transition cursor-pointer"
@@ -268,27 +283,37 @@ export default function MenuPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setSelectedMenuDetail(item)}
-                        className="h-10 px-4 bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center"
+                        className="h-10 px-4 bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center cursor-pointer"
                       >
-                        Customize
+                        Details
                       </button>
-                      <button
-                        onClick={() => handleQuickAdd(item)}
-                        className="h-10 px-4 btn-motive text-[#173612] rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs"
-                        title="Add to Farm Basket"
-                      >
-                        {addedId === item.id ? (
-                          <>
-                            <Check className="w-4 h-4 text-[#173612]" />
-                            <span>Added</span>
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            <span>Add</span>
-                          </>
-                        )}
-                      </button>
+
+                      {!item.isAvailable ? (
+                        <button
+                          disabled
+                          className="h-10 px-4 bg-gray-100 border border-gray-300 text-gray-500 rounded-xl font-bold text-xs cursor-not-allowed"
+                        >
+                          Out of Stock
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleQuickAdd(item)}
+                          className="h-10 px-4 btn-motive text-[#173612] rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer"
+                          title="Add to Farm Basket"
+                        >
+                          {addedId === item.id ? (
+                            <>
+                              <Check className="w-4 h-4 text-[#173612]" />
+                              <span>Added</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              <span>Add</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

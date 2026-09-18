@@ -147,7 +147,7 @@ export function LocationModal() {
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-[#F5FAF0]">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#feef30] border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm shrink-0">
               <MapPin className="w-4 h-4 sm:w-5 sm:h-5 fill-[#173612]" />
             </div>
             <div>
@@ -192,10 +192,10 @@ export function LocationModal() {
             <button
               onClick={handleAutoDetect}
               disabled={detecting}
-              className="w-full flex items-center justify-between px-3.5 py-3 sm:px-5 sm:py-4 rounded-2xl bg-[#feef30] hover:bg-[#f0df01] text-[#173612] font-bold shadow-md hover:shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-60 border-2 border-[#173612] cursor-pointer"
+              className="w-full flex items-center justify-between px-3.5 py-3 sm:px-5 sm:py-4 rounded-2xl bg-[#173612] hover:bg-[#0F240B] text-white font-bold shadow-md hover:shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-60 border-2 border-[#173612] cursor-pointer"
             >
               <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#173612] text-[#feef30] flex items-center justify-center shadow-inner shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/20 text-white flex items-center justify-center shadow-inner shrink-0">
                   {detecting ? (
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                   ) : (
@@ -293,7 +293,7 @@ export function LocationModal() {
 
           {/* Serviceability Guarantee Badge */}
           <div className="p-3 sm:p-3.5 rounded-2xl bg-[#F5FAF0] border border-[#CBE0A3] flex items-center gap-2.5 sm:gap-3">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#173612] text-[#feef30] flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#173612] text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>

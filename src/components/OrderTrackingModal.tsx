@@ -91,7 +91,7 @@ export function OrderTrackingModal() {
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-[#EAF3E4] bg-[#F5FAF0] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-[#feef30] border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-white border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm">
                 <Bike className="w-5 h-5 fill-[#173612]" />
               </div>
               <div>
@@ -99,7 +99,7 @@ export function OrderTrackingModal() {
                   <h2 className="text-base sm:text-lg font-black text-[#0F240B] font-bebas tracking-wide">
                     Live Order Tracking
                   </h2>
-                  <span className="text-xs bg-[#feef30] text-[#173612] font-mono font-black px-2.5 py-0.5 rounded-full border border-[#173612]/20">
+                  <span className="text-xs bg-[#173612] text-white font-mono font-black px-2.5 py-0.5 rounded-full">
                     #{currentOrder.tokenId}
                   </span>
                 </div>
@@ -160,7 +160,7 @@ export function OrderTrackingModal() {
                         <div
                           className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${
                             isCurrent
-                              ? 'bg-[#173612] text-white ring-4 ring-[#feef30]/60 scale-110 shadow-md'
+                              ? 'bg-[#173612] text-white ring-4 ring-emerald-500/40 scale-110 shadow-md'
                               : isPassed
                               ? 'bg-[#173612] text-white'
                               : 'bg-gray-100 text-gray-400 border border-gray-200'
@@ -186,7 +186,7 @@ export function OrderTrackingModal() {
             {/* Doorstep Verification OTP Card */}
             <div className="p-5 bg-[#F5FAF0] rounded-3xl border-2 border-[#CBE0A3] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-[#feef30] border-2 border-[#173612] flex items-center justify-center text-[#173612] shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-white border-2 border-[#173612] flex items-center justify-center text-[#173612] shrink-0">
                   <ShieldCheck className="w-7 h-7 fill-[#173612] text-white" />
                 </div>
                 <div>
@@ -194,15 +194,15 @@ export function OrderTrackingModal() {
                     <span className="text-xs font-bold uppercase tracking-widest text-[#385A2A]">
                       Doorstep Security OTP
                     </span>
-                    <span className="text-[10px] bg-[#feef30] text-[#173612] font-black px-2 py-0.5 rounded-full border border-[#173612]/20">
+                    <span className="text-[10px] bg-[#173612] text-white font-black px-2 py-0.5 rounded-full">
                       Strict Verification
                     </span>
                   </div>
                   <p className="text-2xl sm:text-3xl font-black font-mono tracking-widest text-[#0F240B] mt-0.5">
                     {currentOrder.deliveryOtp}
                   </p>
-                  <p className="text-[11px] text-[#2E6125]">
-                    Share with rider only after safely verifying your chilled package.
+                  <p className="text-[11px] text-[#2E6125] font-medium leading-relaxed">
+                    Please inspect your milk glass bottles & white eggs on the spot before sharing OTP. Once received, no returns/exchanges are available.
                   </p>
                 </div>
               </div>
@@ -213,7 +213,7 @@ export function OrderTrackingModal() {
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#173612] hover:bg-[#0F240B] text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95 shrink-0"
               >
-                <MessageCircle className="w-4 h-4 text-[#feef30]" />
+                <MessageCircle className="w-4 h-4 text-white" />
                 <span>Send to WhatsApp</span>
               </a>
             </div>

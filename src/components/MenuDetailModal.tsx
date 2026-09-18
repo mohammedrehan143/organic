@@ -80,8 +80,17 @@ export function MenuDetailModal() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/30" />
           
-          {/* Dietary Badge */}
-          <div className="absolute top-4 left-4 flex gap-2">
+          {/* Dietary & Stock Badge */}
+          <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+            {!activeItem.isAvailable ? (
+              <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-md animate-pulse">
+                Out of Stock
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-[#173612] text-white border border-white/30 shadow-md">
+                🚚 Free Delivery
+              </span>
+            )}
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-sm ${
                 activeItem.dietary === 'veg'
@@ -96,7 +105,7 @@ export function MenuDetailModal() {
               {activeItem.dietary}
             </span>
             {activeItem.signature && (
-              <span className="px-3 py-1 rounded-full text-xs font-black bg-[#FEEF30] text-[#173612] flex items-center gap-1 backdrop-blur-md shadow-sm border border-[#173612]/20">
+              <span className="px-3 py-1 rounded-full text-xs font-black bg-white text-[#173612] flex items-center gap-1 backdrop-blur-md shadow-sm border border-[#173612]/20">
                 <Sparkles className="w-3 h-3 fill-current" />
                 Farm Classic
               </span>
@@ -208,8 +217,8 @@ export function MenuDetailModal() {
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="p-1.5 rounded-lg hover:bg-white text-[#173612] transition"
-                disabled={quantity <= 1}
+                className="p-1.5 rounded-lg hover:bg-white text-[#173612] transition disabled:opacity-40"
+                disabled={quantity <= 1 || !activeItem.isAvailable}
               >
                 <Minus className="w-4 h-4" />
               </button>
@@ -219,24 +228,35 @@ export function MenuDetailModal() {
               <button
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
-                className="p-1.5 rounded-lg hover:bg-white text-[#173612] transition"
+                className="p-1.5 rounded-lg hover:bg-white text-[#173612] transition disabled:opacity-40"
+                disabled={!activeItem.isAvailable}
               >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Add to Cart Button */}
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              className="flex-1 h-12 flex items-center justify-between px-4 sm:px-6 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl shadow-md hover:shadow-xl transition-all active:scale-[0.98] text-xs sm:text-sm"
-            >
-              <span>
-                <span className="hidden xs:inline">Add to Farm Basket</span>
-                <span className="xs:hidden">Add to Basket</span>
-              </span>
-              <span>₹{totalPrice}</span>
-            </button>
+            {/* Add to Cart Button or Out of Stock */}
+            {!activeItem.isAvailable ? (
+              <button
+                type="button"
+                disabled
+                className="flex-1 h-12 flex items-center justify-center px-4 sm:px-6 bg-gray-200 text-gray-500 font-bold rounded-2xl cursor-not-allowed text-xs sm:text-sm"
+              >
+                <span>Currently Out of Stock</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="flex-1 h-12 flex items-center justify-between px-4 sm:px-6 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl shadow-md hover:shadow-xl transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer"
+              >
+                <span>
+                  <span className="hidden xs:inline">Add to Farm Basket</span>
+                  <span className="xs:hidden">Add to Basket</span>
+                </span>
+                <span>₹{totalPrice}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

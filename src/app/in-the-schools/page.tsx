@@ -50,7 +50,7 @@ export default function InTheSchoolsPage() {
       <header className="py-12 sm:py-20 px-4 sm:px-6 bg-[#FAF9F6] border-b border-[#EAF3E4] text-center">
         <div className="max-w-4xl mx-auto space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-[#FEEF30] border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
+            <div className="w-16 h-16 rounded-full bg-white border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
               <BookOpen className="w-8 h-8 text-[#173612]" />
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function InTheSchoolsPage() {
                   key={idx}
                   className="bg-white p-8 rounded-2xl border border-[#EAF3E4] shadow-sm space-y-4"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#FEEF30] border border-[#173612]/20 flex items-center justify-center text-[#173612]">
+                  <div className="w-12 h-12 rounded-xl bg-[#F5FAF0] border border-[#173612]/20 flex items-center justify-center text-[#173612]">
                     <Icon className="w-6 h-6" />
                   </div>
                   <h3 className="text-lg font-bold text-[#0F240B] font-serif">{prog.title}</h3>

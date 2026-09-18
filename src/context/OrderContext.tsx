@@ -311,14 +311,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Default initial hub location
         const defaultLoc: UserLocation = {
-          formattedAddress: 'Zafiroo Organic Farm Hub, 14 Green Meadow Way, Indiranagar, Bengaluru, KA 560038',
-          shortAddress: 'Indiranagar, Bengaluru',
-          suburb: 'Indiranagar',
-          city: 'Bengaluru',
+          formattedAddress: 'Zafiroo Organic Farm, Bylanarasapura, Hoskote Taluk, Bangalore - 562122',
+          shortAddress: 'Bylanarasapura, Hoskote',
+          suburb: 'Bylanarasapura',
+          city: 'Bangalore',
           state: 'Karnataka',
-          postcode: '560038',
-          lat: 12.9784,
-          lng: 77.6408,
+          postcode: '562122',
+          lat: 13.0716,
+          lng: 77.7981,
         };
         setUserLocationState(defaultLoc);
         localStorage.setItem(USER_LOCATION_KEY, JSON.stringify(defaultLoc));
@@ -514,6 +514,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     setActiveTrackingOrder(newOrder);
     clearCart();
     playOrderChime();
+
+    // Persist to server API & DB
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      }).catch((e) => console.warn('Order sync background error:', e));
+    } catch (e) {
+      console.warn('Order sync error:', e);
+    }
 
     return newOrder;
   };

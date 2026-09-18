@@ -20,14 +20,14 @@ interface RecipeItem {
 const RECIPES: RecipeItem[] = [
   {
     id: 'r1',
-    title: 'Guava Maria Cookie Ice Cream',
-    author: 'Chris Valdes',
-    authorUrl: 'https://instagram.com/chefchrisvaldes',
+    title: 'Farmhouse Saffron Cardamom Kheer',
+    author: 'Zafiroo Farm Kitchen',
+    authorUrl: '#',
     image: '/images/recipe-1.png',
-    description: 'An irresistible artisan frozen custard featuring rich organic heavy cream, sweet tropical guava ribbons, and crisp traditional Maria cookie crumble in every bite.',
-    ingredients: ['2 cups Farm-Fresh A2 Milk', '1 cup Organic Heavy Cream', '3/4 cup Guava Puree', '1 cup Crushed Maria Cookies', '1/2 cup Wildflower Honey'],
-    servings: '6 Servings',
-    prepTime: '25 mins + Chilling',
+    description: 'A rich and comforting traditional slow-simmered dessert crafted with pure A2 farm milk in glass bottles, fragrant Kashmiri saffron, and green cardamom.',
+    ingredients: ['1 Litre Farm Milk in Glass Bottle', '1/4 cup Basmati Rice', '1/3 cup Organic Cane Sugar', 'Kashmiri Saffron', 'Green Cardamom'],
+    servings: '4 Servings',
+    prepTime: '25 mins',
   },
   {
     id: 'r2',
@@ -69,7 +69,7 @@ export function FeaturedRecipesSection() {
               onClick={() => setCurrentIndex(idx)}
               className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                 currentIndex === idx
-                  ? 'bg-[#173612] text-[#FEEF30] shadow-md scale-105'
+                  ? 'bg-[#173612] text-white shadow-md scale-105'
                   : 'bg-[#F5FAF0] text-[#173612] hover:bg-[#EAF3E4] border border-[#CBE0A3]'
               }`}
             >

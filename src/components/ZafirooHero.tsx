@@ -46,16 +46,16 @@ export function ZafirooHero() {
     }
   }, [currentVideoIndex]);
 
-  const scrollToFamilies = (e: React.MouseEvent) => {
+  const scrollToShop = (e: React.MouseEvent) => {
     e.preventDefault();
-    const el = document.getElementById('farm-families');
+    const el = document.getElementById('shop');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <header className="relative w-full min-h-[92vh] sm:min-h-[95vh] flex items-center justify-center overflow-hidden select-none bg-black">
+    <header className="relative w-full min-h-[90vh] sm:min-h-[92vh] flex items-center justify-center overflow-hidden select-none bg-black">
       {/* 1. Background Video Slideshow (3 videos seamlessly cycling in the background) */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         {HERO_VIDEOS.map((video, idx) => {
@@ -76,7 +76,7 @@ export function ZafirooHero() {
                 muted
                 playsInline
                 poster={video.poster}
-                className="w-full h-full object-cover scale-105 filter brightness-[0.82] contrast-[1.05]"
+                className="w-full h-full object-cover scale-105 filter brightness-[0.78] contrast-[1.08]"
               >
                 <source src={video.src} type="video/mp4" />
               </video>
@@ -85,82 +85,63 @@ export function ZafirooHero() {
         })}
 
         {/* Parallax & Sunlight Vignette Overlay */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/50 via-black/20 to-black/65 pointer-events-none" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-black/35 to-black/75 pointer-events-none" />
       </div>
 
-      {/* 2. Zafiroo Iconic Circular Title Emblem */}
-      <div className="relative z-20 mt-14 sm:mt-24 mb-10 sm:mb-16 px-3 sm:px-4 flex flex-col items-center justify-center">
-        {/* The Florida Milk Yellow Sun Circle Emblem */}
-        <div className="relative w-[265px] h-[265px] xs:w-[305px] xs:h-[305px] sm:w-[410px] sm:h-[410px] md:w-[490px] md:h-[490px] rounded-full bg-[#FEEF30] shadow-[0_20px_60px_rgba(0,0,0,0.45)] border-4 sm:border-[5px] border-white/85 flex flex-col items-center justify-center text-center p-2.5 xs:p-3.5 sm:p-8 transition transform hover:scale-[1.01] duration-500">
-          {/* Main Title Heading */}
-          <div className="space-y-0 sm:space-y-0.5">
-            <span className="block font-serif italic text-lg xs:text-xl sm:text-3xl md:text-4xl text-[#173612] font-semibold leading-none tracking-tight">
-              Zafiroo
-            </span>
-            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase text-[#0F240B] tracking-wider leading-[0.85] font-bebas">
-              ORGANIC
-            </h1>
-            <span className="block text-sm xs:text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-widest text-[#173612]">
-              STORE
-            </span>
-          </div>
+      {/* 2. Clean Hero Overlay without circle container */}
+      <div className="relative z-20 max-w-4xl mx-auto px-4 py-16 sm:py-24 text-center flex flex-col items-center justify-center space-y-4 sm:space-y-6">
+        {/* Free Delivery Top Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full bg-white text-[#173612] text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-lg border border-[#173612]/20">
+          <span>🚚 100% Free Doorstep Delivery On All Products</span>
+        </div>
 
-          {/* Subtitle */}
-          <h2 className="text-[9px] xs:text-[11px] sm:text-sm md:text-base font-bold text-[#173612] mt-1 xs:mt-1.5 sm:mt-3 max-w-[195px] xs:max-w-[240px] sm:max-w-sm leading-tight sm:leading-snug px-1">
-            Pure organic milk & pasture-raised eggs<br className="hidden sm:inline" /> from our local farms to your table.
-          </h2>
+        {/* Clean Cow Face Logo */}
+        <div className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-white border-3 border-white shadow-2xl flex items-center justify-center p-1 hover:scale-105 transition-transform duration-300">
+          <img
+            src="/images/cow-face-clean.png"
+            alt="Zafiroo Cow Face Logo"
+            className="w-full h-full object-contain rounded-full"
+          />
+        </div>
 
-          {/* Cow Icon Emblem */}
-          <div className="mt-1 xs:mt-1.5 sm:mt-3 flex justify-center">
-            <img
-              src="/images/icon-cow.png"
-              alt="Farm Cow Icon"
-              className="w-7 h-7 xs:w-8 xs:h-8 sm:w-13 sm:h-13 object-contain"
-            />
-          </div>
+        {/* Main Title Heading */}
+        <div className="space-y-1 sm:space-y-2 text-white">
+          <span className="block font-serif italic text-2xl sm:text-4xl md:text-5xl text-white font-bold drop-shadow-md tracking-tight">
+            Zafiroo
+          </span>
+          <h1 className="text-4xl xs:text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-wider font-bebas text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] leading-[0.9]">
+            ORGANIC STORE
+          </h1>
+          <p className="text-sm xs:text-base sm:text-xl font-medium text-white/95 max-w-2xl mx-auto drop-shadow-md leading-relaxed px-2">
+            Pure organic milk in glass bottles & farm-fresh white eggs delivered cold from our local pastures in Bylanarasapura, Hoskote to your table.
+          </p>
+        </div>
 
-          {/* Quick Action Buttons: Side-by-side on mobile, perfectly fitted inside the circle */}
-          <div className="mt-2 xs:mt-2.5 sm:mt-4 flex flex-row items-center justify-center gap-2 sm:gap-3 w-full max-w-[220px] xs:max-w-[250px] sm:max-w-none">
-            <Link
-              href="/menu"
-              className="btn-darkgreen px-3 xs:px-3.5 sm:px-5 py-1.5 xs:py-2 sm:py-2.5 text-[10px] xs:text-[11px] sm:text-xs md:text-sm font-bold shadow-md hover:shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FEEF30]" />
-              <span>Shop Milk & Eggs</span>
-            </Link>
-            <button
-              onClick={() => setCartDrawerOpen(true)}
-              className="px-3 xs:px-3.5 sm:px-5 py-1.5 xs:py-2 sm:py-2.5 bg-white hover:bg-[#F5FAF0] text-[#173612] border-2 border-[#173612] text-[10px] xs:text-[11px] sm:text-xs md:text-sm font-bold rounded-full shadow-md transition transform hover:scale-105 active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <span>Order Now</span>
-            </button>
-          </div>
+        {/* Quick Action Buttons */}
+        <div className="flex flex-col xs:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 w-full max-w-md">
+          <Link
+            href="/menu"
+            className="w-full xs:w-auto px-6 sm:px-8 py-3.5 bg-white hover:bg-white/90 text-[#173612] font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl hover:scale-105 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#173612]" />
+            <span>Shop Milk & Eggs</span>
+          </Link>
+          <a
+            href="#shop"
+            onClick={scrollToShop}
+            className="w-full xs:w-auto px-6 sm:px-8 py-3.5 bg-[#173612]/90 hover:bg-[#173612] text-white border border-white/30 font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl hover:scale-105 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Browse Farm Items</span>
+          </a>
         </div>
       </div>
 
-      {/* 3. Florida Milk Circular Bottom-Right Action Bubble */}
-      <div className="hidden lg:block absolute bottom-6 right-10 xl:right-24 z-20">
-        <Link
-          href="#farm-families"
-          onClick={scrollToFamilies}
-          className="w-44 h-44 xl:w-52 xl:h-52 rounded-full border-[8px] border-white bg-[#EEEEEE] hover:bg-[#D8D8D8] text-[#173612] flex flex-col items-center justify-center text-center shadow-2xl transition-all duration-300 transform hover:scale-105 group"
-        >
-          <span className="text-xs font-serif italic text-[#385A2A]">meet our</span>
-          <span className="text-2xl xl:text-3xl font-black uppercase text-[#0F240B] font-bebas tracking-wide leading-tight">
-            Farm Families
-          </span>
-          <div className="mt-1 w-8 h-8 rounded-full bg-[#173612] text-white flex items-center justify-center group-hover:bg-[#feef30] group-hover:text-[#173612] transition">
-            <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition" />
-          </div>
-        </Link>
-      </div>
-
-      {/* 4. Bouncing Chevron Down Scroll Button */}
+      {/* 3. Bouncing Chevron Down Scroll Button */}
       <a
-        href="#farm-families"
-        onClick={scrollToFamilies}
-        aria-label="Scroll down to farm families"
-        className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/95 hover:bg-[#FEEF30] text-[#173612] shadow-lg flex items-center justify-center transition-all duration-300 animate-bounce border border-[#173612]/20 cursor-pointer"
+        href="#shop"
+        onClick={scrollToShop}
+        aria-label="Scroll down to farm shop"
+        className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/95 hover:bg-emerald-50 text-[#173612] shadow-lg flex items-center justify-center transition-all duration-300 animate-bounce border border-[#173612]/20 cursor-pointer"
       >
         <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-[#173612]" />
       </a>

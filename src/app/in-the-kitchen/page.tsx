@@ -22,29 +22,29 @@ interface FullRecipe {
 const KITCHEN_RECIPES: FullRecipe[] = [
   {
     id: 'k1',
-    title: 'Guava Maria Cookie Ice Cream',
+    title: 'Farmhouse Saffron Cardamom Kheer',
     category: 'Desserts',
-    author: 'Chef Chris Valdes',
+    author: 'Zafiroo Farm Kitchen',
     image: '/images/recipe-1.png',
-    prepTime: '25 mins + Freeze',
-    servings: '6 Servings',
-    description: 'A decadent Florida-inspired ice cream that swirls pure A2 farm milk and organic heavy cream with tropical guava ribbons and traditional crisp Maria cookie crumble.',
+    prepTime: '25 mins',
+    servings: '4 Servings',
+    description: 'A rich and aromatic traditional slow-simmered dessert crafted with pure A2 farm milk in glass bottles, fragrant Kashmiri saffron, and green cardamom.',
     ingredients: [
-      '2 cups Zafiroo Organic Farm A2 Whole Milk',
-      '1 cup Organic Churned Heavy Cream',
-      '3/4 cup Organic Guava Puree',
-      '1/2 cup Pure Raw Forest Honey',
-      '1 cup Crushed Artisan Maria Cookies',
-      '1 tsp Vanilla Bean Extract',
+      '1 Litre Zafiroo Organic Milk in Glass Bottle',
+      '1/4 cup Aromatic Basmati Rice',
+      '1/3 cup Organic Raw Cane Sugar or Jaggery',
+      'Pinch of Pure Kashmiri Saffron Strands',
+      '1/2 tsp Green Cardamom Powder',
+      'Slivered Almonds & Pistachios',
     ],
     instructions: [
-      'In a heavy saucepan, gently warm the whole A2 milk and honey until completely dissolved (do not boil).',
-      'Whisk in the heavy cream and vanilla bean extract. Chill in refrigerator for 2 hours.',
-      'Churn in an ice cream maker for 20 minutes until soft-serve consistency is reached.',
-      'Fold in the crushed Maria cookies and swirl the guava puree through the custard.',
-      'Transfer to a chilled container and freeze for 4 hours before scooping.',
+      'Rinse the basmati rice and soak in clean water for 15 minutes.',
+      'In a heavy-bottomed pot, bring 1 Litre of Zafiroo Organic Milk to a gentle rolling boil.',
+      'Add soaked rice and simmer on low heat for 20 minutes, stirring occasionally until thick and creamy.',
+      'Stir in organic raw cane sugar, crushed cardamom, and saffron strands infused in warm milk.',
+      'Garnish with slivered almonds and pistachios. Serve warm or chilled.',
     ],
-    storeProductId: 'org-des1',
+    storeProductId: 'org-milk-1l',
   },
   {
     id: 'k2',
@@ -145,7 +145,7 @@ export default function InTheKitchenPage() {
       <header className="py-12 sm:py-20 px-4 sm:px-6 bg-[#FAF9F6] border-b border-[#EAF3E4] text-center">
         <div className="max-w-4xl mx-auto space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-[#FEEF30] border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
+            <div className="w-16 h-16 rounded-full bg-white border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
               <ChefHat className="w-8 h-8 text-[#173612]" />
             </div>
           </div>
@@ -167,7 +167,7 @@ export default function InTheKitchenPage() {
                 onClick={() => setSelectedCat(cat)}
                 className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition ${
                   selectedCat === cat
-                    ? 'bg-[#173612] text-[#FEEF30] shadow'
+                    ? 'bg-[#173612] text-white shadow'
                     : 'bg-[#F5FAF0] border border-[#CBE0A3] text-[#173612] hover:bg-[#EAF3E4]'
                 }`}
               >

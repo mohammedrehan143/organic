@@ -52,7 +52,7 @@ export function CartDrawer() {
               <h2 className="text-lg font-black text-[#0F240B] font-bebas tracking-wide">
                 Organic Farm Basket
               </h2>
-              <span className="text-xs bg-[#feef30] text-[#173612] font-black px-2 py-0.5 rounded-full border border-[#173612]/20">
+              <span className="text-xs bg-[#173612] text-white font-black px-2 py-0.5 rounded-full">
                 {cart.length} items
               </span>
             </div>
@@ -88,23 +88,15 @@ export function CartDrawer() {
           {cart.length > 0 && (
             <div className="bg-[#FAF9F6] px-5 py-3 border-b border-gray-200">
               <div className="flex items-center justify-between text-xs font-medium text-[#173612] mb-1.5">
-                {isFreeDelivery ? (
-                  <span className="text-emerald-700 font-bold flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    You unlocked FREE farm-fresh delivery!
-                  </span>
-                ) : (
-                  <span>
-                    Add <strong className="text-[#173612] font-black">₹{remainingForFree}</strong> more for{' '}
-                    <strong>FREE delivery</strong>
-                  </span>
-                )}
-                <span className="font-bold">{progressPercent}%</span>
+                <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
+                  <span>🚚 100% Free Doorstep Delivery Unlocked For All Items!</span>
+                </span>
+                <span className="font-bold text-emerald-700">100%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-emerald-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-[#FEEF30] to-[#173612] h-full transition-all duration-300 rounded-full"
-                  style={{ width: `${progressPercent}%` }}
+                  className="bg-[#173612] h-full w-full rounded-full"
                 />
               </div>
             </div>

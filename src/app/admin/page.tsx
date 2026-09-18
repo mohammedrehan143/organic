@@ -506,7 +506,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-[#FEEF30] hover:text-[#173612] text-cream-100 font-bold text-xs transition border border-white/20 shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white hover:text-[#173612] text-cream-100 font-bold text-xs transition border border-white/20 shadow-sm cursor-pointer"
               title="Return to Customer Store Website"
             >
               <ArrowLeft className="w-3.5 h-3.5" />

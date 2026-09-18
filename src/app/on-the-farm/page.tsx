@@ -61,7 +61,7 @@ export default function OnTheFarmPage() {
       <header className="relative w-full py-12 sm:py-20 px-4 sm:px-6 bg-[#FAF9F6] border-b border-[#EAF3E4] text-center overflow-hidden">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex justify-center">
-            <div className="w-20 h-20 rounded-full bg-[#FEEF30] border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
+            <div className="w-20 h-20 rounded-full bg-white border-2 border-[#173612] p-2 flex items-center justify-center shadow-md">
               <img src="/images/icon-cow.png" alt="Cow icon" className="w-12 h-12 object-contain" />
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function OnTheFarmPage() {
                   key={idx}
                   className="bg-white p-7 rounded-2xl border border-[#EAF3E4] shadow-sm space-y-4 flex flex-col justify-between"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#FEEF30] border border-[#173612]/20 flex items-center justify-center text-[#173612]">
+                  <div className="w-12 h-12 rounded-xl bg-[#F5FAF0] border border-[#173612]/20 flex items-center justify-center text-[#173612]">
                     <Icon className="w-6 h-6" />
                   </div>
                   <div>

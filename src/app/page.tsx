@@ -2,28 +2,16 @@
 
 import React from 'react';
 import { ZafirooHero } from '@/components/ZafirooHero';
-import { FarmFamiliesSection } from '@/components/FarmFamiliesSection';
-import { FeaturedRecipesSection } from '@/components/FeaturedRecipesSection';
 import { FarmShopSection } from '@/components/FarmShopSection';
-import { MilkBlogSection } from '@/components/MilkBlogSection';
 
 export default function HomePage() {
   return (
     <div className="w-full bg-white text-[#173612]">
-      {/* 1. Florida Milk Parallax Hero with Video Background & Iconic Yellow Emblem */}
+      {/* 1. Hero with Video Background & Open Header */}
       <ZafirooHero />
 
-      {/* 2. Florida Milk "our farm families" Section */}
-      <FarmFamiliesSection />
-
-      {/* 3. Florida Milk Featured Recipe Section */}
-      <FeaturedRecipesSection />
-
-      {/* 5. Direct Organic Farm Store (Shop Fresh Milk, Butter, Ghee, Eggs) */}
+      {/* 2. Direct Organic Farm Store (Shop Fresh Milk, Ghee, White Eggs) */}
       <FarmShopSection />
-
-      {/* 6. Florida Milk Green "Milk Blog" Section */}
-      <MilkBlogSection />
     </div>
   );
 }

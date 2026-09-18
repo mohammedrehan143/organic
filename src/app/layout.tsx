@@ -39,7 +39,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-white text-[#173612] font-sans antialiased selection:bg-[#FEEF30] selection:text-[#173612]">
+      <body className="min-h-screen flex flex-col bg-white text-[#173612] font-sans antialiased selection:bg-[#173612] selection:text-white">
         <OrderProvider>
           <ZafirooNavbar />
           <main className="flex-1">{children}</main>

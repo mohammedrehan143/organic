@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { serverStore } from '@/lib/serverStore';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
   try {
     let deletedCount = 0;

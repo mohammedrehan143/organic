@@ -37,8 +37,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: #feef30;
-  color: #173612;
+  background-color: #173612;
+  color: #FFFFFF;
   font-weight: 700;
   border-radius: 9999px;
   box-shadow: 0 2px 8px -2px rgba(23, 54, 18, 0.15);
@@ -47,12 +47,12 @@
   user-select: none;
 }
 .btn-motive:hover {
-  background-color: #f0df01;
+  background-color: #0F240B;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px -2px rgba(23, 54, 18, 0.2);
 }
 .btn-motive:active {
-  background-color: #d8c901;
+  background-color: #0a1807;
   transform: scale(0.98);
 }
 
@@ -72,7 +72,7 @@
 }
 .btn-darkgreen:hover {
   background-color: #0F240B;
-  color: #feef30;
+  color: #FFFFFF;
   transform: translateY(-1px);
   box-shadow: 0 4px 14px -2px rgba(23, 54, 18, 0.35);
 }

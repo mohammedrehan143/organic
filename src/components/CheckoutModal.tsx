@@ -22,9 +22,19 @@ import {
   ChevronRight,
   ShieldCheck,
   Smartphone,
+  Printer,
+  MessageCircle,
+  Clock,
+  Bike,
+  ChefHat,
+  PackageCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
+import { Order } from '@/types/cafe';
+import { BillModal } from './BillModal';
+import { generateWhatsAppOtpLink } from '@/lib/whatsapp';
 
 // Helper to load official Razorpay Checkout SDK
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -71,6 +81,13 @@ export function CheckoutModal() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showSandboxModal, setShowSandboxModal] = useState(false);
   const [sandboxOrderData, setSandboxOrderData] = useState<any>(null);
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [billModalOpen, setBillModalOpen] = useState(false);
+
+  const handleCloseModal = () => {
+    setPlacedOrder(null);
+    setCheckoutModalOpen(false);
+  };
 
   // Auto-sync with userLocation when opened
   useEffect(() => {
@@ -202,16 +219,15 @@ export function CheckoutModal() {
         particleCount: 90,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#173612', '#FEEF30', '#43670F', '#F7F3EC'],
+        colors: ['#173612', '#FFFFFF', '#43670F', '#F7F3EC'],
       });
     } catch (e) {
       // fallback
     }
 
-    setCheckoutModalOpen(false);
     setShowSandboxModal(false);
     setActiveTrackingOrder(order);
-    router.push(`/track?token=${order.tokenId}`);
+    setPlacedOrder(order);
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -356,6 +372,232 @@ export function CheckoutModal() {
     }
   };
 
+  if (placedOrder) {
+    const whatsappOtpUrl = generateWhatsAppOtpLink(
+      placedOrder.customer.phone,
+      placedOrder.deliveryOtp,
+      placedOrder.tokenId,
+      placedOrder.total,
+      placedOrder.customer.name
+    );
+
+    const stages = [
+      { key: 'new', label: 'Order Received', icon: Clock },
+      { key: 'preparing', label: 'Harvest Packed', icon: ChefHat },
+      { key: 'ready', label: 'Seal Verified', icon: PackageCheck },
+      {
+        key: 'delivering',
+        label: placedOrder.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Hub',
+        icon: Bike,
+      },
+      { key: 'completed', label: 'Delivered', icon: CheckCircle2 },
+    ];
+
+    return (
+      <>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fadeIn text-[#173612]">
+          <div
+            className="relative w-full max-w-xl my-4 sm:my-8 bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-[#EAF3E4] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-[#EAF3E4] bg-[#F5FAF0] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 border-2 border-emerald-700 flex items-center justify-center text-emerald-800 shadow-sm shrink-0">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-[#0F240B] font-bebas tracking-wide">
+                    Order Placed Successfully!
+                  </h2>
+                  <p className="text-xs text-emerald-800 font-semibold">
+                    Order Details & Doorstep Verification Code
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 rounded-full hover:bg-gray-200/60 text-[#173612] transition cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Container */}
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
+              {/* Order Meta Bar */}
+              <div className="p-4 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#385A2A] block">
+                    Order Token
+                  </span>
+                  <span className="text-lg font-black text-[#0F240B] font-mono">
+                    #{placedOrder.tokenId}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#385A2A] block">
+                    Order ID
+                  </span>
+                  <span className="text-xs font-bold text-[#173612] font-mono">
+                    #{placedOrder.id}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#385A2A] block">
+                    Estimated Delivery
+                  </span>
+                  <span className="text-xs font-black text-emerald-800">
+                    {placedOrder.estimatedTime}
+                  </span>
+                </div>
+              </div>
+
+              {/* Doorstep Verification OTP Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border-2 border-emerald-600 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
+                      Doorstep Security OTP
+                    </span>
+                  </div>
+                  <span className="text-2xl font-black font-mono tracking-widest text-[#0F240B] bg-[#ECF5DE] px-3.5 py-1 rounded-xl border border-[#CBE0A3]">
+                    {placedOrder.deliveryOtp}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#ECF5DE] border border-[#CBE0A3] text-[#173612] text-[11px] leading-relaxed">
+                  <strong>⚠️ Important Zafiroo Policy:</strong> Please inspect your milk glass bottles and white eggs carefully on the spot upon arrival. Share this OTP with the delivery partner only after checking, as no return or exchange is available once accepted.
+                </div>
+              </div>
+
+              {/* Fulfillment Pipeline */}
+              <div className="p-4 rounded-2xl bg-[#F5FAF0] border border-[#CBE0A3] space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#0F240B] block">
+                  Live Fulfillment Status: Order Received
+                </span>
+                <div className="grid grid-cols-5 gap-1 text-center">
+                  {stages.map((stage, idx) => {
+                    const Icon = stage.icon;
+                    const isActive = idx === 0;
+                    return (
+                      <div key={stage.key} className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center ${
+                            isActive
+                              ? 'bg-[#173612] text-white ring-2 ring-emerald-500'
+                              : 'bg-gray-100 text-gray-400'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span
+                          className={`text-[8px] sm:text-[9px] mt-1 font-bold ${
+                            isActive ? 'text-[#0F240B]' : 'text-gray-400'
+                          }`}
+                        >
+                          {stage.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Customer & Delivery Address */}
+              <div className="p-4 rounded-2xl bg-white border border-[#EAF3E4] space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-[#173612] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-[#0F240B] block">
+                      {placedOrder.customer.name} ({placedOrder.customer.phone})
+                    </span>
+                    <p className="text-gray-600 mt-0.5">
+                      {placedOrder.customer.address}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                  <span>Method: {placedOrder.deliveryMethod === 'delivery' ? 'Direct Farm Delivery' : 'Farm Hub Pickup'}</span>
+                  <span>Payment: <strong className="text-[#0F240B]">{placedOrder.paymentMethod}</strong></span>
+                </div>
+              </div>
+
+              {/* Ordered Items Breakdown */}
+              <div className="p-4 rounded-2xl bg-white border border-[#EAF3E4] space-y-3">
+                <span className="text-xs font-black uppercase tracking-wider text-[#0F240B] block">
+                  Items Ordered ({placedOrder.items.length})
+                </span>
+                <div className="divide-y divide-gray-100 max-h-40 overflow-y-auto">
+                  {placedOrder.items.map((it, idx) => {
+                    const itemName = it.menuItem?.name || (it as any).name || 'Farm Item';
+                    const itemPrice = it.itemTotal ?? ((it.menuItem?.priceNumber || (it as any).price || 0) * it.quantity);
+                    return (
+                      <div key={idx} className="py-2 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#173612] bg-[#F5FAF0] w-6 h-6 rounded-full flex items-center justify-center text-[10px] border border-[#CBE0A3]">
+                            {it.quantity}x
+                          </span>
+                          <span className="font-semibold text-[#0F240B]">{itemName}</span>
+                        </div>
+                        <span className="font-bold text-[#0F240B]">
+                          ₹{itemPrice.toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between font-black text-sm">
+                  <span>Grand Total</span>
+                  <span className="text-base text-emerald-800">₹{placedOrder.total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBillModalOpen(true)}
+                    className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 hover:bg-[#F5FAF0] text-[#173612] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print 80mm Bill Receipt</span>
+                  </button>
+
+                  <a
+                    href={whatsappOtpUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-white" />
+                    <span>Send to WhatsApp</span>
+                  </a>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-black uppercase tracking-wider shadow-md transition cursor-pointer"
+                >
+                  Done & Return to Farm Store
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <BillModal
+          order={placedOrder}
+          isOpen={billModalOpen}
+          onClose={() => setBillModalOpen(false)}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fadeIn text-[#173612]">
       <div
@@ -365,7 +607,7 @@ export function CheckoutModal() {
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-[#EAF3E4] bg-[#F5FAF0] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#feef30] border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-white border-2 border-[#173612] flex items-center justify-center text-[#173612] shadow-sm">
               <Sparkles className="w-5 h-5 fill-[#173612]" />
             </div>
             <div>
@@ -378,7 +620,7 @@ export function CheckoutModal() {
             </div>
           </div>
           <button
-            onClick={() => setCheckoutModalOpen(false)}
+            onClick={handleCloseModal}
             className="p-2 rounded-full hover:bg-gray-200/60 text-[#173612] transition"
           >
             <X className="w-5 h-5" />
@@ -480,12 +722,12 @@ export function CheckoutModal() {
                   type="button"
                   onClick={handleUseCurrentLocation}
                   disabled={geocoding}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#feef30] hover:bg-[#f0df01] text-[#173612] border border-[#173612]/30 rounded-xl text-[11px] font-bold transition active:scale-95 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#173612] hover:bg-[#0F240B] text-white border border-[#173612]/30 rounded-xl text-[11px] font-bold transition active:scale-95 disabled:opacity-50"
                 >
                   {geocoding ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <MapPin className="w-3.5 h-3.5 fill-[#173612]" />
+                    <MapPin className="w-3.5 h-3.5 fill-white text-white" />
                   )}
                   <span>{geocoding ? 'Detecting GPS...' : 'Auto-Detect GPS'}</span>
                 </button>
@@ -652,13 +894,35 @@ export function CheckoutModal() {
             </div>
           </div>
 
+          {/* Zafiroo Official Store Policy Notice */}
+          <div className="p-4 bg-[#F5FAF0] rounded-2xl border-2 border-[#173612]/20 space-y-2 text-xs text-[#173612]">
+            <div className="flex items-center gap-2 font-bold text-[#0F240B]">
+              <ShieldCheck className="w-4 h-4 text-[#173612]" />
+              <span className="uppercase tracking-wider">Zafiroo Delivery & Acceptance Policy:</span>
+            </div>
+            <ul className="space-y-1.5 text-[11px] text-[#173612]/90 leading-relaxed list-disc pl-4 font-medium">
+              <li>
+                <strong>Glass Bottle Breakage:</strong> When glass bottle breaks the customer has to pay rupees 200 per bottle.
+              </li>
+              <li>
+                <strong>Spot Verification:</strong> When your order is arrived please check the product carefully are all items available because ones you receive no exchange and return available so please check on the spot.
+              </li>
+              <li>
+                <strong>Eggs Inspection:</strong> When your eggs order has arrived please check weather the eggs are in good condition it should not be cracked or broken please check on the spot so you can get exchange.
+              </li>
+              <li>
+                <strong>Milk Damage Assistance:</strong> If the milk it broken you can contact directly to the Zafiroo agents so you can exchange and get fresh milk contact as soon as possible (Helpline: +91 7259635948).
+              </li>
+            </ul>
+          </div>
+
           {/* Doorstep Verification Notice */}
-          <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-950">
-            <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-[#ECF5DE] rounded-2xl border border-[#CBE0A3] flex items-start gap-2.5 text-xs text-[#173612]">
+            <ShieldCheck className="w-4 h-4 text-[#173612] shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-amber-900">Doorstep 4-Digit Security OTP</p>
-              <p className="text-[11px] text-amber-800 mt-0.5">
-                A secret 4-digit code will be generated upon placing this order. Share it with your delivery courier only after verifying your chilled package.
+              <p className="font-bold text-[#0F240B]">Doorstep 4-Digit Security OTP</p>
+              <p className="text-[11px] text-[#173612]/80 mt-0.5">
+                A secret 4-digit code will be generated upon placing this order. Verify your chilled package on the spot before providing OTP to your courier.
               </p>
             </div>
           </div>
@@ -689,7 +953,7 @@ export function CheckoutModal() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full h-14 flex items-center justify-center gap-2 bg-[#173612] hover:bg-[#0F240B] text-[#FEEF30] font-black rounded-2xl shadow-lg hover:shadow-xl transition active:scale-[0.98] disabled:opacity-50 text-sm uppercase tracking-wider cursor-pointer"
+            className="w-full h-14 flex items-center justify-center gap-2 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-2xl shadow-lg hover:shadow-xl transition active:scale-[0.98] disabled:opacity-50 text-sm uppercase tracking-wider cursor-pointer"
           >
             {submitting ? (
               <>
@@ -753,13 +1017,13 @@ export function CheckoutModal() {
               </div>
 
               {/* Info about configuration */}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+              <div className="p-3 bg-[#ECF5DE] rounded-xl border border-[#CBE0A3] text-xs text-[#173612] space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-[#0F240B]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#173612]" />
                   Razorpay Ready for Testing
                 </p>
-                <p className="text-[11px] leading-relaxed text-amber-800">
-                  You can simulate an instant test transaction right now. When you're ready for live customer payments, just paste your <code className="font-bold bg-white px-1 py-0.5 rounded">RAZORPAY_KEY_ID</code> and <code className="font-bold bg-white px-1 py-0.5 rounded">RAZORPAY_KEY_SECRET</code> into <code className="font-bold bg-white px-1 py-0.5 rounded">.env.local</code>.
+                <p className="text-[11px] leading-relaxed text-[#173612]/80">
+                  You can simulate an instant test transaction right now. When you're ready for live customer payments, just paste your <code className="font-bold bg-white px-1 py-0.5 rounded text-[#0F240B]">RAZORPAY_KEY_ID</code> and <code className="font-bold bg-white px-1 py-0.5 rounded text-[#0F240B]">RAZORPAY_KEY_SECRET</code> into <code className="font-bold bg-white px-1 py-0.5 rounded text-[#0F240B]">.env.local</code>.
                 </p>
               </div>
 
@@ -793,9 +1057,9 @@ export function CheckoutModal() {
                       setSubmitting(false);
                     }
                   }}
-                  className="w-full py-3.5 px-4 bg-[#173612] hover:bg-[#0F240B] text-[#FEEF30] font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 px-4 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <CheckCircle className="w-4 h-4 text-[#FEEF30]" />
+                  <CheckCircle className="w-4 h-4 text-white" />
                   <span>Simulate Successful Payment (Instant)</span>
                 </button>
 
