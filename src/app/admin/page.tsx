@@ -14,7 +14,6 @@ import {
   buildGoogleMapsUrl,
   getCurrentLocationAddress,
 } from '@/lib/location';
-import { verifyAdminPin } from '@/lib/adminAuth';
 import {
   Shield,
   Clock,
@@ -62,8 +61,6 @@ export default function AdminPage() {
     playOrderChime,
     playSosSiren,
     verifyDeliveryOtp,
-    kitchenPin,
-    updateKitchenPin,
   } = useOrder();
 
   // Authentication State
@@ -71,8 +68,10 @@ export default function AdminPage() {
   const [authRole, setAuthRole] = useState<'admin' | 'rider'>('admin');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
   const [newPinInput, setNewPinInput] = useState('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState('');
+  const [updatingPin, setUpdatingPin] = useState(false);
 
   // Mode: Kitchen KDS vs Rider Mobile Mode vs Analytics
   const [activeTab, setActiveTab] = useState<'kds' | 'rider' | 'analytics'>('kds');
@@ -80,6 +79,8 @@ export default function AdminPage() {
   // Rider Login State
   const [riderPhoneInput, setRiderPhoneInput] = useState('');
   const [currentRider, setCurrentRider] = useState<DeliveryAgent | null>(null);
+  const [riderLoading, setRiderLoading] = useState(false);
+  const [riderError, setRiderError] = useState('');
   const [riderOtpInputs, setRiderOtpInputs] = useState<Record<string, string>>({});
   const [riderOtpFeedback, setRiderOtpFeedback] = useState<Record<string, { success: boolean; message: string }>>({});
 
@@ -148,63 +149,96 @@ export default function AdminPage() {
     }
   }, [latestActiveSos, playSosSiren]);
 
-  // Auth Handler
-  const handlePinSubmit = (e: React.FormEvent) => {
+  // Auth Handler - Server & Database Verified
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError('');
-    const result = verifyAdminPin(pinInput, kitchenPin);
+    setPinLoading(true);
 
-    if (result.valid) {
-      setIsAuthenticated(true);
-      setPinInput('');
-    } else {
-      setPinError(result.message);
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+        setPinInput('');
+      } else {
+        setPinError(data.message || 'Invalid PIN or Master Key. Access denied.');
+      }
+    } catch {
+      setPinError('Connection to authentication server failed. Check your network.');
+    } finally {
+      setPinLoading(false);
     }
   };
 
-  // Update Kitchen PIN
-  const handleUpdatePin = (e: React.FormEvent) => {
+  // Update Kitchen PIN in Database
+  const handleUpdatePin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPinInput.trim().length < 4) {
+    setPinError('');
+    const clean = newPinInput.trim();
+    if (clean.length < 4) {
       setPinError('New PIN must be at least 4 digits');
       return;
     }
-    updateKitchenPin(newPinInput.trim());
-    setPinSuccessMsg(`Kitchen PIN successfully changed to: ${newPinInput.trim()}`);
-    setNewPinInput('');
-    setTimeout(() => setPinSuccessMsg(''), 4000);
+    setUpdatingPin(true);
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_pin', newPin: clean }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPinSuccessMsg('Admin access PIN updated successfully in database.');
+        setNewPinInput('');
+        setTimeout(() => setPinSuccessMsg(''), 4000);
+      } else {
+        setPinError(data.message || 'Failed to update PIN in database');
+      }
+    } catch {
+      setPinError('Failed to communicate with database server.');
+    } finally {
+      setUpdatingPin(false);
+    }
   };
 
-  // Rider Login Handler
-  const handleRiderLogin = (e: React.FormEvent) => {
+  // Rider Login Handler - Verified against Supabase Database
+  const handleRiderLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = riderPhoneInput.replace(/[^0-9]/g, '');
     if (!clean) return;
+    setRiderError('');
+    setRiderLoading(true);
 
-    const found = deliveryAgents.find(
-      (a) => a.phone.replace(/[^0-9]/g, '').includes(clean) || clean.includes(a.phone.replace(/[^0-9]/g, ''))
-    );
+    try {
+      const res = await fetch('/api/delivery/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: clean }),
+      });
+      const data = await res.json();
 
-    if (found) {
-      setCurrentRider(found);
-    } else {
-      // Register temporary session rider
-      const newRider: DeliveryAgent = {
-        id: `AGT-${clean.slice(-4)}-01`,
-        name: `Rider (${clean.slice(-4)})`,
-        phone: `+91 ${clean.slice(-10)}`,
-        status: 'active',
-        vehicleType: 'Motorcycle',
-        ordersDeliveredCount: 0,
-      };
-      setCurrentRider(newRider);
+      if (res.ok && data.success && data.agent) {
+        setCurrentRider(data.agent);
+      } else {
+        setRiderError(data.message || 'No courier partner account found with this phone number.');
+      }
+    } catch {
+      setRiderError('Network error verifying rider identity.');
+    } finally {
+      setRiderLoading(false);
     }
   };
 
   // Rider Doorstep OTP Submit
-  const handleRiderOtpVerify = (orderId: string) => {
+  const handleRiderOtpVerify = async (orderId: string) => {
     const entered = riderOtpInputs[orderId] || '';
-    const result = verifyDeliveryOtp(orderId, entered);
+    const result = await verifyDeliveryOtp(orderId, entered);
     setRiderOtpFeedback((prev) => ({
       ...prev,
       [orderId]: result,
@@ -259,15 +293,37 @@ export default function AdminPage() {
     return orders.filter((o) => o.status === kdsFilter);
   }, [orders, kdsFilter]);
 
-  // Assigned Orders for Logged-In Rider
+  // Assigned Active Orders for Logged-In Rider (excluding completed and cancelled)
   const riderAssignedOrders = useMemo(() => {
     if (!currentRider) return [];
+    const riderDigits = currentRider.phone.replace(/[^0-9]/g, '');
     return orders.filter(
       (o) =>
+        o.deliveryMethod === 'delivery' &&
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
         (o.deliveryAgentId === currentRider.id ||
-          (o.riderPhone && o.riderPhone.replace(/[^0-9]/g, '') === currentRider.phone.replace(/[^0-9]/g, '')) ||
-          o.status === 'delivering') &&
-        o.deliveryMethod === 'delivery'
+          (o.riderPhone && o.riderPhone.replace(/[^0-9]/g, '') === riderDigits))
+    );
+  }, [orders, currentRider]);
+
+  // Ready orders waiting for rider claim/pickup
+  const unassignedReadyOrders = useMemo(() => {
+    return orders.filter(
+      (o) => o.status === 'ready' && o.deliveryMethod === 'delivery' && !o.deliveryAgentId
+    );
+  }, [orders]);
+
+  // Delivered runs completed by logged-in rider
+  const riderCompletedOrders = useMemo(() => {
+    if (!currentRider) return [];
+    const riderDigits = currentRider.phone.replace(/[^0-9]/g, '');
+    return orders.filter(
+      (o) =>
+        o.status === 'completed' &&
+        o.deliveryMethod === 'delivery' &&
+        (o.deliveryAgentId === currentRider.id ||
+          (o.riderPhone && o.riderPhone.replace(/[^0-9]/g, '') === riderDigits))
     );
   }, [orders, currentRider]);
 
@@ -328,7 +384,7 @@ export default function AdminPage() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-espresso-700 mb-1.5">
-                Kitchen Access PIN
+                Admin / Kitchen Access PIN
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-espresso-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -336,22 +392,20 @@ export default function AdminPage() {
                   type="password"
                   required
                   autoFocus
-                  placeholder="Enter 4-digit PIN (Default: 1234)"
+                  placeholder="Enter Secure Access PIN"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-2xl border border-cream-300 bg-cream-50 text-center font-mono text-lg tracking-widest text-espresso-900 focus:outline-none focus:border-banhmi-red shadow-sm"
                 />
               </div>
-              <p className="text-[11px] text-espresso-500 mt-1 text-center">
-                Default Kitchen PIN is <strong>1234</strong> or Master Key <strong>9999</strong>
-              </p>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-2xl shadow-warm-md transition active:scale-95 text-xs uppercase tracking-wider"
+              disabled={pinLoading}
+              className="w-full py-3.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-2xl shadow-warm-md transition active:scale-95 text-xs uppercase tracking-wider disabled:opacity-50"
             >
-              Authenticate & Enter
+              {pinLoading ? 'Verifying...' : 'Authenticate & Enter'}
             </button>
           </form>
 
@@ -813,26 +867,32 @@ export default function AdminPage() {
               </div>
 
               <form onSubmit={handleRiderLogin} className="space-y-3">
+                {riderError && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl text-center">
+                    {riderError}
+                  </div>
+                )}
                 <input
                   type="tel"
                   required
-                  placeholder="e.g. 9876543210 (Aarav Sharma)"
+                  placeholder="Enter registered 10-digit phone number"
                   value={riderPhoneInput}
                   onChange={(e) => setRiderPhoneInput(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-cream-300 bg-cream-50 text-xs text-espresso-900 focus:outline-none focus:border-banhmi-red"
                 />
                 <button
                   type="submit"
-                  className="w-full py-3 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition"
+                  disabled={riderLoading}
+                  className="w-full py-3 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition disabled:opacity-50"
                 >
-                  Access Assigned Runs
+                  {riderLoading ? 'Verifying Courier Account...' : 'Access Assigned Runs'}
                 </button>
               </form>
 
               {/* Quick Select Rider Pills */}
               <div className="pt-2 border-t border-cream-100">
                 <span className="text-[11px] font-bold text-espresso-500 uppercase tracking-wider block mb-2 text-center">
-                  Or Quick Demo Rider:
+                  Quick Switch Active Courier Partner:
                 </span>
                 <div className="flex flex-wrap justify-center gap-2">
                   {deliveryAgents.map((a) => (
@@ -892,6 +952,46 @@ export default function AdminPage() {
                   Trigger SOS
                 </button>
               </div>
+
+              {/* Ready Orders Available for Self-Claim / Pickup */}
+              {unassignedReadyOrders.length > 0 && (
+                <div className="space-y-3 p-5 bg-amber-50 rounded-3xl border-2 border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Ready for Pickup at Kitchen ({unassignedReadyOrders.length})</span>
+                    </h4>
+                    <span className="text-[10px] bg-amber-600 text-white font-bold px-2 py-0.5 rounded-full">
+                      Open Runs
+                    </span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {unassignedReadyOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-espresso-950">#{order.tokenId}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                              Ready
+                            </span>
+                          </div>
+                          <p className="text-espresso-800 font-semibold mt-1">To: {order.customer.name}</p>
+                          <p className="text-[11px] text-espresso-600 line-clamp-1">{order.customer.address}</p>
+                        </div>
+                        <button
+                          onClick={() => assignDeliveryAgent(order.id, currentRider.id)}
+                          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 shrink-0"
+                        >
+                          Claim & Start Run
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Assigned Active Orders */}
               <div className="space-y-4">
@@ -1029,6 +1129,32 @@ export default function AdminPage() {
                   })
                 )}
               </div>
+
+              {/* Completed Runs Today */}
+              {riderCompletedOrders.length > 0 && (
+                <div className="space-y-3 p-5 bg-emerald-50 rounded-3xl border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Completed Deliveries Today ({riderCompletedOrders.length})</span>
+                    </h4>
+                    <span className="text-[10px] bg-emerald-700 text-white font-bold px-2.5 py-0.5 rounded-full">
+                      Verified & Handed Over
+                    </span>
+                  </div>
+                  <div className="divide-y divide-emerald-100">
+                    {riderCompletedOrders.slice(0, 10).map((co) => (
+                      <div key={co.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-mono font-bold text-emerald-950">#{co.tokenId}</span>
+                          <span className="text-emerald-700 ml-2">to {co.customer.name}</span>
+                        </div>
+                        <span className="font-bold text-emerald-900">₹{co.total} • Delivered</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1134,16 +1260,16 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Custom Kitchen PIN Configuration Section */}
+          {/* Database Admin PIN Configuration Section */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm max-w-lg space-y-4">
             <div className="flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-banhmi-red" />
               <h3 className="text-sm font-bold uppercase tracking-wider text-espresso-950">
-                Kitchen PIN Configuration
+                Admin Access PIN Configuration
               </h3>
             </div>
             <p className="text-xs text-espresso-600">
-              Current Kitchen PIN is <strong>{kitchenPin}</strong>. You can update it here for team access.
+              Access PINs are securely managed in the Supabase database. Enter a new 4+ digit PIN below to update credentials.
             </p>
 
             {pinSuccessMsg && (
@@ -1154,17 +1280,18 @@ export default function AdminPage() {
 
             <form onSubmit={handleUpdatePin} className="space-y-3">
               <input
-                type="text"
-                placeholder="Enter new 4-digit PIN"
+                type="password"
+                placeholder="Enter new PIN (min 4 digits)"
                 value={newPinInput}
                 onChange={(e) => setNewPinInput(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-xs text-espresso-900 font-mono tracking-widest focus:outline-none focus:border-banhmi-red"
               />
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-xl text-xs transition active:scale-95"
+                disabled={updatingPin}
+                className="px-5 py-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 font-bold rounded-xl text-xs transition active:scale-95 disabled:opacity-50"
               >
-                Update Kitchen PIN
+                {updatingPin ? 'Updating Database...' : 'Update Access PIN'}
               </button>
             </form>
           </div>

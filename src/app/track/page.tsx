@@ -400,11 +400,11 @@ function TrackPageContent() {
       setHasSearched(true);
 
       try {
-        let apiUrl = '/api/orders';
+        let apiUrl = '/api/orders?limit=30';
         if (cleanDigits.length >= 4) {
-          apiUrl = `/api/orders?phone=${encodeURIComponent(cleanDigits)}`;
+          apiUrl = `/api/orders?phone=${encodeURIComponent(cleanDigits)}&limit=30`;
         } else if (q.length > 0) {
-          apiUrl = `/api/orders?query=${encodeURIComponent(q)}`;
+          apiUrl = `/api/orders?query=${encodeURIComponent(q)}&limit=30`;
         }
 
         const res = await fetch(apiUrl);

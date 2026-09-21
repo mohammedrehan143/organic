@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findLocalOrder, updateLocalOrderStatus } from '@/lib/serverStore';
-import { isSupabaseConfigured, supabase, formatDbOrderToModel } from '@/lib/supabase';
+import { findLocalOrder, updateLocalOrderStatus, serverStore } from '@/lib/serverStore';
+import { isSupabaseConfigured, supabase, supabaseAdmin, formatDbOrderToModel } from '@/lib/supabase';
 
 export async function GET(
   req: NextRequest,
@@ -8,13 +8,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const client = supabaseAdmin || supabase;
     
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && client) {
       // Check by id or token_id or tracking_code
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('orders')
         .select('*')
-        .or(`id.eq.${id},token_id.eq.${id},tracking_code.eq.${id},customer_phone.eq.${id}`)
+        .or(`id.eq.${id},token_id.eq.${id},tracking_code.eq.${id}`)
         .limit(1)
         .maybeSingle();
 
@@ -51,29 +52,47 @@ export async function PATCH(
     if (feedbackTags !== undefined) extra.feedbackTags = feedbackTags;
     if (feedbackNote !== undefined) extra.feedbackNote = feedbackNote;
 
-    if (isSupabaseConfigured && supabase) {
-      const updateData: any = {};
+    const client = supabaseAdmin || supabase;
+    let dbUpdatedOrder: any = null;
+
+    if (isSupabaseConfigured && client) {
+      const updateData: any = { updated_at: new Date().toISOString() };
       if (status) updateData.status = status;
-      if (riderName) updateData.rider_name = riderName;
-      if (riderPhone) updateData.rider_phone = riderPhone;
-      if (deliveryAgentId) updateData.delivery_agent_id = deliveryAgentId;
-      if (rating) updateData.rating = rating;
-      if (feedbackTags) updateData.feedback_tags = feedbackTags;
-      if (feedbackNote) updateData.feedback_note = feedbackNote;
+      if (riderName !== undefined) updateData.rider_name = riderName;
+      if (riderPhone !== undefined) updateData.rider_phone = riderPhone;
+      if (deliveryAgentId !== undefined) updateData.delivery_agent_id = deliveryAgentId;
+      if (rating !== undefined) updateData.rating = rating;
+      if (feedbackTags !== undefined) updateData.feedback_tags = feedbackTags;
+      if (feedbackNote !== undefined) updateData.feedback_note = feedbackNote;
       if (status === 'completed') updateData.delivered_at = new Date().toISOString();
 
-      await supabase
+      const { data, error } = await client
         .from('orders')
         .update(updateData)
-        .or(`id.eq.${id},token_id.eq.${id}`);
+        .or(`id.eq.${id},token_id.eq.${id}`)
+        .select('*')
+        .maybeSingle();
+
+      if (!error && data) {
+        dbUpdatedOrder = formatDbOrderToModel(data);
+
+        // If marked completed and delivery agent assigned, increment rider count
+        if (status === 'completed' && data.delivery_agent_id) {
+          try {
+            await client.rpc('increment_agent_delivery_count', { agent_id: data.delivery_agent_id });
+          } catch {
+            // Ignore RPC failure if function not yet defined
+          }
+        }
+      }
     }
 
     const updated = updateLocalOrderStatus(id, status, extra);
-    if (!updated) {
+    if (!updated && !dbUpdatedOrder) {
       return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, order: updated });
+    return NextResponse.json({ success: true, order: dbUpdatedOrder || updated });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLocalAgents } from '@/lib/serverStore';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
 import { DeliveryAgent } from '@/types/cafe';
 
 export async function POST(req: NextRequest) {
@@ -11,10 +11,11 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanInput = phone.replace(/[^0-9]/g, '');
+    const client = supabaseAdmin || supabase;
 
-    // Search in DB if configured
-    if (isSupabaseConfigured && supabase) {
-      const { data } = await supabase
+    // Search in Supabase DB if configured
+    if (isSupabaseConfigured && client) {
+      const { data } = await client
         .from('delivery_agents')
         .select('*');
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Local in-memory search
+    // Local in-memory search fallback
     const localAgents = getLocalAgents();
     const foundLocal = localAgents.find((a) =>
       a.phone.replace(/[^0-9]/g, '').includes(cleanInput) ||
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, agent: foundLocal });
     }
 
-    // If phone is valid 10 digits and not found, register on-the-fly for seamless testing
+    // If phone is valid 10 digits and not found, auto-register partner in DB
     if (cleanInput.length >= 10) {
       const autoAgent: DeliveryAgent = {
         id: `AGT-${cleanInput.slice(-4)}-01`,
@@ -58,8 +59,20 @@ export async function POST(req: NextRequest) {
         vehicleType: 'Delivery Vehicle',
         ordersDeliveredCount: 0,
       };
+
+      if (isSupabaseConfigured && client) {
+        await client.from('delivery_agents').insert({
+          id: autoAgent.id,
+          name: autoAgent.name,
+          phone: autoAgent.phone,
+          status: autoAgent.status,
+          vehicle_type: autoAgent.vehicleType,
+          orders_delivered_count: 0,
+        });
+      }
+
       localAgents.push(autoAgent);
-      return NextResponse.json({ success: true, agent: autoAgent, note: 'New rider registered' });
+      return NextResponse.json({ success: true, agent: autoAgent, note: 'New rider registered in database' });
     }
 
     return NextResponse.json({ success: false, message: 'No delivery agent found with this phone number' }, { status: 404 });

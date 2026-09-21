@@ -24,7 +24,7 @@ export function ZafirooNavbar() {
           {/* FREE DELIVERY FOR ALL PRODUCTS & Delivery Line (Replaces Daily Harvest) */}
           <div className="flex items-center gap-2 truncate">
             <span className="px-2 py-0.5 rounded-full bg-white text-[#173612] font-black text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 shadow-xs">
-              🚚 FREE DELIVERY
+              FREE DELIVERY
             </span>
             <span className="text-white/95 font-semibold text-[10px] sm:text-[11px] truncate">
               Free Delivery For All Products • Call: +91 7259635948

@@ -18,15 +18,45 @@ import {
   INITIAL_SOS_ALERTS,
   CAFE_METADATA,
 } from '@/data/cafeData';
-import { isSupabaseConfigured, supabase, formatDbOrderToModel } from '@/lib/supabase';
+import {
+  isSupabaseConfigured,
+  supabase,
+  formatDbOrderToModel,
+  generateCollisionSafeOrderId,
+  generateCollisionSafeTokenId,
+  generateCollisionSafeTrackingCode,
+} from '@/lib/supabase';
 import { getCurrentLocationAddress } from '@/lib/location';
 
 // Local storage keys
 const CART_STORAGE_KEY = 'atelier_lambre_cart_v1';
 const ORDERS_STORAGE_KEY = 'atelier_lambre_orders_v1';
 const SOS_STORAGE_KEY = 'zafiroo_sos_alerts_v1';
-const KITCHEN_PIN_KEY = 'zafiroo_kitchen_pin_v1';
 const USER_LOCATION_KEY = 'zafiroo_user_location_v1';
+
+// Max orders retained in client memory & localStorage to prevent browser crashes under 10,000 orders
+const MAX_CLIENT_ORDERS = 200;
+const MAX_SAVED_LOCAL_ORDERS = 25;
+
+/**
+ * Safe local storage setter to guard against DOMException: QuotaExceededError
+ */
+function safeSetStorage(key: string, data: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (err: any) {
+    console.warn(`[Zafiroo Storage] LocalStorage write failed for ${key}:`, err?.message);
+    // If quota exceeded, clear stale keys or trim
+    try {
+      if (Array.isArray(data)) {
+        localStorage.setItem(key, JSON.stringify(data.slice(0, 10)));
+      }
+    } catch {
+      // Ignore fallback failure
+    }
+  }
+}
 
 export interface OrderContextType {
   // Location Auto-Setter
@@ -36,6 +66,7 @@ export interface OrderContextType {
   setLocationModalOpen: (open: boolean) => void;
   setUserLocation: (loc: UserLocation) => void;
   autoDetectLocation: () => Promise<UserLocation | null>;
+
   // Menu
   menuItems: MenuItem[];
   loadingMenu: boolean;
@@ -73,7 +104,7 @@ export interface OrderContextType {
   deliveryAgents: DeliveryAgent[];
   refreshDeliveryAgents: () => Promise<void>;
   assignDeliveryAgent: (orderId: string, agentId: string) => Promise<boolean>;
-  verifyDeliveryOtp: (orderIdOrToken: string, enteredOtp: string) => { success: boolean; message: string };
+  verifyDeliveryOtp: (orderIdOrToken: string, enteredOtp: string) => Promise<{ success: boolean; message: string; order?: Order }>;
 
   // Rider SOS Disaster Alerts
   sosAlerts: SosAlert[];
@@ -112,13 +143,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const setUserLocation = useCallback((loc: UserLocation) => {
     setUserLocationState(loc);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(USER_LOCATION_KEY, JSON.stringify(loc));
-      } catch (e) {
-        console.warn('Error saving user location:', e);
-      }
-    }
+    safeSetStorage(USER_LOCATION_KEY, loc);
   }, []);
 
   const autoDetectLocation = useCallback(async (): Promise<UserLocation | null> => {
@@ -180,6 +205,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [kitchenPin, setKitchenPin] = useState('1234');
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // High-concurrency realtime event buffer refs
+  const orderEventQueueRef = useRef<Order[]>([]);
+  const batchFlushTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Web Audio Context initializer
   const getAudioContext = useCallback(() => {
@@ -246,7 +275,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       osc.type = 'sawtooth';
       gain.gain.setValueAtTime(0.3, now);
 
-      // Warble pitch for 3.5 seconds
       for (let i = 0; i < 7; i++) {
         const time = now + i * 0.45;
         osc.frequency.setValueAtTime(i % 2 === 0 ? 880 : 587.33, time);
@@ -262,6 +290,34 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [getAudioContext]);
 
+  const refreshDeliveryAgents = useCallback(async () => {
+    try {
+      const res = await fetch('/api/delivery/agents');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.agents)) {
+          setDeliveryAgents(data.agents);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const refreshSosAlerts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/delivery/sos');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.alerts)) {
+          setSosAlerts(data.alerts);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   // Load from localStorage on client mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -273,34 +329,51 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setCart(JSON.parse(savedCart));
       }
 
-      // 2. Orders
+      // 2. Orders (purges legacy demo orders and initializes clean)
       const savedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
       if (savedOrders) {
         const parsed = JSON.parse(savedOrders);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setOrders(parsed);
-          setActiveTrackingOrder(parsed[0]);
+          const realOrders = parsed.filter(
+            (o) => o.id !== 'ZF-9421-XK7' && o.id !== 'ZF-3829-MR2'
+          );
+          setOrders(realOrders.slice(0, MAX_CLIENT_ORDERS));
+          setActiveTrackingOrder(realOrders[0] || null);
+          safeSetStorage(ORDERS_STORAGE_KEY, realOrders.slice(0, MAX_SAVED_LOCAL_ORDERS));
+        } else {
+          setOrders([]);
+          setActiveTrackingOrder(null);
         }
       } else {
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(INITIAL_ORDERS));
-        setActiveTrackingOrder(INITIAL_ORDERS[0]);
+        setOrders([]);
+        setActiveTrackingOrder(null);
       }
 
-      // 3. SOS Alerts
+      // 3. SOS Alerts (purges legacy demo alerts)
       const savedSos = localStorage.getItem(SOS_STORAGE_KEY);
       if (savedSos) {
-        setSosAlerts(JSON.parse(savedSos));
+        const parsedSos = JSON.parse(savedSos);
+        if (Array.isArray(parsedSos)) {
+          const realSos = parsedSos.filter((s) => s.id !== 'SOS-9421-1718');
+          setSosAlerts(realSos);
+          safeSetStorage(SOS_STORAGE_KEY, realSos.slice(0, 50));
+        } else {
+          setSosAlerts([]);
+        }
       } else {
-        localStorage.setItem(SOS_STORAGE_KEY, JSON.stringify(INITIAL_SOS_ALERTS));
+        setSosAlerts([]);
       }
 
-      // 4. Kitchen PIN
-      const savedPin = localStorage.getItem(KITCHEN_PIN_KEY);
-      if (savedPin) {
-        setKitchenPin(savedPin);
-      }
+      // 4. Purge legacy confidential data from browser local storage
+      try {
+        localStorage.removeItem('zafiroo_kitchen_pin_v1');
+      } catch {}
 
-      // 5. Delivery Location
+      // 5. Fetch fresh database courier agents and active SOS alerts
+      refreshDeliveryAgents();
+      refreshSosAlerts();
+
+      // 6. Delivery Location
       const savedLocation = localStorage.getItem(USER_LOCATION_KEY);
       if (savedLocation) {
         try {
@@ -309,7 +382,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           console.warn('Error parsing saved location:', e);
         }
       } else {
-        // Default initial hub location
         const defaultLoc: UserLocation = {
           formattedAddress: 'Zafiroo Organic Farm, Bylanarasapura, Hoskote Taluk, Bangalore - 562122',
           shortAddress: 'Bylanarasapura, Hoskote',
@@ -321,69 +393,90 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           lng: 77.7981,
         };
         setUserLocationState(defaultLoc);
-        localStorage.setItem(USER_LOCATION_KEY, JSON.stringify(defaultLoc));
+        safeSetStorage(USER_LOCATION_KEY, defaultLoc);
       }
     } catch (err) {
       console.warn('Error reading from local storage:', err);
     }
-  }, []);
+  }, [refreshDeliveryAgents, refreshSosAlerts]);
 
-  // Persist cart changes to localStorage
+  // Persist cart changes
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-    } catch (e) {
-      console.warn('Error saving cart:', e);
-    }
+    safeSetStorage(CART_STORAGE_KEY, cart);
   }, [cart]);
 
-  // Persist orders changes to localStorage
+  // Persist bounded orders (never saves more than MAX_SAVED_LOCAL_ORDERS to prevent 5MB storage quota crash)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-    } catch (e) {
-      console.warn('Error saving orders:', e);
+    if (orders.length > 0) {
+      safeSetStorage(ORDERS_STORAGE_KEY, orders.slice(0, MAX_SAVED_LOCAL_ORDERS));
     }
   }, [orders]);
 
-  // Persist SOS alerts changes to localStorage
+  // Persist SOS alerts
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(SOS_STORAGE_KEY, JSON.stringify(sosAlerts));
-    } catch (e) {
-      console.warn('Error saving sos alerts:', e);
-    }
+    safeSetStorage(SOS_STORAGE_KEY, sosAlerts.slice(0, 50));
   }, [sosAlerts]);
 
-  // Supabase Realtime Listener (graceful fallback if not configured)
+  // Flush batched realtime orders to avoid React render queue starvation under mass traffic
+  const flushOrderQueue = useCallback(() => {
+    if (orderEventQueueRef.current.length === 0) return;
+
+    const incoming = [...orderEventQueueRef.current];
+    orderEventQueueRef.current = [];
+
+    setOrders((prev) => {
+      const map = new Map<string, Order>();
+      // Put incoming first
+      for (const o of incoming) {
+        map.set(o.id, o);
+      }
+      // Add existing if not present
+      for (const o of prev) {
+        if (!map.has(o.id)) {
+          map.set(o.id, o);
+        }
+      }
+      const combined = Array.from(map.values());
+      // Sort newest first and cap to MAX_CLIENT_ORDERS to keep DOM 60fps
+      combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return combined.slice(0, MAX_CLIENT_ORDERS);
+    });
+
+    // Update active tracking order if affected
+    setActiveTrackingOrder((current) => {
+      if (!current) return incoming[0] || null;
+      const updated = incoming.find((o) => o.id === current.id || o.tokenId === current.tokenId);
+      return updated || current;
+    });
+
+    playOrderChime();
+  }, [playOrderChime]);
+
+  // Supabase Realtime Listener (with event batching)
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
     try {
       const ordersChannel = supabase
-        .channel('realtime_orders')
+        .channel('realtime_orders_v2')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
           (payload) => {
-            if (payload.eventType === 'INSERT') {
-              const newOrder = formatDbOrderToModel(payload.new);
-              setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
-              playOrderChime();
-            } else if (payload.eventType === 'UPDATE') {
-              const updated = formatDbOrderToModel(payload.new);
-              setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
-              setActiveTrackingOrder((current) => (current?.id === updated.id ? updated : current));
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const model = formatDbOrderToModel(payload.new);
+              orderEventQueueRef.current.push(model);
+
+              // Debounce flush every 250ms
+              if (batchFlushTimeoutRef.current) clearTimeout(batchFlushTimeoutRef.current);
+              batchFlushTimeoutRef.current = setTimeout(flushOrderQueue, 250);
             }
           }
         )
         .subscribe();
 
       const sosChannel = supabase
-        .channel('realtime_sos')
+        .channel('realtime_sos_v2')
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'sos_alerts' },
@@ -398,18 +491,56 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         .subscribe();
 
       return () => {
+        if (batchFlushTimeoutRef.current) clearTimeout(batchFlushTimeoutRef.current);
         supabase?.removeChannel(ordersChannel);
         supabase?.removeChannel(sosChannel);
       };
     } catch (e) {
-      console.warn('Supabase subscription error:', e);
+      console.warn('Supabase subscription warning:', e);
     }
-  }, [playOrderChime, playSosSiren]);
+  }, [flushOrderQueue, playSosSiren]);
+
+  // Smart Background Sync (Polls active orders every 5 seconds to guarantee 100% real-time sync with zero client exposure)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/orders?status=active&limit=60');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && Array.isArray(data.orders)) {
+          const activeList: Order[] = data.orders;
+          setOrders((prev) => {
+            const map = new Map<string, Order>();
+            for (const o of activeList) {
+              map.set(o.id, o);
+            }
+            for (const o of prev) {
+              if (!map.has(o.id)) {
+                map.set(o.id, o);
+              }
+            }
+            const combined = Array.from(map.values());
+            combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            return combined.slice(0, MAX_CLIENT_ORDERS);
+          });
+
+          setActiveTrackingOrder((current) => {
+            if (!current) return current;
+            const updated = activeList.find((o) => o.id === current.id || o.tokenId === current.tokenId);
+            return updated || current;
+          });
+        }
+      } catch {
+        // Network silent fallback
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, []);
 
   // Cart operations
   const addToCart = (item: MenuItem, quantity = 1, selectedOptions: Record<string, string> = {}) => {
     setCart((prev) => {
-      // Check if item with exact same options already exists
       const optionsKey = JSON.stringify(selectedOptions);
       const existingIndex = prev.findIndex(
         (ci) => ci.menuItem.id === item.id && JSON.stringify(ci.selectedOptions) === optionsKey
@@ -491,13 +622,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const placeOrder = async (
     orderData: Omit<Order, 'id' | 'tokenId' | 'trackingCode' | 'createdAt' | 'status' | 'deliveryOtp'>
   ): Promise<Order> => {
-    const randomSuffix = Math.random().toString(36).substring(2, 5).toUpperCase();
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderId = `ZF-${randomNum}-${randomSuffix}`;
-    const tokenId = `TOK-${randomNum}-${randomSuffix}`;
-    const trackingCode = `TRK-${randomNum}`;
-    // Strict 4-digit OTP for doorstep verification
-    const deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const orderId = generateCollisionSafeOrderId();
+    const tokenId = generateCollisionSafeTokenId();
+    const trackingCode = generateCollisionSafeTrackingCode();
+    // Strict 4-digit OTP for doorstep delivery verification
+    const deliveryOtp = String(Math.floor(1000 + Math.random() * 9000));
 
     const newOrder: Order = {
       ...orderData,
@@ -509,21 +638,31 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-    // Update local state
-    setOrders((prev) => [newOrder, ...prev]);
+    // Optimistic local update
+    setOrders((prev) => [newOrder, ...prev.slice(0, MAX_CLIENT_ORDERS - 1)]);
     setActiveTrackingOrder(newOrder);
     clearCart();
     playOrderChime();
 
     // Persist to server API & DB
     try {
-      fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newOrder),
-      }).catch((e) => console.warn('Order sync background error:', e));
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.order) {
+          // Merge confirmed server response
+          setOrders((prev) => prev.map((o) => (o.id === newOrder.id ? data.order : o)));
+          setActiveTrackingOrder(data.order);
+          return data.order;
+        }
+      }
     } catch (e) {
-      console.warn('Order sync error:', e);
+      console.warn('Order sync network warning (order saved locally):', e);
     }
 
     return newOrder;
@@ -536,6 +675,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   ): Promise<Order | null> => {
     let updatedOrder: Order | null = null;
 
+    // Optimistic local state update
     setOrders((prev) =>
       prev.map((o) => {
         if (o.id === orderId || o.tokenId === orderId) {
@@ -543,7 +683,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             ...o,
             status,
             ...extra,
-            deliveredAt: status === 'completed' ? new Date().toISOString() : o.deliveredAt,
+            deliveredAt: status === 'completed' ? (extra?.deliveredAt || new Date().toISOString()) : o.deliveredAt,
           };
           return updatedOrder;
         }
@@ -553,6 +693,28 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     if (updatedOrder && activeTrackingOrder && (activeTrackingOrder.id === orderId || activeTrackingOrder.tokenId === orderId)) {
       setActiveTrackingOrder(updatedOrder);
+    }
+
+    // Persist to backend and Supabase
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, ...extra }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.order) {
+          updatedOrder = data.order;
+          setOrders((prev) => prev.map((o) => (o.id === orderId || o.tokenId === orderId ? data.order : o)));
+          if (activeTrackingOrder && (activeTrackingOrder.id === orderId || activeTrackingOrder.tokenId === orderId)) {
+            setActiveTrackingOrder(data.order);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Update order status server sync error:', e);
     }
 
     return updatedOrder;
@@ -577,6 +739,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return o;
       })
     );
+
+    try {
+      await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, feedbackTags: tags, feedbackNote: note }),
+      });
+    } catch (e) {
+      console.warn('Feedback sync error:', e);
+    }
+
     return true;
   };
 
@@ -584,34 +757,69 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const agent = deliveryAgents.find((a) => a.id === agentId);
     if (!agent) return false;
 
-    await updateOrderStatus(orderId, 'delivering', {
+    const result = await updateOrderStatus(orderId, 'delivering', {
       deliveryAgentId: agent.id,
       riderName: agent.name,
       riderPhone: agent.phone,
     });
-    return true;
+
+    return Boolean(result);
   };
 
-  const verifyDeliveryOtp = (
+  const verifyDeliveryOtp = async (
     orderIdOrToken: string,
     enteredOtp: string
-  ): { success: boolean; message: string } => {
-    const target = orders.find(
-      (o) => o.id === orderIdOrToken || o.tokenId === orderIdOrToken
-    );
-
-    if (!target) {
-      return { success: false, message: 'Order not found.' };
-    }
-
+  ): Promise<{ success: boolean; message: string; order?: Order }> => {
     const cleanEntered = (enteredOtp || '').trim();
-    if (cleanEntered !== target.deliveryOtp) {
-      return { success: false, message: 'Invalid 4-digit OTP. Delivery cannot be completed.' };
+    if (!cleanEntered) {
+      return { success: false, message: 'Please enter the 4-digit doorstep OTP.' };
     }
 
-    // Complete order
-    updateOrderStatus(target.id, 'completed');
-    return { success: true, message: 'OTP verified successfully! Order marked as Delivered.' };
+    try {
+      const res = await fetch('/api/delivery/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: orderIdOrToken,
+          otp: cleanEntered,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Update local status to completed
+        const completedOrder = data.order;
+        setOrders((prev) =>
+          prev.map((o) => {
+            if (o.id === orderIdOrToken || o.tokenId === orderIdOrToken) {
+              return completedOrder || { ...o, status: 'completed', deliveredAt: new Date().toISOString() };
+            }
+            return o;
+          })
+        );
+
+        if (activeTrackingOrder && (activeTrackingOrder.id === orderIdOrToken || activeTrackingOrder.tokenId === orderIdOrToken)) {
+          setActiveTrackingOrder(completedOrder || { ...activeTrackingOrder, status: 'completed', deliveredAt: new Date().toISOString() });
+        }
+
+        return {
+          success: true,
+          message: data.message || 'OTP verified successfully! Order marked as Delivered.',
+          order: completedOrder,
+        };
+      }
+
+      return {
+        success: false,
+        message: data.message || 'Invalid 4-digit OTP. Delivery cannot be completed.',
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        message: 'Could not connect to OTP verification service. Please check your internet connection.',
+      };
+    }
   };
 
   // SOS alerts operations
@@ -644,8 +852,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-    setSosAlerts((prev) => [newAlert, ...prev]);
+    setSosAlerts((prev) => [newAlert, ...prev.slice(0, 50)]);
     playSosSiren();
+
+    try {
+      fetch('/api/delivery/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAlert),
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('SOS sync error:', e);
+    }
+
     return newAlert;
   };
 
@@ -662,6 +881,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           : a
       )
     );
+
+    try {
+      fetch('/api/delivery/sos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: alertId, resolvedBy }),
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('Resolve SOS sync error:', e);
+    }
+
     return true;
   };
 
@@ -670,20 +900,22 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setLoadingMenu(false), 200);
   };
 
-  const refreshDeliveryAgents = async () => {};
-  const refreshSosAlerts = async () => {};
-
-  const updateKitchenPin = (newPin: string) => {
+  const updateKitchenPin = async (newPin: string) => {
     const clean = newPin.trim();
     if (clean.length >= 4) {
       setKitchenPin(clean);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(KITCHEN_PIN_KEY, clean);
+      try {
+        await fetch('/api/admin/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update_pin', newPin: clean }),
+        });
+      } catch (err) {
+        console.warn('Failed to sync updated PIN to server:', err);
       }
     }
   };
 
-  // Most recent active SOS alert (if any)
   const latestActiveSos = sosAlerts.find((a) => a.status === 'active') || null;
 
   return (

@@ -1,7 +1,10 @@
 import { Order, MenuItem, DeliveryAgent, SosAlert, OrderStatus } from '@/types/cafe';
 import { INITIAL_ORDERS, INITIAL_MENU_ITEMS, INITIAL_DELIVERY_AGENTS, INITIAL_SOS_ALERTS } from '@/data/cafeData';
 
-// Global singleton in-memory state for local development when DB is not configured
+// Maximum in-memory order retention to prevent Node.js heap exhaustion under 10,000+ orders
+const MAX_LOCAL_ORDERS = 1000;
+
+// Global singleton in-memory state for local development / fallback when DB is not configured
 declare global {
   // eslint-disable-next-line no-var
   var __zafiroo_server_store__: {
@@ -10,44 +13,203 @@ declare global {
     agents: DeliveryAgent[];
     sosAlerts: SosAlert[];
     kitchenPin: string;
+    // O(1) Index maps for instantaneous search under high order volume
+    indexById: Map<string, Order>;
+    indexByToken: Map<string, Order>;
+    indexByPhone: Map<string, Order[]>;
   } | undefined;
 }
 
-if (!global.__zafiroo_server_store__) {
-  global.__zafiroo_server_store__ = {
-    orders: [...INITIAL_ORDERS],
-    menu: [...INITIAL_MENU_ITEMS],
-    agents: [...INITIAL_DELIVERY_AGENTS],
-    sosAlerts: [...INITIAL_SOS_ALERTS],
-    kitchenPin: '1234',
-  };
+function reindexAll(orders: Order[], store: typeof global.__zafiroo_server_store__) {
+  if (!store) return;
+  store.indexById.clear();
+  store.indexByToken.clear();
+  store.indexByPhone.clear();
+
+  for (const o of orders) {
+    if (o.id) store.indexById.set(o.id.toLowerCase(), o);
+    if (o.tokenId) store.indexByToken.set(o.tokenId.toLowerCase(), o);
+    if (o.trackingCode) store.indexByToken.set(o.trackingCode.toLowerCase(), o);
+
+    const phone = (o.customer?.phone || '').replace(/[^0-9]/g, '');
+    if (phone) {
+      const ten = phone.slice(-10);
+      const list = store.indexByPhone.get(ten) || [];
+      list.push(o);
+      store.indexByPhone.set(ten, list);
+    }
+  }
 }
 
-export const serverStore = global.__zafiroo_server_store__;
+const DEFAULT_SERVER_AGENTS: DeliveryAgent[] = [
+  {
+    id: "AGT-9876-01",
+    name: "Aarav Sharma",
+    phone: "9876543201",
+    status: "active",
+    vehicleType: "Electric Eco-Van",
+    ordersDeliveredCount: 142,
+  },
+  {
+    id: "AGT-9876-02",
+    name: "Priya Nair",
+    phone: "9876543202",
+    status: "active",
+    vehicleType: "Insulated Farm Cargo Bike",
+    ordersDeliveredCount: 98,
+  },
+  {
+    id: "AGT-9876-03",
+    name: "Rahul Verma",
+    phone: "9876543203",
+    status: "active",
+    vehicleType: "Electric Eco-Van",
+    ordersDeliveredCount: 215,
+  },
+  {
+    id: "AGT-9876-04",
+    name: "Deepak Patel",
+    phone: "9876543204",
+    status: "active",
+    vehicleType: "Insulated Farm Cargo Bike",
+    ordersDeliveredCount: 64,
+  },
+];
 
-export function getLocalOrders(): Order[] {
-  return serverStore.orders;
+if (!global.__zafiroo_server_store__) {
+  const initialOrders = [...INITIAL_ORDERS];
+  const store = {
+    orders: initialOrders,
+    menu: [...INITIAL_MENU_ITEMS],
+    agents: INITIAL_DELIVERY_AGENTS.length > 0 ? [...INITIAL_DELIVERY_AGENTS] : [...DEFAULT_SERVER_AGENTS],
+    sosAlerts: [...INITIAL_SOS_ALERTS],
+    kitchenPin: '1234',
+    indexById: new Map<string, Order>(),
+    indexByToken: new Map<string, Order>(),
+    indexByPhone: new Map<string, Order[]>(),
+  };
+  reindexAll(initialOrders, store);
+  global.__zafiroo_server_store__ = store;
+}
+
+export const serverStore = global.__zafiroo_server_store__!;
+
+export interface GetLocalOrdersOptions {
+  status?: string;
+  limit?: number;
+  offset?: number;
+  phone?: string;
+  query?: string;
+}
+
+export function getLocalOrders(options?: GetLocalOrdersOptions): Order[] {
+  let list = serverStore.orders;
+
+  if (options?.status) {
+    if (options.status === 'active') {
+      list = list.filter((o) => ['new', 'preparing', 'ready', 'delivering'].includes(o.status));
+    } else {
+      list = list.filter((o) => o.status === options.status);
+    }
+  }
+
+  if (options?.phone) {
+    const clean = options.phone.replace(/[^0-9]/g, '');
+    const ten = clean.slice(-10);
+    list = list.filter((o) => {
+      const oPhone = (o.customer?.phone || '').replace(/[^0-9]/g, '');
+      return oPhone.includes(clean) || clean.includes(oPhone) || (ten && oPhone.includes(ten));
+    });
+  } else if (options?.query) {
+    const q = options.query.trim().toLowerCase();
+    const qDigits = q.replace(/[^0-9]/g, '');
+    list = list.filter((o) => {
+      if (o.id.toLowerCase().includes(q)) return true;
+      if (o.tokenId.toLowerCase().includes(q)) return true;
+      if (o.trackingCode.toLowerCase().includes(q)) return true;
+      if (o.customer?.name?.toLowerCase().includes(q)) return true;
+      if (qDigits.length >= 4 && (o.customer?.phone || '').replace(/[^0-9]/g, '').includes(qDigits)) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  const offset = options?.offset || 0;
+  const limit = options?.limit || list.length;
+  return list.slice(offset, offset + limit);
 }
 
 export function findLocalOrder(identifier: string): Order | undefined {
+  if (!identifier) return undefined;
   const query = identifier.trim().toLowerCase();
+  const cleanDigits = query.replace(/[^0-9]/g, '');
+
+  // 1. Direct O(1) ID lookup
+  if (serverStore.indexById.has(query)) {
+    return serverStore.indexById.get(query);
+  }
+
+  // 2. Direct O(1) Token or Tracking Code lookup
+  if (serverStore.indexByToken.has(query)) {
+    return serverStore.indexByToken.get(query);
+  }
+
+  // 3. Direct Phone suffix lookup
+  if (cleanDigits.length >= 10) {
+    const ten = cleanDigits.slice(-10);
+    const byPhone = serverStore.indexByPhone.get(ten);
+    if (byPhone && byPhone.length > 0) {
+      return byPhone[0];
+    }
+  }
+
+  // 4. Linear scan fallback for partial matches
   return serverStore.orders.find(
     (o) =>
       o.id.toLowerCase() === query ||
       o.tokenId.toLowerCase() === query ||
       o.trackingCode.toLowerCase() === query ||
-      o.customer.phone.replace(/[^0-9]/g, '').includes(query.replace(/[^0-9]/g, ''))
+      (cleanDigits.length >= 4 && (o.customer?.phone || '').replace(/[^0-9]/g, '').includes(cleanDigits))
   );
 }
 
 export function addLocalOrder(order: Order): Order {
   // Prepend new order
   serverStore.orders.unshift(order);
+
+  // Index in fast maps
+  if (order.id) serverStore.indexById.set(order.id.toLowerCase(), order);
+  if (order.tokenId) serverStore.indexByToken.set(order.tokenId.toLowerCase(), order);
+  if (order.trackingCode) serverStore.indexByToken.set(order.trackingCode.toLowerCase(), order);
+
+  const phone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
+  if (phone) {
+    const ten = phone.slice(-10);
+    const list = serverStore.indexByPhone.get(ten) || [];
+    list.unshift(order);
+    serverStore.indexByPhone.set(ten, list);
+  }
+
+  // Prevent memory leaks: evict oldest orders if exceeding capacity
+  if (serverStore.orders.length > MAX_LOCAL_ORDERS) {
+    const evicted = serverStore.orders.pop();
+    if (evicted) {
+      if (evicted.id) serverStore.indexById.delete(evicted.id.toLowerCase());
+      if (evicted.tokenId) serverStore.indexByToken.delete(evicted.tokenId.toLowerCase());
+      if (evicted.trackingCode) serverStore.indexByToken.delete(evicted.trackingCode.toLowerCase());
+    }
+  }
+
   return order;
 }
 
 export function updateLocalOrderStatus(id: string, status: OrderStatus, extra?: Partial<Order>): Order | null {
-  const index = serverStore.orders.findIndex((o) => o.id === id || o.tokenId === id);
+  const query = id.trim().toLowerCase();
+  const existing = serverStore.indexById.get(query) || serverStore.indexByToken.get(query);
+  const targetId = existing ? existing.id : id;
+
+  const index = serverStore.orders.findIndex((o) => o.id === targetId || o.tokenId === id);
   if (index === -1) return null;
 
   const current = serverStore.orders[index];
@@ -55,9 +217,16 @@ export function updateLocalOrderStatus(id: string, status: OrderStatus, extra?: 
     ...current,
     status,
     ...extra,
-    deliveredAt: status === 'completed' ? new Date().toISOString() : current.deliveredAt,
+    deliveredAt: status === 'completed' ? (extra?.deliveredAt || new Date().toISOString()) : current.deliveredAt,
   };
+
   serverStore.orders[index] = updated;
+
+  // Update indexes
+  if (updated.id) serverStore.indexById.set(updated.id.toLowerCase(), updated);
+  if (updated.tokenId) serverStore.indexByToken.set(updated.tokenId.toLowerCase(), updated);
+  if (updated.trackingCode) serverStore.indexByToken.set(updated.trackingCode.toLowerCase(), updated);
+
   return updated;
 }
 
@@ -67,6 +236,9 @@ export function getLocalSosAlerts(): SosAlert[] {
 
 export function addLocalSosAlert(alert: SosAlert): SosAlert {
   serverStore.sosAlerts.unshift(alert);
+  if (serverStore.sosAlerts.length > 500) {
+    serverStore.sosAlerts.pop();
+  }
   return alert;
 }
 

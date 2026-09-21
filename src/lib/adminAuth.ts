@@ -1,7 +1,4 @@
-// Admin authentication & universal master key verification
-
-const DEFAULT_MASTER_KEY = process.env.ADMIN_MASTER_KEY || "ZAFIROO_MASTER_2026";
-const DEFAULT_KITCHEN_PIN = "1234";
+// Admin authentication & master key verification (Server-Side Only)
 
 export interface VerifyResult {
   valid: boolean;
@@ -10,33 +7,34 @@ export interface VerifyResult {
 }
 
 /**
- * Verifies if entered PIN matches either the Universal Master Key or Kitchen PIN
+ * Server-side verification of entered PIN against environment variables or database values
  */
-export function verifyAdminPin(enteredPin: string, customKitchenPin?: string): VerifyResult {
+export function verifyAdminPin(
+  enteredPin: string,
+  dbPins?: { kitchenPin?: string; masterPin?: string }
+): VerifyResult {
   const pin = (enteredPin || '').trim();
-  const activeKitchenPin = (customKitchenPin || DEFAULT_KITCHEN_PIN).trim();
+  const masterKey = (process.env.ADMIN_MASTER_KEY || dbPins?.masterPin || '').trim();
+  const kitchenPin = (dbPins?.kitchenPin || '1234').trim();
 
   if (!pin) {
     return { valid: false, role: 'invalid', message: 'PIN cannot be empty' };
   }
 
-  // Universal Master Key bypass
-  if (pin === DEFAULT_MASTER_KEY || pin === '9999') {
+  // Universal Master Key match
+  if (masterKey && pin === masterKey) {
     return { valid: true, role: 'master', message: 'Authenticated with Universal Master Key' };
   }
 
-  // Standard Kitchen PIN
-  if (pin === activeKitchenPin) {
+  // Kitchen PIN match
+  if (kitchenPin && pin === kitchenPin) {
     return { valid: true, role: 'kitchen', message: 'Kitchen PIN verified' };
   }
 
-  return { valid: false, role: 'invalid', message: 'Incorrect PIN. Try 1234 or master key.' };
+  return { valid: false, role: 'invalid', message: 'Incorrect PIN. Access denied.' };
 }
 
 export function isMasterKey(pin: string): boolean {
-  return pin === DEFAULT_MASTER_KEY || pin === '9999';
-}
-
-export function getDefaultKitchenPin(): string {
-  return DEFAULT_KITCHEN_PIN;
+  const masterKey = (process.env.ADMIN_MASTER_KEY || '').trim();
+  return Boolean(masterKey && pin.trim() === masterKey);
 }
