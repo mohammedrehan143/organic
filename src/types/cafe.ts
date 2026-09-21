@@ -161,3 +161,25 @@ export interface AdminCredentials {
   pin: string;
   isMaster?: boolean;
 }
+
+export type MembershipPlanType = '1_month' | '6_months';
+export type MembershipBillingType = 'postpaid' | 'prepaid';
+export type MembershipStatus = 'active' | 'expired' | 'cancelled';
+
+export interface Membership {
+  id: string;
+  phone: string;
+  customerName: string;
+  customerEmail?: string;
+  address?: string;
+  planType: MembershipPlanType;
+  planName: string;
+  billingType: MembershipBillingType;
+  price: number;
+  status: MembershipStatus;
+  paymentStatus: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt?: string;
+}

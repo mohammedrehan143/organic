@@ -93,6 +93,7 @@ export interface OrderContextType {
 
   // Order Placement & Tracking
   orders: Order[];
+  refreshOrders: () => Promise<void>;
   activeTrackingOrder: Order | null;
   setActiveTrackingOrder: (order: Order | null) => void;
   findOrderByIdOrPhone: (query: string) => Order | null;
@@ -500,42 +501,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [flushOrderQueue, playSosSiren]);
 
-  // Smart Background Sync (Polls active orders every 5 seconds to guarantee 100% real-time sync with zero client exposure)
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/orders?status=active&limit=60');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && Array.isArray(data.orders)) {
-          const activeList: Order[] = data.orders;
-          setOrders((prev) => {
-            const map = new Map<string, Order>();
-            for (const o of activeList) {
-              map.set(o.id, o);
-            }
-            for (const o of prev) {
-              if (!map.has(o.id)) {
-                map.set(o.id, o);
-              }
-            }
-            const combined = Array.from(map.values());
-            combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            return combined.slice(0, MAX_CLIENT_ORDERS);
-          });
-
-          setActiveTrackingOrder((current) => {
-            if (!current) return current;
-            const updated = activeList.find((o) => o.id === current.id || o.tokenId === current.tokenId);
-            return updated || current;
-          });
-        }
-      } catch {
-        // Network silent fallback
+  // Administrative Orders Refresh function (used strictly by Admin & Rider Portal)
+  const refreshOrders = useCallback(async () => {
+    try {
+      const res = await fetch('/api/orders?limit=100');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
+        setOrders(data.orders);
       }
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
+    } catch {
+      // Network silent fallback
+    }
   }, []);
 
   // Cart operations
@@ -568,7 +545,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       };
       return [...prev, newCartItem];
     });
-    setCartDrawerOpen(true);
   };
 
   const removeFromCart = (cartItemId: string) => {
@@ -946,6 +922,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         selectedMenuDetail,
         setSelectedMenuDetail,
         orders,
+        refreshOrders,
         activeTrackingOrder,
         setActiveTrackingOrder,
         findOrderByIdOrPhone,

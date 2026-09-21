@@ -1,13 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { CAFE_METADATA } from '@/data/cafeData';
 import Link from 'next/link';
 import { MessageSquare, PhoneCall, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
 import { TermsModal } from './TermsModal';
 
 export function ZafirooFooter() {
+  const pathname = usePathname();
   const [termsModalOpen, setTermsModalOpen] = useState(false);
+
+  // Hide customer footer on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="bg-[#0F240B] text-white pt-12 pb-8 sm:pt-16 sm:pb-12 border-t border-[#173612]">
@@ -85,12 +92,18 @@ export function ZafirooFooter() {
             <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-white/80">
               <li>
                 <span className="text-white font-bold block">
-                  🚚 100% Free Doorstep Delivery
+                  Free Doorstep Delivery
                 </span>
               </li>
               <li>
+                <Link href="/membership" className="hover:text-amber-300 transition flex items-center justify-between text-amber-300 font-bold">
+                  <span>Farm Membership Schemes</span>
+                  <span className="text-[10px] bg-amber-400 text-black px-2 py-0.5 rounded-full font-black">1 & 6 Mo</span>
+                </Link>
+              </li>
+              <li>
                 <Link href="/track" className="hover:text-emerald-300 transition flex items-center justify-between">
-                  <span>Live Order Tracking & OTP</span>
+                  <span>Live Order Tracking</span>
                   <span className="text-[10px] text-emerald-400 font-bold">Track Now</span>
                 </Link>
               </li>

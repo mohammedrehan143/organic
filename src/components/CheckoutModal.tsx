@@ -21,20 +21,15 @@ import {
   Store,
   ChevronRight,
   ShieldCheck,
-  Smartphone,
   Printer,
-  MessageCircle,
   Clock,
   Bike,
-  ChefHat,
-  PackageCheck,
   CheckCircle2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import { Order } from '@/types/cafe';
 import { BillModal } from './BillModal';
-import { generateWhatsAppOtpLink } from '@/lib/whatsapp';
 
 // Helper to load official Razorpay Checkout SDK
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -228,6 +223,7 @@ export function CheckoutModal() {
     setShowSandboxModal(false);
     setActiveTrackingOrder(order);
     setPlacedOrder(order);
+    setBillModalOpen(true); // Automatically generate bill receipt after order is placed
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -373,18 +369,8 @@ export function CheckoutModal() {
   };
 
   if (placedOrder) {
-    const whatsappOtpUrl = generateWhatsAppOtpLink(
-      placedOrder.customer.phone,
-      placedOrder.deliveryOtp,
-      placedOrder.tokenId,
-      placedOrder.total,
-      placedOrder.customer.name
-    );
-
     const stages = [
-      { key: 'new', label: 'Order Received', icon: Clock },
-      { key: 'preparing', label: 'Harvest Packed', icon: ChefHat },
-      { key: 'ready', label: 'Seal Verified', icon: PackageCheck },
+      { key: 'new', label: 'Order Placed', icon: Clock },
       {
         key: 'delivering',
         label: placedOrder.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Hub',
@@ -411,7 +397,7 @@ export function CheckoutModal() {
                     Order Placed Successfully!
                   </h2>
                   <p className="text-xs text-emerald-800 font-semibold">
-                    Order Details & Doorstep Verification Code
+                    Order Details & Live Dispatch Tracking
                   </p>
                 </div>
               </div>
@@ -454,30 +440,12 @@ export function CheckoutModal() {
                 </div>
               </div>
 
-              {/* Doorstep Verification OTP Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-white border-2 border-emerald-600 shadow-sm space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
-                    <span className="text-xs font-black uppercase tracking-wider text-[#0F240B]">
-                      Doorstep Security OTP
-                    </span>
-                  </div>
-                  <span className="text-2xl font-black font-mono tracking-widest text-[#0F240B] bg-[#ECF5DE] px-3.5 py-1 rounded-xl border border-[#CBE0A3]">
-                    {placedOrder.deliveryOtp}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#ECF5DE] border border-[#CBE0A3] text-[#173612] text-[11px] leading-relaxed">
-                  <strong>⚠️ Important Zafiroo Policy:</strong> Please inspect your milk glass bottles and white eggs carefully on the spot upon arrival. Share this OTP with the delivery partner only after checking, as no return or exchange is available once accepted.
-                </div>
-              </div>
-
               {/* Fulfillment Pipeline */}
               <div className="p-4 rounded-2xl bg-[#F5FAF0] border border-[#CBE0A3] space-y-3">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#0F240B] block">
-                  Live Fulfillment Status: Order Received
+                  Live Fulfillment Status: Order Placed
                 </span>
-                <div className="grid grid-cols-5 gap-1 text-center">
+                <div className="grid grid-cols-3 gap-2 text-center">
                   {stages.map((stage, idx) => {
                     const Icon = stage.icon;
                     const isActive = idx === 0;
@@ -493,7 +461,7 @@ export function CheckoutModal() {
                           <Icon className="w-4 h-4" />
                         </div>
                         <span
-                          className={`text-[8px] sm:text-[9px] mt-1 font-bold ${
+                          className={`text-[9px] sm:text-[10px] mt-1 font-bold ${
                             isActive ? 'text-[#0F240B]' : 'text-gray-400'
                           }`}
                         >
@@ -566,15 +534,17 @@ export function CheckoutModal() {
                     <span>Print 80mm Bill Receipt</span>
                   </button>
 
-                  <a
-                    href={whatsappOtpUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseModal();
+                      router.push(`/track?token=${placedOrder.tokenId}`);
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <MessageCircle className="w-4 h-4 fill-white" />
-                    <span>Send to WhatsApp</span>
-                  </a>
+                    <Bike className="w-4 h-4" />
+                    <span>Live Order Tracking</span>
+                  </button>
                 </div>
 
                 <button
@@ -816,7 +786,7 @@ export function CheckoutModal() {
                 <strong>Address:</strong> {CAFE_METADATA.address}
               </p>
               <p className="text-[#385A2A]">
-                Operating Hours: {CAFE_METADATA.hours}. Your chilled order will be ready at the farm counter in ~15 minutes.
+                Operating Hours: {CAFE_METADATA.hours}. Your order will be ready at the farm counter in ~15 minutes.
               </p>
             </div>
           )}
@@ -920,9 +890,9 @@ export function CheckoutModal() {
           <div className="p-3.5 bg-[#ECF5DE] rounded-2xl border border-[#CBE0A3] flex items-start gap-2.5 text-xs text-[#173612]">
             <ShieldCheck className="w-4 h-4 text-[#173612] shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-[#0F240B]">Doorstep 4-Digit Security OTP</p>
+              <p className="font-bold text-[#0F240B]">Doorstep Handover & Inspection</p>
               <p className="text-[11px] text-[#173612]/80 mt-0.5">
-                A secret 4-digit code will be generated upon placing this order. Verify your chilled package on the spot before providing OTP to your courier.
+                Verify your fresh package and milk glass bottles on the spot with the courier partner upon arrival.
               </p>
             </div>
           </div>
@@ -938,10 +908,6 @@ export function CheckoutModal() {
               <span className={deliveryFee === 0 ? 'text-emerald-700 font-bold' : ''}>
                 {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
               </span>
-            </div>
-            <div className="flex justify-between">
-              <span>GST (5%)</span>
-              <span>₹{tax}</span>
             </div>
             <div className="flex justify-between font-black text-sm text-[#0F240B] pt-2 border-t border-gray-200 font-bebas text-base">
               <span>Grand Total</span>

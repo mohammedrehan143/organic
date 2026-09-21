@@ -1,30 +1,42 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, CheckCircle2, ShieldCheck, Clock, RefreshCw, MessageSquare, PhoneCall } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Sparkles,
+  CheckCircle2,
+  ShieldCheck,
+  Clock,
+  RefreshCw,
+  Crown,
+  ArrowRight,
+  Search,
+  Gift,
+  Zap,
+} from 'lucide-react';
 import { CAFE_METADATA } from '@/data/cafeData';
 
 export function MembershipSection() {
   const perks = [
     {
       icon: Clock,
-      title: 'Daily 6:30 AM Morning Delivery',
-      desc: 'Wake up to freshly bottled A2 pasture milk chilled and waiting at your doorstep before breakfast.',
+      title: 'Daily Sunrise Delivery',
+      desc: 'Wake up to freshly bottled organic milk fresh and waiting at your doorstep before 8:30 AM.',
     },
     {
       icon: RefreshCw,
-      title: 'Doorstep Glass Bottle Exchange',
-      desc: 'Eco-friendly sterilized glass bottles replaced every morning. Zero single-use plastic waste.',
+      title: 'Sterilized Bottle Swap',
+      desc: 'Eco-friendly sterilized glass bottles replaced every morning. Zero bottle deposit required for members.',
     },
     {
       icon: ShieldCheck,
-      title: 'Guaranteed Fresh Stock Allocation',
-      desc: 'Members receive priority allocation of fresh daily milk, normal white eggs & authentic Nati eggs.',
+      title: 'Guaranteed Daily Allocation',
+      desc: 'Members receive 100% priority allocation of fresh daily milk, normal white eggs & authentic Nati eggs.',
     },
     {
-      icon: MessageSquare,
-      title: 'Flexible WhatsApp Management',
-      desc: 'Going on holiday? Pause or resume your daily milk subscription anytime with a quick WhatsApp message.',
+      icon: Zap,
+      title: 'Flexible Postpaid / Prepaid',
+      desc: 'Choose 1-Month Postpaid (settle at month-end) or 6-Months Prepaid (upfront savings + free gift).',
     },
   ];
 
@@ -38,21 +50,129 @@ export function MembershipSection() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#173612] text-xs font-black uppercase tracking-wider shadow-lg">
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>Farm Direct Club</span>
+            <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+            <span>Zafiroo Farm Membership Schemes</span>
           </div>
 
           <h2 className="text-3xl xs:text-4xl sm:text-6xl font-black uppercase tracking-tight text-white font-bebas">
-            Zafiroo Farm Membership Available
+            100% Free Daily Doorstep Deliveries
           </h2>
 
           <p className="text-sm sm:text-base text-white/85 max-w-2xl mx-auto leading-relaxed">
-            Join the Zafiroo Daily Membership for unadulterated A2 milk in sterilized glass bottles and fresh white table eggs delivered cold to your home in Bylanarasapura, Hoskote and surrounding Bangalore areas.
+            Join the Zafiroo Organic Club with our <strong>1-Month Postpaid</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
           </p>
+
+          <div className="pt-2 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/membership"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black text-xs uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition"
+            >
+              <Crown className="w-4 h-4 fill-[#0F240B]" />
+              <span>Explore Membership Schemes</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+
+            <Link
+              href="/membership"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 hover:scale-105 active:scale-95 transition"
+            >
+              <Search className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Check Profile by Mobile No.</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 2 Plans Side-By-Side Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {/* Plan 1: 1 Month Postpaid */}
+          <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/15 space-y-5 flex flex-col justify-between hover:border-emerald-400/50 transition">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  POSTPAID SCHEME
+                </span>
+                <span className="text-xs text-gray-300 font-mono">30 Days</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white font-serif">1 Month Organic Pass</h3>
+                <p className="text-xs text-emerald-100/80 mt-1">
+                  Pay at month-end. Enjoy 100% free daily deliveries with zero advance commitment.
+                </p>
+              </div>
+              <div className="text-3xl font-black text-white">
+                ₹299 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid)</span>
+              </div>
+              <ul className="space-y-2 text-xs text-gray-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Free doorstep deliveries every morning</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Postpaid billing cycle (settle invoice at month-end)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Zero glass bottle deposit required</span>
+                </li>
+              </ul>
+            </div>
+            <Link
+              href="/membership"
+              className="w-full py-3 bg-white text-[#173612] hover:bg-emerald-50 font-bold rounded-2xl text-xs uppercase tracking-wider text-center transition block"
+            >
+              Select 1-Month Postpaid
+            </Link>
+          </div>
+
+          {/* Plan 2: 6 Months Prepaid */}
+          <div className="bg-gradient-to-b from-[#1C3E14] to-[#122A0D] rounded-3xl p-6 sm:p-8 border-2 border-amber-400/80 space-y-5 flex flex-col justify-between shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-bl-xl">
+              BEST VALUE
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
+                  <Crown className="w-3 h-3 fill-amber-300" />
+                  <span>PREPAID VIP CLUB</span>
+                </span>
+                <span className="text-xs text-gray-300 font-mono">180 Days</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white font-serif">6 Months VIP Club</h3>
+                <p className="text-xs text-emerald-100/80 mt-1">
+                  Prepaid upfront activation with ₹300 instant savings and free insulated cooler bag.
+                </p>
+              </div>
+              <div className="text-3xl font-black text-amber-300">
+                ₹1,499 <span className="text-xs text-gray-400 line-through">₹1,794</span>
+              </div>
+              <ul className="space-y-2 text-xs text-gray-200">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>180 days uninterrupted free daily deliveries</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>Complimentary Thermal Milk Cooler Bag (worth ₹450)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>10% extra discount on seasonal farm specials</span>
+                </li>
+              </ul>
+            </div>
+            <Link
+              href="/membership"
+              className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black rounded-2xl text-xs uppercase tracking-wider text-center transition block shadow-md"
+            >
+              Select 6-Months Prepaid
+            </Link>
+          </div>
         </div>
 
         {/* Perks Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
           {perks.map((perk, idx) => {
             const Icon = perk.icon;
             return (
@@ -72,41 +192,6 @@ export function MembershipSection() {
               </div>
             );
           })}
-        </div>
-
-        {/* Membership CTA Banner */}
-        <div className="bg-[#173612] border-2 border-emerald-600/30 rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-8 text-center lg:text-left">
-          <div className="space-y-2 max-w-xl">
-            <span className="text-xs uppercase font-black tracking-widest text-emerald-300">
-              Zero Commitment • Free Cancellation • Free Delivery
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-white font-bebas tracking-wide">
-              Start Your Daily Pure Milk & Eggs Plan
-            </h3>
-            <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
-              Connect with our farm coordinator to select your daily quantity (1L / 500ml milk, 12 / 30 eggs) and preferred morning drop time.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full sm:w-auto">
-            <a
-              href={`https://wa.me/${CAFE_METADATA.whatsapp.replace(/[^0-9]/g, '')}?text=Hi%20Zafiroo,%20I%20would%20like%20to%20inquire%20about%20the%20Daily%20Farm%20Membership%20for%20fresh%20milk%20and%20eggs.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto px-7 py-4 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <MessageSquare className="w-4 h-4 fill-white text-white" />
-              <span>Join Membership On WhatsApp</span>
-            </a>
-
-            <a
-              href={`tel:${CAFE_METADATA.phone.replace(/[^0-9+]/g, '')}`}
-              className="w-full sm:w-auto px-6 py-4 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider border border-white/20 transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <PhoneCall className="w-4 h-4 text-white" />
-              <span>Call: {CAFE_METADATA.phone}</span>
-            </a>
-          </div>
         </div>
       </div>
     </section>

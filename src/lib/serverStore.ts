@@ -1,4 +1,4 @@
-import { Order, MenuItem, DeliveryAgent, SosAlert, OrderStatus } from '@/types/cafe';
+import { Order, MenuItem, DeliveryAgent, SosAlert, OrderStatus, Membership } from '@/types/cafe';
 import { INITIAL_ORDERS, INITIAL_MENU_ITEMS, INITIAL_DELIVERY_AGENTS, INITIAL_SOS_ALERTS } from '@/data/cafeData';
 
 // Maximum in-memory order retention to prevent Node.js heap exhaustion under 10,000+ orders
@@ -12,6 +12,7 @@ declare global {
     menu: MenuItem[];
     agents: DeliveryAgent[];
     sosAlerts: SosAlert[];
+    memberships: Membership[];
     kitchenPin: string;
     // O(1) Index maps for instantaneous search under high order volume
     indexById: Map<string, Order>;
@@ -83,6 +84,7 @@ if (!global.__zafiroo_server_store__) {
     menu: [...INITIAL_MENU_ITEMS],
     agents: INITIAL_DELIVERY_AGENTS.length > 0 ? [...INITIAL_DELIVERY_AGENTS] : [...DEFAULT_SERVER_AGENTS],
     sosAlerts: [...INITIAL_SOS_ALERTS],
+    memberships: [] as Membership[],
     kitchenPin: '1234',
     indexById: new Map<string, Order>(),
     indexByToken: new Map<string, Order>(),
@@ -258,3 +260,34 @@ export function getLocalAgents(): DeliveryAgent[] {
 export function getLocalMenu(): MenuItem[] {
   return serverStore.menu;
 }
+
+export function getLocalMemberships(phone?: string): Membership[] {
+  if (!serverStore.memberships) {
+    serverStore.memberships = [];
+  }
+  if (!phone) return serverStore.memberships;
+  const clean = phone.replace(/[^0-9]/g, '');
+  const ten = clean.slice(-10);
+  return serverStore.memberships.filter((m) => {
+    const mPhone = m.phone.replace(/[^0-9]/g, '');
+    return mPhone.includes(clean) || clean.includes(mPhone) || (ten && mPhone.includes(ten));
+  });
+}
+
+export function saveLocalMembership(membership: Membership): Membership {
+  if (!serverStore.memberships) {
+    serverStore.memberships = [];
+  }
+  // If phone already has membership, replace or prepend
+  const clean = membership.phone.replace(/[^0-9]/g, '').slice(-10);
+  const idx = serverStore.memberships.findIndex(
+    (m) => m.id === membership.id || (clean.length === 10 && m.phone.replace(/[^0-9]/g, '').slice(-10) === clean)
+  );
+  if (idx > -1) {
+    serverStore.memberships[idx] = membership;
+  } else {
+    serverStore.memberships.unshift(membership);
+  }
+  return membership;
+}
+

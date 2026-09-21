@@ -98,10 +98,12 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
           <span>SUBTOTAL:</span>
           <span>₹{receipt.subtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between">
-          <span>GST (5%):</span>
-          <span>₹{receipt.tax.toFixed(2)}</span>
-        </div>
+        {receipt.tax > 0 && (
+          <div className="flex justify-between">
+            <span>GST:</span>
+            <span>₹{receipt.tax.toFixed(2)}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span>DELIVERY FEE:</span>
           <span>{receipt.deliveryFee === 0 ? 'FREE' : `₹${receipt.deliveryFee.toFixed(2)}`}</span>
@@ -119,13 +121,6 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
       </div>
 
       <div className="border-t border-dashed border-black my-2" />
-
-      {/* Doorstep OTP Box */}
-      <div className="my-2 p-1.5 border border-black text-center space-y-0.5">
-        <p className="text-[9px] font-bold">DOORSTEP DELIVERY OTP</p>
-        <p className="text-base font-black tracking-widest">{receipt.otp}</p>
-        <p className="text-[8px] text-gray-600">Provide to rider only after receiving order</p>
-      </div>
 
       {/* Zafiroo Store Policy on Receipt */}
       <div className="my-2 p-2 border border-gray-400 bg-gray-50 text-[8.5px] leading-tight space-y-1">

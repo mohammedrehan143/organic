@@ -196,9 +196,9 @@ export default function OnTheFarmPage() {
             <span className="w-10 h-10 rounded-full bg-[#173612] text-white font-bold flex items-center justify-center mx-auto text-sm">
               2
             </span>
-            <h4 className="font-bold text-base text-[#0F240B]">Immediate 4°C Chilling</h4>
+            <h4 className="font-bold text-base text-[#0F240B]">Immediate Farm Cooling</h4>
             <p className="text-xs text-[#173612]/80 leading-relaxed">
-              Milk is filtered and cooled to 4°C within seconds to protect natural enzymes and freshness.
+              Milk is filtered and cooled within seconds to protect natural enzymes and freshness.
             </p>
           </div>
 

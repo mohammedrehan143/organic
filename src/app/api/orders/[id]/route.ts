@@ -55,6 +55,32 @@ export async function PATCH(
     const client = supabaseAdmin || supabase;
     let dbUpdatedOrder: any = null;
 
+    // Strict validation: Cancellation is only permitted before Out for Delivery
+    if (status === 'cancelled') {
+      if (isSupabaseConfigured && client) {
+        const { data: existingDb } = await client
+          .from('orders')
+          .select('status')
+          .or(`id.eq.${id},token_id.eq.${id}`)
+          .maybeSingle();
+
+        if (existingDb && (existingDb.status === 'delivering' || existingDb.status === 'completed')) {
+          return NextResponse.json(
+            { success: false, message: 'Cannot cancel order once it is out for delivery or completed.' },
+            { status: 400 }
+          );
+        }
+      }
+
+      const existingLocal = findLocalOrder(id);
+      if (existingLocal && (existingLocal.status === 'delivering' || existingLocal.status === 'completed')) {
+        return NextResponse.json(
+          { success: false, message: 'Cannot cancel order once it is out for delivery or completed.' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (isSupabaseConfigured && client) {
       const updateData: any = { updated_at: new Date().toISOString() };
       if (status) updateData.status = status;

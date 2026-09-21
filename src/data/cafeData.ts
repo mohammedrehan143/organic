@@ -12,7 +12,7 @@ export const CAFE_METADATA = {
   hours: "Daily Morning & Evening Delivery: 6:00 AM – 9:30 PM",
   freeDeliveryThreshold: 0, // FREE DELIVERY FOR ALL PRODUCTS
   deliveryFee: 0,
-  taxRate: 0.05, // 5% GST
+  taxRate: 0, // GST removed
   bottleBreakageFee: 200,
   termsAndPolicies: [
     "When glass bottle breaks the customer has to pay rupees 200 per bottle.",
@@ -29,7 +29,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     name: "Organic Milk in Glass Bottle (1 Litre)",
     category: "Organic Milk",
     description: "Pure single-source certified organic milk in sterilized glass bottles labeled Zafiroo Organic Milk.",
-    detailedDescription: "Unadulterated single-source certified organic whole milk bottled in sterilized glass bottles with Zafiroo Organic Milk label. Non-homogenized with natural cream top, chilled at 4°C with dynamic milk splash freshness. (Note: Reusable glass bottle policy applies — ₹200 fee in case of bottle breakage).",
+    detailedDescription: "Unadulterated single-source certified organic whole milk bottled in sterilized glass bottles with Zafiroo Organic Milk label. Non-homogenized with natural cream top and pure farm freshness. (Note: Reusable glass bottle policy applies — ₹200 fee in case of bottle breakage).",
     price: "₹72",
     priceNumber: 72,
     image: "/images/zafiroo-organic-milk.png",
@@ -43,7 +43,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     displayOrder: 1,
     customizationOptions: {
       portion: ["1 Litre Glass Bottle (₹72)", "Half Litre - 500ml Glass Bottle (₹38)"],
-      temperature: ["Chilled (4°C)", "Room Temp Bottle"]
+      temperature: ["Freshly Chilled", "Room Temp Bottle"]
     }
   },
   {
@@ -65,7 +65,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     displayOrder: 2,
     customizationOptions: {
       portion: ["Half Litre - 500ml Glass Bottle (₹38)", "1 Litre Glass Bottle (₹72)"],
-      temperature: ["Chilled (4°C)", "Room Temp Bottle"]
+      temperature: ["Freshly Chilled", "Room Temp Bottle"]
     }
   },
 

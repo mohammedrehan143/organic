@@ -2,10 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useOrder } from '@/context/OrderContext';
-import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2 } from 'lucide-react';
+import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2, Crown } from 'lucide-react';
 
 export function ZafirooNavbar() {
+  const pathname = usePathname();
+
+  // Hide customer navbar on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   const {
     cartCount,
     setCartDrawerOpen,
@@ -85,8 +93,19 @@ export function ZafirooNavbar() {
           </div>
         </Link>
 
-        {/* Right Actions: Tracking & Cart */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* Right Actions: Membership, Tracking & Cart */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Membership Club Button */}
+          <Link
+            href="/membership"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] text-xs sm:text-sm font-black shadow-xs hover:shadow-md transition transform hover:scale-105 active:scale-95 cursor-pointer"
+            title="Zafiroo Farm Membership (1 Month Postpaid / 6 Months Prepaid)"
+          >
+            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0F240B] fill-[#0F240B] shrink-0" />
+            <span className="hidden md:inline font-black">Membership</span>
+            <span className="md:hidden font-black text-xs">Club</span>
+          </Link>
+
           {/* Tracking Option Button */}
           <Link
             href="/track"

@@ -31,7 +31,7 @@ export function FarmShopSection() {
         <div className="text-center max-w-3xl mx-auto space-y-2 sm:space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#173612] text-white text-xs font-black uppercase tracking-wider shadow-sm">
             <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>🚚 100% Free Doorstep Delivery On All Products</span>
+            <span>Free Doorstep Delivery On All Products</span>
           </div>
           <h2 className="text-2xl xs:text-3xl sm:text-5xl font-black uppercase text-[#0F240B] font-bebas tracking-tight">
             Fresh Organic Milk & Farm Eggs

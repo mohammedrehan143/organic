@@ -122,6 +122,25 @@ CREATE TABLE IF NOT EXISTS admin_keys (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. Memberships Table (1 Month Postpaid & 6 Months Prepaid)
+CREATE TABLE IF NOT EXISTS memberships (
+    id VARCHAR(64) PRIMARY KEY,
+    phone VARCHAR(20) NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    address TEXT,
+    plan_type VARCHAR(32) NOT NULL CHECK (plan_type IN ('1_month', '6_months')),
+    plan_name VARCHAR(64) NOT NULL,
+    billing_type VARCHAR(32) NOT NULL CHECK (billing_type IN ('postpaid', 'prepaid')),
+    price NUMERIC(10, 2) NOT NULL,
+    status VARCHAR(32) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'cancelled')),
+    payment_status VARCHAR(32) DEFAULT 'pending',
+    start_date TIMESTAMPTZ DEFAULT NOW(),
+    end_date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =========================================================
 -- INDEXES OPTIMIZED FOR 10,000+ HIGH-CONCURRENCY WORKLOADS
 -- =========================================================
@@ -141,6 +160,8 @@ CREATE INDEX IF NOT EXISTS idx_delivery_agents_phone ON delivery_agents(phone);
 CREATE INDEX IF NOT EXISTS idx_delivery_agents_status ON delivery_agents(status);
 CREATE INDEX IF NOT EXISTS idx_sos_alerts_status ON sos_alerts(status);
 CREATE INDEX IF NOT EXISTS idx_sos_alerts_created ON sos_alerts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memberships_phone ON memberships(phone);
+CREATE INDEX IF NOT EXISTS idx_memberships_status ON memberships(status);
 
 -- =========================================================
 -- TRIGGERS FOR MODTIME
@@ -257,6 +278,10 @@ ALTER TABLE admin_keys ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin_keys_public_all" ON admin_keys;
 CREATE POLICY "admin_keys_public_all" ON admin_keys FOR ALL USING (true) WITH CHECK (true);
 
+ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "memberships_public_all" ON memberships;
+CREATE POLICY "memberships_public_all" ON memberships FOR ALL USING (true) WITH CHECK (true);
+
 -- =========================================================
 -- SUPABASE REALTIME REPLICATION CONFIGURATION
 -- Broadcasts instant order updates to Admin KDS and Customer Trackers
@@ -276,6 +301,11 @@ BEGIN
         END;
         BEGIN
             ALTER PUBLICATION supabase_realtime ADD TABLE delivery_agents;
+        EXCEPTION WHEN duplicate_object THEN
+            NULL;
+        END;
+        BEGIN
+            ALTER PUBLICATION supabase_realtime ADD TABLE memberships;
         EXCEPTION WHEN duplicate_object THEN
             NULL;
         END;

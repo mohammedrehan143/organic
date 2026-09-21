@@ -301,7 +301,7 @@ export function LocationModal() {
                 30-45 Min Cold-Chain Delivery
               </span>
               <span className="text-[10px] sm:text-[11px] text-[#2E6125] block leading-tight">
-                Insulated transport maintains optimal 4°C farm freshness until doorstep.
+                Insulated transport maintains optimal farm freshness until doorstep.
               </span>
             </div>
           </div>

@@ -8,6 +8,7 @@ import {
   DeliveryAgent,
   SosAlert,
   SosReason,
+  Membership,
 } from '@/types/cafe';
 import {
   formatFullOneLineAddress,
@@ -38,29 +39,41 @@ import {
   BellRing,
   Volume2,
   RefreshCw,
-  Send,
   Sparkles,
   ArrowLeft,
   Home,
+  XCircle,
+  AlertOctagon,
+  Ban,
+  Crown,
+  FastForward,
+  Check,
+  ExternalLink,
+  MessageSquare,
+  Mail,
+  MapPin,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
-import { generateWhatsAppOtpLink, generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
+import { generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
 
 export default function AdminPage() {
   const {
     orders,
+    refreshOrders,
     updateOrderStatus,
     assignDeliveryAgent,
     deliveryAgents,
+    refreshDeliveryAgents,
     sosAlerts,
+    refreshSosAlerts,
     latestActiveSos,
     triggerRiderSos,
     resolveSosAlert,
     playOrderChime,
     playSosSiren,
-    verifyDeliveryOtp,
   } = useOrder();
 
   // Authentication State
@@ -73,20 +86,114 @@ export default function AdminPage() {
   const [pinSuccessMsg, setPinSuccessMsg] = useState('');
   const [updatingPin, setUpdatingPin] = useState(false);
 
-  // Mode: Kitchen KDS vs Rider Mobile Mode vs Analytics
-  const [activeTab, setActiveTab] = useState<'kds' | 'rider' | 'analytics'>('kds');
+  // Mode: Kitchen KDS vs Rider Mobile Mode vs Analytics vs Memberships
+  const [activeTab, setActiveTab] = useState<'kds' | 'rider' | 'analytics' | 'memberships'>('kds');
+
+  // Admin Memberships State
+  const [adminMemberships, setAdminMemberships] = useState<Membership[]>([]);
+  const [membershipsLoading, setMembershipsLoading] = useState(false);
+  const [membershipFilter, setMembershipFilter] = useState<'all' | '6_months' | '1_month' | 'due' | 'active'>('all');
+  const [membershipSearch, setMembershipSearch] = useState('');
+  const [membershipActionLoading, setMembershipActionLoading] = useState<string | null>(null);
+  const [membershipActionMsg, setMembershipActionMsg] = useState('');
+
+  const fetchAdminMemberships = async () => {
+    setMembershipsLoading(true);
+    try {
+      const res = await fetch('/api/membership');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAdminMemberships(data.memberships || []);
+      }
+    } catch (err) {
+      console.error('Failed to load admin memberships:', err);
+    } finally {
+      setMembershipsLoading(false);
+    }
+  };
+
+  const handleMarkMembershipPaid = async (membership: Membership) => {
+    setMembershipActionLoading(membership.id);
+    setMembershipActionMsg('');
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: membership.id,
+          phone: membership.phone,
+          action: 'mark_paid',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembershipActionMsg(`✓ Marked month-end bill paid for ${membership.customerName}. Renewed for 30 days.`);
+        await fetchAdminMemberships();
+      }
+    } catch (err) {
+      console.error('Error marking paid:', err);
+    } finally {
+      setMembershipActionLoading(null);
+    }
+  };
+
+  const handleSimulateMembershipDue = async (membership: Membership) => {
+    setMembershipActionLoading(membership.id);
+    setMembershipActionMsg('');
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: membership.id,
+          phone: membership.phone,
+          action: 'skip_to_due',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembershipActionMsg(`⏩ Fast-forwarded 30 days for ${membership.customerName}. Bill is now due.`);
+        await fetchAdminMemberships();
+      }
+    } catch (err) {
+      console.error('Error skipping to due:', err);
+    } finally {
+      setMembershipActionLoading(null);
+    }
+  };
+
+  const handleExtendMembership30 = async (membership: Membership) => {
+    setMembershipActionLoading(membership.id);
+    setMembershipActionMsg('');
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: membership.id,
+          phone: membership.phone,
+          action: 'extend_30',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembershipActionMsg(`✓ Extended membership by 30 days for ${membership.customerName}.`);
+        await fetchAdminMemberships();
+      }
+    } catch (err) {
+      console.error('Error extending membership:', err);
+    } finally {
+      setMembershipActionLoading(null);
+    }
+  };
 
   // Rider Login State
   const [riderPhoneInput, setRiderPhoneInput] = useState('');
   const [currentRider, setCurrentRider] = useState<DeliveryAgent | null>(null);
   const [riderLoading, setRiderLoading] = useState(false);
   const [riderError, setRiderError] = useState('');
-  const [riderOtpInputs, setRiderOtpInputs] = useState<Record<string, string>>({});
-  const [riderOtpFeedback, setRiderOtpFeedback] = useState<Record<string, { success: boolean; message: string }>>({});
-
-  // KDS Clock & Midnight Countdown
+  // KDS Live Clock
   const [currentTime, setCurrentTime] = useState('');
-  const [midnightCountdown, setMidnightCountdown] = useState('');
 
   // Full-Screen 5-Second Red SOS Alert Takeover
   const [fullScreenSosAlert, setFullScreenSosAlert] = useState<SosAlert | null>(null);
@@ -102,29 +209,39 @@ export default function AdminPage() {
   // Bill Receipt Modal
   const [activeBillOrder, setActiveBillOrder] = useState<Order | null>(null);
 
-  // Status Filter in KDS
-  const [kdsFilter, setKdsFilter] = useState<'all' | OrderStatus>('all');
+  // Status Filter in KDS: Order Placed ('new'), Out for Delivery ('delivering'), Delivered ('completed'), Cancelled ('cancelled')
+  const [kdsFilter, setKdsFilter] = useState<'all' | 'new' | 'delivering' | 'completed' | 'cancelled'>('all');
 
   // Clock Timer
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-
-      // Calculate time until midnight
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-      const diffMs = midnight.getTime() - now.getTime();
-      const hours = Math.floor(diffMs / (1000 * 60 * 60));
-      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-      setMidnightCountdown(`${hours}h ${mins}m ${secs}s`);
     };
 
     updateClock();
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Real-Time Background Sync for Kitchen KDS & Rider Dispatch Portal (Runs strictly inside Admin Portal)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    refreshOrders();
+    refreshDeliveryAgents();
+    refreshSosAlerts();
+    fetchAdminMemberships();
+
+    const interval = setInterval(() => {
+      refreshOrders();
+      refreshDeliveryAgents();
+      refreshSosAlerts();
+      fetchAdminMemberships();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts]);
 
   // Monitor latestActiveSos for 5-Second Red Alert Takeover
   useEffect(() => {
@@ -235,18 +352,9 @@ export default function AdminPage() {
     }
   };
 
-  // Rider Doorstep OTP Submit
-  const handleRiderOtpVerify = async (orderId: string) => {
-    const entered = riderOtpInputs[orderId] || '';
-    const result = await verifyDeliveryOtp(orderId, entered);
-    setRiderOtpFeedback((prev) => ({
-      ...prev,
-      [orderId]: result,
-    }));
-
-    if (result.success) {
-      setRiderOtpInputs((prev) => ({ ...prev, [orderId]: '' }));
-    }
+  // 1-Click Direct Delivery Completion (No OTP required)
+  const handleMarkOrderDelivered = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'completed');
   };
 
   // Rider Trigger Emergency SOS
@@ -287,9 +395,21 @@ export default function AdminPage() {
     }
   };
 
-  // Filtered Orders for KDS
+  // Filtered Orders for KDS: 2 Main Statuses: Order Placed ('new') & Out for Delivery ('delivering'), plus Delivered ('completed') & Cancelled ('cancelled')
   const filteredKdsOrders = useMemo(() => {
     if (kdsFilter === 'all') return orders;
+    if (kdsFilter === 'new') {
+      return orders.filter((o) => o.status === 'new' || o.status === 'preparing');
+    }
+    if (kdsFilter === 'delivering') {
+      return orders.filter((o) => o.status === 'delivering' || o.status === 'ready');
+    }
+    if (kdsFilter === 'completed') {
+      return orders.filter((o) => o.status === 'completed');
+    }
+    if (kdsFilter === 'cancelled') {
+      return orders.filter((o) => o.status === 'cancelled');
+    }
     return orders.filter((o) => o.status === kdsFilter);
   }, [orders, kdsFilter]);
 
@@ -307,10 +427,14 @@ export default function AdminPage() {
     );
   }, [orders, currentRider]);
 
-  // Ready orders waiting for rider claim/pickup
-  const unassignedReadyOrders = useMemo(() => {
+  // Orders waiting for courier claim / assignment
+  const unassignedOrders = useMemo(() => {
     return orders.filter(
-      (o) => o.status === 'ready' && o.deliveryMethod === 'delivery' && !o.deliveryAgentId
+      (o) =>
+        o.deliveryMethod === 'delivery' &&
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
+        !o.deliveryAgentId
     );
   }, [orders]);
 
@@ -345,6 +469,34 @@ export default function AdminPage() {
       pickupOrders,
     };
   }, [orders]);
+
+  // Filtered Memberships for Admin Registry
+  const filteredAdminMemberships = useMemo(() => {
+    let list = adminMemberships;
+    if (membershipSearch.trim()) {
+      const q = membershipSearch.trim().toLowerCase();
+      const qDigits = q.replace(/[^0-9]/g, '');
+      list = list.filter((m) => {
+        if (m.customerName?.toLowerCase().includes(q)) return true;
+        if (m.id?.toLowerCase().includes(q)) return true;
+        if (qDigits && m.phone?.replace(/[^0-9]/g, '').includes(qDigits)) return true;
+        return false;
+      });
+    }
+    if (membershipFilter === '6_months') {
+      return list.filter((m) => m.planType === '6_months');
+    }
+    if (membershipFilter === '1_month') {
+      return list.filter((m) => m.planType === '1_month');
+    }
+    if (membershipFilter === 'due') {
+      return list.filter((m) => m.paymentStatus === 'due' || m.status === 'expired');
+    }
+    if (membershipFilter === 'active') {
+      return list.filter((m) => m.status === 'active' && m.paymentStatus !== 'due');
+    }
+    return list;
+  }, [adminMemberships, membershipSearch, membershipFilter]);
 
   // If not authenticated, render Admin Login Modal
   if (!isAuthenticated) {
@@ -551,7 +703,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <p className="text-[11px] text-cream-400">
-                Clock: <strong>{currentTime}</strong> • Midnight Reset in: <strong>{midnightCountdown}</strong>
+                Clock: <strong>{currentTime}</strong> • Status: <strong>Persistent (Orders Stay Active Until Completed)</strong>
               </p>
             </div>
           </div>
@@ -604,6 +756,21 @@ export default function AdminPage() {
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span>Analytics</span>
               </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('memberships');
+                  fetchAdminMemberships();
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                  activeTab === 'memberships'
+                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                    : 'text-cream-300 hover:text-white'
+                }`}
+              >
+                <Crown className="w-3.5 h-3.5" />
+                <span>Memberships</span>
+              </button>
             </div>
 
             <button
@@ -623,21 +790,28 @@ export default function AdminPage() {
           {/* Quick Filters & Sound Chime Test */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-cream-200 shadow-warm-sm">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-              {(['all', 'new', 'preparing', 'ready', 'delivering', 'completed'] as const).map((st) => (
+              {[
+                { key: 'all' as const, label: 'All Orders', count: orders.length, isDanger: false },
+                { key: 'new' as const, label: '1. Order Placed', count: orders.filter((o) => o.status === 'new' || o.status === 'preparing').length, isDanger: false },
+                { key: 'delivering' as const, label: '2. Out for Delivery', count: orders.filter((o) => o.status === 'delivering' || o.status === 'ready').length, isDanger: false },
+                { key: 'completed' as const, label: '3. Delivered', count: orders.filter((o) => o.status === 'completed').length, isDanger: false },
+                { key: 'cancelled' as const, label: '4. Cancelled', count: orders.filter((o) => o.status === 'cancelled').length, isDanger: true },
+              ].map((f) => (
                 <button
-                  key={st}
-                  onClick={() => setKdsFilter(st)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold capitalize whitespace-nowrap transition ${
-                    kdsFilter === st
-                      ? 'bg-banhmi-red text-cream-50 shadow-sm'
+                  key={f.key}
+                  onClick={() => setKdsFilter(f.key)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                    kdsFilter === f.key
+                      ? f.isDanger
+                        ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400'
+                        : 'bg-banhmi-red text-cream-50 shadow-sm'
+                      : f.isDanger && f.count > 0
+                      ? 'bg-red-50 text-red-700 border-2 border-red-400 hover:bg-red-100 font-black'
                       : 'bg-cream-50 text-espresso-700 hover:bg-cream-100 border border-cream-200'
                   }`}
                 >
-                  {st} (
-                  {st === 'all'
-                    ? orders.length
-                    : orders.filter((o) => o.status === st).length}
-                  )
+                  {f.isDanger && f.count > 0 && <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />}
+                  <span>{f.label} ({f.count})</span>
                 </button>
               ))}
             </div>
@@ -665,30 +839,60 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredKdsOrders.map((order) => {
               const isDelivery = order.deliveryMethod === 'delivery';
+              const isCancelled = order.status === 'cancelled';
 
               return (
                 <div
                   key={order.id}
-                  className={`bg-white rounded-3xl border shadow-warm-sm overflow-hidden flex flex-col justify-between transition-all ${
-                    order.status === 'new'
-                      ? 'border-amber-400 ring-2 ring-amber-300/40'
+                  className={`rounded-3xl border overflow-hidden flex flex-col justify-between transition-all ${
+                    isCancelled
+                      ? 'border-2 border-red-500 bg-red-50/70 shadow-lg shadow-red-200/50 ring-2 ring-red-400/40'
+                      : order.status === 'new'
+                      ? 'bg-white border-amber-400 ring-2 ring-amber-300/40 shadow-warm-sm'
                       : order.status === 'preparing'
-                      ? 'border-orange-400'
+                      ? 'bg-white border-orange-400 shadow-warm-sm'
                       : order.status === 'ready'
-                      ? 'border-emerald-400'
-                      : 'border-cream-200'
+                      ? 'bg-white border-emerald-400 shadow-warm-sm'
+                      : 'bg-white border-cream-200 shadow-warm-sm'
                   }`}
                 >
+                  {/* Top Red Cancelled Banner Across Card Header */}
+                  {isCancelled && (
+                    <div className="bg-red-600 text-white px-4 py-2.5 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-white animate-pulse shrink-0" />
+                        <span className="font-black text-xs uppercase tracking-wider">
+                          🚨 ORDER CANCELLED BY CUSTOMER
+                        </span>
+                      </div>
+                      <span className="text-[10px] bg-white text-red-700 font-black px-2 py-0.5 rounded uppercase shadow-xs">
+                        DO NOT DISPATCH
+                      </span>
+                    </div>
+                  )}
+
                   {/* Card Header */}
-                  <div className="p-5 border-b border-cream-100 bg-cream-50/50 flex items-center justify-between">
+                  <div
+                    className={`p-5 border-b flex items-center justify-between ${
+                      isCancelled
+                        ? 'border-red-200 bg-red-100/60'
+                        : 'border-cream-100 bg-cream-50/50'
+                    }`}
+                  >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-espresso-950 font-mono">
+                        <span
+                          className={`text-base font-black font-mono ${
+                            isCancelled ? 'text-red-950 font-black' : 'text-espresso-950'
+                          }`}
+                        >
                           #{order.tokenId}
                         </span>
                         <span
                           className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            isDelivery
+                            isCancelled
+                              ? 'bg-red-200 text-red-900 border border-red-300'
+                              : isDelivery
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-purple-100 text-purple-800'
                           }`}
@@ -703,22 +907,48 @@ export default function AdminPage() {
 
                     <span
                       className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
-                        order.status === 'new'
-                          ? 'bg-amber-100 text-amber-800'
-                          : order.status === 'preparing'
-                          ? 'bg-orange-100 text-orange-800'
-                          : order.status === 'ready'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : order.status === 'delivering'
-                          ? 'bg-blue-100 text-blue-800'
+                        isCancelled
+                          ? 'bg-red-600 text-white font-black border border-red-700 shadow-sm flex items-center gap-1 animate-pulse'
+                          : order.status === 'new' || order.status === 'preparing'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : order.status === 'delivering' || order.status === 'ready'
+                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
                           : order.status === 'completed'
-                          ? 'bg-gray-100 text-gray-700'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                           : 'bg-rose-100 text-rose-700'
                       }`}
                     >
-                      {order.status}
+                      {isCancelled ? (
+                        <>
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Cancelled</span>
+                        </>
+                      ) : order.status === 'new' || order.status === 'preparing' ? (
+                        'Order Placed'
+                      ) : order.status === 'delivering' || order.status === 'ready' ? (
+                        'Out for Delivery'
+                      ) : order.status === 'completed' ? (
+                        'Delivered'
+                      ) : (
+                        'Cancelled'
+                      )}
                     </span>
                   </div>
+
+                  {/* Red Alert Note If Cancelled */}
+                  {isCancelled && (
+                    <div className="mx-5 mt-4 p-3.5 bg-red-100/90 border-2 border-red-300 rounded-2xl flex items-start gap-3 text-xs text-red-900">
+                      <AlertOctagon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="font-black text-red-900 uppercase tracking-wide">
+                          Cancelled Before Courier Dispatch
+                        </p>
+                        <p className="text-[11px] text-red-800 leading-relaxed font-medium">
+                          The customer cancelled this order prior to delivery dispatch. Keep organic products in cold storage. Do not pack or dispatch.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Customer Info & Address */}
                   <div className="px-5 pt-3 pb-2 text-xs space-y-1 text-espresso-800 border-b border-cream-100">
@@ -744,7 +974,7 @@ export default function AdminPage() {
                     {order.items.map((ci) => (
                       <div key={ci.id} className="pt-2 first:pt-0 flex justify-between text-xs">
                         <div>
-                          <p className="font-bold text-espresso-950">
+                          <p className={`font-bold ${isCancelled ? 'line-through text-red-900/70' : 'text-espresso-950'}`}>
                             {ci.quantity}x {ci.menuItem.name}
                           </p>
                           {ci.selectedOptions && Object.keys(ci.selectedOptions).length > 0 && (
@@ -753,13 +983,15 @@ export default function AdminPage() {
                             </p>
                           )}
                         </div>
-                        <span className="font-semibold text-espresso-800">₹{ci.itemTotal}</span>
+                        <span className={`font-semibold ${isCancelled ? 'text-red-700' : 'text-espresso-800'}`}>
+                          ₹{ci.itemTotal}
+                        </span>
                       </div>
                     ))}
                   </div>
 
                   {/* Assigned Rider Banner (if assigned) */}
-                  {order.riderName && (
+                  {order.riderName && !isCancelled && (
                     <div className="px-5 py-2.5 bg-banhmi-card/60 border-t border-cream-200 text-xs flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Bike className="w-3.5 h-3.5 text-banhmi-red" />
@@ -782,64 +1014,72 @@ export default function AdminPage() {
                       </button>
                     </div>
 
-                    {/* Status Progression Buttons */}
+                    {/* Action Area: Blocked if Cancelled vs Normal Progression */}
                     <div className="space-y-2">
-                      {order.status === 'new' && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'preparing')}
-                          className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
-                        >
-                          <Flame className="w-3.5 h-3.5" />
-                          <span>Accept & Start Cooking</span>
-                        </button>
-                      )}
-
-                      {order.status === 'preparing' && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'ready')}
-                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
-                        >
-                          <PackageCheck className="w-3.5 h-3.5" />
-                          <span>Mark Thermal Packed (Ready)</span>
-                        </button>
-                      )}
-
-                      {order.status === 'ready' && isDelivery && (
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold uppercase text-espresso-600">
-                            Dispatch Delivery Partner:
-                          </label>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {deliveryAgents.map((agent) => (
-                              <button
-                                key={agent.id}
-                                onClick={() => assignDeliveryAgent(order.id, agent.id)}
-                                className="px-2 py-1.5 bg-white hover:bg-banhmi-card border border-cream-300 rounded-lg text-[11px] font-bold text-espresso-900 truncate transition active:scale-95"
-                              >
-                                {agent.name.split(' ')[0]}
-                              </button>
-                            ))}
-                          </div>
+                      {isCancelled ? (
+                        <div className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
+                          <Ban className="w-4 h-4 text-white" />
+                          <span>ORDER CANCELLED — DISPATCH BLOCKED</span>
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          {(order.status === 'new' || order.status === 'preparing') && (
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => updateOrderStatus(order.id, 'delivering')}
+                                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                              >
+                                <Bike className="w-3.5 h-3.5" />
+                                <span>Dispatch / Out for Delivery</span>
+                              </button>
 
-                      {order.status === 'ready' && !isDelivery && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'completed')}
-                          className="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Verify Pickup OTP & Handover</span>
-                        </button>
-                      )}
+                              {isDelivery && deliveryAgents.length > 0 && (
+                                <div className="pt-1">
+                                  <label className="block text-[10px] font-bold uppercase text-espresso-600 mb-1">
+                                    Or Assign Courier Directly:
+                                  </label>
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    {deliveryAgents.map((agent) => (
+                                      <button
+                                        key={agent.id}
+                                        onClick={() => assignDeliveryAgent(order.id, agent.id)}
+                                        className="px-2 py-1.5 bg-white hover:bg-banhmi-card border border-cream-300 rounded-lg text-[11px] font-bold text-espresso-900 truncate transition active:scale-95 text-left"
+                                      >
+                                        🛵 {agent.name.split(' ')[0]}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
-                      {order.status !== 'completed' && order.status !== 'cancelled' && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                          className="w-full text-center text-[10px] text-espresso-400 hover:text-rose-600 pt-1"
-                        >
-                          Cancel Order
-                        </button>
+                          {(order.status === 'delivering' || order.status === 'ready') && (
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'completed')}
+                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Mark Order Delivered</span>
+                            </button>
+                          )}
+
+                          {order.status === 'completed' && (
+                            <div className="py-2 px-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold text-center border border-emerald-200 flex items-center justify-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Delivered Successfully</span>
+                            </div>
+                          )}
+
+                          {order.status !== 'completed' && order.status !== 'cancelled' && (
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                              className="w-full text-center text-[10px] text-espresso-400 hover:text-rose-600 pt-1 cursor-pointer"
+                            >
+                              Cancel Order
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -954,19 +1194,19 @@ export default function AdminPage() {
               </div>
 
               {/* Ready Orders Available for Self-Claim / Pickup */}
-              {unassignedReadyOrders.length > 0 && (
+              {unassignedOrders.length > 0 && (
                 <div className="space-y-3 p-5 bg-amber-50 rounded-3xl border-2 border-amber-200">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Ready for Pickup at Kitchen ({unassignedReadyOrders.length})</span>
+                      <span>Ready for Pickup & Dispatch ({unassignedOrders.length})</span>
                     </h4>
                     <span className="text-[10px] bg-amber-600 text-white font-bold px-2 py-0.5 rounded-full">
                       Open Runs
                     </span>
                   </div>
                   <div className="space-y-2.5">
-                    {unassignedReadyOrders.map((order) => (
+                    {unassignedOrders.map((order) => (
                       <div
                         key={order.id}
                         className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
@@ -975,7 +1215,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-espresso-950">#{order.tokenId}</span>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                              Ready
+                              {order.status === 'delivering' ? 'Out for Delivery' : 'Order Placed'}
                             </span>
                           </div>
                           <p className="text-espresso-800 font-semibold mt-1">To: {order.customer.name}</p>
@@ -1007,15 +1247,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   riderAssignedOrders.map((order) => {
-                    const feedback = riderOtpFeedback[order.id];
                     const mapsUrl = buildGoogleMapsUrl(order.customer.address, order.customer.lat, order.customer.lng);
-                    const whatsappOtpUrl = generateWhatsAppOtpLink(
-                      order.customer.phone,
-                      order.deliveryOtp,
-                      order.tokenId,
-                      order.total,
-                      order.customer.name
-                    );
 
                     return (
                       <div
@@ -1030,7 +1262,7 @@ export default function AdminPage() {
                             <p className="text-xs text-espresso-500">Order ID: {order.id}</p>
                           </div>
                           <span className="text-xs font-bold uppercase px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
-                            {order.status}
+                            {order.status === 'delivering' ? 'Out for Delivery' : 'Order Placed'}
                           </span>
                         </div>
 
@@ -1070,60 +1302,17 @@ export default function AdminPage() {
                           </a>
                         </div>
 
-                        {/* WhatsApp OTP Share (All SMS removed) */}
-                        <a
-                          href={whatsappOtpUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-bold transition"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Share OTP Reminder to Customer WhatsApp</span>
-                        </a>
-
                         <hr className="border-cream-200" />
 
-                        {/* STRICT DOORSTEP 4-DIGIT OTP VERIFICATION FORM */}
-                        <div className="space-y-2 pt-1">
-                          <label className="block text-xs font-bold uppercase tracking-wider text-espresso-900">
-                            Doorstep 4-Digit OTP Handover Verification *
-                          </label>
-
-                          {feedback && (
-                            <div
-                              className={`p-2.5 rounded-xl text-xs font-bold text-center ${
-                                feedback.success
-                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                                  : 'bg-rose-50 text-rose-800 border border-rose-300'
-                              }`}
-                            >
-                              {feedback.message}
-                            </div>
-                          )}
-
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              maxLength={4}
-                              placeholder="Enter 4-digit customer OTP"
-                              value={riderOtpInputs[order.id] || ''}
-                              onChange={(e) =>
-                                setRiderOtpInputs((prev) => ({ ...prev, [order.id]: e.target.value }))
-                              }
-                              className="flex-1 px-4 py-2.5 rounded-xl border border-cream-300 bg-white font-mono text-center text-base tracking-widest text-espresso-900 focus:outline-none focus:border-banhmi-red shadow-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRiderOtpVerify(order.id)}
-                              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95"
-                            >
-                              Verify & Complete
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-espresso-500">
-                            Strict DB validation. Bypass codes disabled for delivery integrity.
-                          </p>
-                        </div>
+                        {/* Direct 1-Click Order Delivery Completion */}
+                        <button
+                          type="button"
+                          onClick={() => handleMarkOrderDelivered(order.id)}
+                          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm transition active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Mark Order Delivered</span>
+                        </button>
                       </div>
                     );
                   })
@@ -1298,7 +1487,423 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 7. SOS ACTION CENTER MODAL (Admin inspection of active alerts) */}
+      {/* 7. TAB 4: MEMBERSHIPS MANAGEMENT (CARDS ONE BELOW THE OTHER) */}
+      {activeTab === 'memberships' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+          {/* Header Banner */}
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shadow-sm shrink-0">
+                <Crown className="w-6 h-6 fill-amber-500 text-amber-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-espresso-950 font-display tracking-tight">
+                    FARM MEMBERSHIP REGISTRY
+                  </h2>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                    Live Database Sync
+                  </span>
+                </div>
+                <p className="text-xs text-espresso-600 mt-0.5">
+                  View, track, settle month-end bills, and manage 6-Month Prepaid VIP & 1-Month Postpaid Pass holders.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchAdminMemberships}
+              disabled={membershipsLoading}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-espresso-900 hover:bg-black text-cream-50 font-bold text-xs rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${membershipsLoading ? 'animate-spin' : ''}`} />
+              <span>{membershipsLoading ? 'Syncing...' : 'Sync Memberships'}</span>
+            </button>
+          </div>
+
+          {/* Action Notice / Toast */}
+          {membershipActionMsg && (
+            <div className="p-4 bg-emerald-50 border-2 border-emerald-300 text-emerald-900 text-xs font-bold rounded-2xl flex items-center justify-between shadow-xs">
+              <span>{membershipActionMsg}</span>
+              <button
+                onClick={() => setMembershipActionMsg('')}
+                className="text-emerald-700 hover:text-emerald-900 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-sm space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-espresso-500">
+                Total Members
+              </span>
+              <p className="text-3xl font-black text-espresso-950 font-mono">
+                {adminMemberships.length}
+              </p>
+              <p className="text-[11px] text-espresso-500 font-medium">
+                Registered customer profiles
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-sm space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                6-Month Prepaid VIP
+              </span>
+              <p className="text-3xl font-black text-amber-600 font-mono">
+                {adminMemberships.filter((m) => m.planType === '6_months').length}
+              </p>
+              <p className="text-[11px] text-amber-700 font-medium">
+                ₹1,499 paid upfront (180 days)
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-sm space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                1-Month Postpaid Pass
+              </span>
+              <p className="text-3xl font-black text-emerald-700 font-mono">
+                {adminMemberships.filter((m) => m.planType === '1_month').length}
+              </p>
+              <p className="text-[11px] text-emerald-700 font-medium">
+                ₹299/mo postpaid cycle
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border-2 border-rose-300 bg-rose-50/40 shadow-warm-sm space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                <span>Month-End Bills Due</span>
+              </span>
+              <p className="text-3xl font-black text-rose-700 font-mono">
+                {adminMemberships.filter((m) => m.paymentStatus === 'due' || m.status === 'expired').length}
+              </p>
+              <p className="text-[11px] text-rose-600 font-medium">
+                Requires payment / renewal
+              </p>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="bg-white p-4 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative w-full md:max-w-md">
+              <Search className="w-4 h-4 text-espresso-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search member name, phone or ID..."
+                value={membershipSearch}
+                onChange={(e) => setMembershipSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 text-xs text-espresso-900 focus:outline-none focus:border-[#173612]"
+              />
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto scrollbar-none pb-1 md:pb-0">
+              {[
+                { key: 'all' as const, label: 'All', count: adminMemberships.length },
+                { key: '6_months' as const, label: '6-Mo VIP', count: adminMemberships.filter((m) => m.planType === '6_months').length },
+                { key: '1_month' as const, label: '1-Mo Postpaid', count: adminMemberships.filter((m) => m.planType === '1_month').length },
+                { key: 'due' as const, label: '🚨 Bill Due', count: adminMemberships.filter((m) => m.paymentStatus === 'due' || m.status === 'expired').length },
+                { key: 'active' as const, label: 'Active', count: adminMemberships.filter((m) => m.status === 'active' && m.paymentStatus !== 'due').length },
+              ].map((pill) => (
+                <button
+                  key={pill.key}
+                  onClick={() => setMembershipFilter(pill.key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                    membershipFilter === pill.key
+                      ? 'bg-espresso-950 text-cream-50 shadow-sm'
+                      : 'bg-cream-100 text-espresso-700 hover:bg-cream-200'
+                  }`}
+                >
+                  {pill.label} ({pill.count})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* MEMBERSHIP CARDS - RENDERED ONE BELOW THE OTHER (VERTICAL STACK) */}
+          <div className="space-y-4">
+            {filteredAdminMemberships.length === 0 ? (
+              <div className="bg-white p-12 rounded-3xl border border-cream-200 text-center space-y-3">
+                <Crown className="w-12 h-12 text-cream-400 mx-auto" />
+                <h3 className="text-base font-bold text-espresso-900">
+                  No Memberships Found
+                </h3>
+                <p className="text-xs text-espresso-500 max-w-sm mx-auto">
+                  {membershipSearch
+                    ? 'No members match your search criteria. Try a different query or clear filter.'
+                    : 'No customer memberships enrolled in this category yet.'}
+                </p>
+              </div>
+            ) : (
+              filteredAdminMemberships.map((m) => {
+                const isDue = m.paymentStatus === 'due' || m.status === 'expired';
+                const now = new Date();
+                const endDate = new Date(m.endDate);
+                const diffMs = endDate.getTime() - now.getTime();
+                const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                const cleanPhone = m.phone.replace(/[^0-9]/g, '');
+
+                const waMessage = encodeURIComponent(
+                  isDue
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹299 for 30 days of free daily deliveries is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
+                );
+
+                return (
+                  <div
+                    key={m.id}
+                    className={`bg-white rounded-3xl border-2 p-5 sm:p-6 transition shadow-warm-sm hover:shadow-warm-md relative overflow-hidden ${
+                      isDue
+                        ? 'border-rose-400 bg-rose-50/20'
+                        : m.planType === '6_months'
+                        ? 'border-amber-300'
+                        : 'border-[#D8ECCE]'
+                    }`}
+                  >
+                    {/* Top Tag */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cream-200 pb-3.5 mb-4">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span
+                          className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                            m.planType === '6_months'
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          }`}
+                        >
+                          {m.planType === '6_months' ? (
+                            <>
+                              <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                              <span>6-Month VIP Club (Prepaid)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-700" />
+                              <span>1-Month Organic Pass (Postpaid)</span>
+                            </>
+                          )}
+                        </span>
+
+                        <span className="text-xs font-mono font-bold text-espresso-500 bg-cream-100 px-2.5 py-1 rounded-xl">
+                          ID: {m.id}
+                        </span>
+                      </div>
+
+                      {/* Status Pill */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                          isDue
+                            ? 'bg-rose-600 text-white animate-pulse'
+                            : 'bg-emerald-500 text-white'
+                        }`}
+                      >
+                        {isDue ? (
+                          <>
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>🚨 MONTH-END BILL DUE (₹299)</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                            <span>ACTIVE MEMBER</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Main Details Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+                      {/* Column 1: Customer Contact */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-espresso-400 block">
+                          Customer Profile
+                        </span>
+                        <div className="space-y-1">
+                          <h4 className="text-base font-black text-espresso-950">
+                            {m.customerName}
+                          </h4>
+                          <div className="flex items-center gap-2 font-mono font-bold text-espresso-700">
+                            <Phone className="w-3.5 h-3.5 text-espresso-400" />
+                            <span>{m.phone}</span>
+                          </div>
+                          {m.address && (
+                            <div className="flex items-start gap-1.5 text-espresso-600 text-[11px] leading-relaxed">
+                              <MapPin className="w-3.5 h-3.5 text-espresso-400 shrink-0 mt-0.5" />
+                              <span className="line-clamp-2">{m.address}</span>
+                            </div>
+                          )}
+                          {m.customerEmail && (
+                            <div className="flex items-center gap-1.5 text-espresso-600 text-[11px]">
+                              <Mail className="w-3.5 h-3.5 text-espresso-400 shrink-0" />
+                              <span className="truncate">{m.customerEmail}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Column 2: Dates & Validity Countdown */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-espresso-400 block">
+                          Membership Validity
+                        </span>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-espresso-600 text-[11px]">Days Remaining:</span>
+                            <strong
+                              className={`text-sm font-black ${
+                                isDue ? 'text-rose-600' : 'text-emerald-700'
+                              }`}
+                            >
+                              {isDue ? 'Cycle Completed (Due)' : `${daysRemaining} Days`}
+                            </strong>
+                          </div>
+
+                          <div className="w-full h-2 bg-cream-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                isDue
+                                  ? 'bg-rose-500'
+                                  : 'bg-gradient-to-r from-emerald-500 to-amber-500'
+                              }`}
+                              style={{
+                                width: `${
+                                  isDue
+                                    ? 100
+                                    : Math.min(
+                                        100,
+                                        Math.max(
+                                          5,
+                                          (daysRemaining / (m.planType === '6_months' ? 180 : 30)) * 100
+                                        )
+                                      )
+                                }%`,
+                              }}
+                            />
+                          </div>
+
+                          <div className="text-[11px] text-espresso-500 flex justify-between">
+                            <span>Started: {new Date(m.startDate).toLocaleDateString('en-IN')}</span>
+                            <span>Expires: {new Date(m.endDate).toLocaleDateString('en-IN')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Column 3: Billing & Financial Status */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-espresso-400 block">
+                          Billing Status
+                        </span>
+                        <div className="p-3 bg-cream-50 rounded-2xl border border-cream-200 space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-espresso-600">Scheme Rate:</span>
+                            <strong className="text-espresso-950 font-black">
+                              {m.planType === '6_months' ? '₹1,499.00' : '₹299.00 / mo'}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-espresso-600">Payment Mode:</span>
+                            <strong className="uppercase font-bold text-espresso-800">
+                              {m.billingType}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between items-center pt-1 border-t border-cream-200">
+                            <span className="text-espresso-600">Payment Status:</span>
+                            <span
+                              className={`px-2 py-0.5 rounded-md font-black text-[10px] uppercase ${
+                                isDue
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {isDue
+                                ? '₹299 DUE NOW'
+                                : m.billingType === 'prepaid'
+                                ? 'PAID UPFRONT'
+                                : 'POSTPAID ACTIVE'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Actions Bar */}
+                    <div className="pt-4 mt-4 border-t border-cream-200 flex flex-wrap items-center justify-between gap-3">
+                      {/* Left: Contact actions */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={`tel:${cleanPhone}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cream-100 hover:bg-cream-200 text-espresso-800 text-xs font-bold transition"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call Member</span>
+                        </a>
+
+                        <a
+                          href={`https://wa.me/91${cleanPhone}?text=${waMessage}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>WhatsApp Reminder</span>
+                        </a>
+
+                        <Link
+                          href={`/track?phone=${cleanPhone}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cream-100 hover:bg-cream-200 text-espresso-800 text-xs font-bold transition"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View Orders</span>
+                        </Link>
+                      </div>
+
+                      {/* Right: Operational actions */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isDue && (
+                          <button
+                            onClick={() => handleMarkMembershipPaid(m)}
+                            disabled={membershipActionLoading === m.id}
+                            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Mark Month-End Bill Paid (₹299)</span>
+                          </button>
+                        )}
+
+                        {!isDue && m.billingType === 'postpaid' && (
+                          <button
+                            onClick={() => handleSimulateMembershipDue(m)}
+                            disabled={membershipActionLoading === m.id}
+                            className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                            title="Simulate 30 days passed to test bill payment flow"
+                          >
+                            <FastForward className="w-3.5 h-3.5" />
+                            <span>Simulate Due Bill (Test)</span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleExtendMembership30(m)}
+                          disabled={membershipActionLoading === m.id}
+                          className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50"
+                        >
+                          + Extend 30 Days
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 8. SOS ACTION CENTER MODAL (Admin inspection of active alerts) */}
       {sosActionCenterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-fadeIn">
           <div

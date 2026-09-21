@@ -92,7 +92,7 @@ export function ZafirooHero() {
       <div className="relative z-20 max-w-4xl mx-auto px-4 py-16 sm:py-24 text-center flex flex-col items-center justify-center space-y-4 sm:space-y-6">
         {/* Free Delivery Top Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 sm:px-6 sm:py-2 rounded-full bg-white text-[#173612] text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-lg border border-[#173612]/20">
-          <span>🚚 100% Free Doorstep Delivery On All Products</span>
+          <span>Free Doorstep Delivery On All Products</span>
         </div>
 
         {/* Clean Cow Face Logo */}

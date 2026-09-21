@@ -20,8 +20,6 @@ export function CartDrawer() {
     setLocationModalOpen,
   } = useOrder();
 
-  const [tip, setTip] = useState(30);
-
   if (!cartDrawerOpen) return null;
 
   const threshold = CAFE_METADATA.freeDeliveryThreshold;
@@ -30,8 +28,8 @@ export function CartDrawer() {
   const progressPercent = Math.min(100, Math.round((cartSubtotal / threshold) * 100));
   const remainingForFree = Math.max(0, threshold - cartSubtotal);
 
-  const tax = Math.round(cartSubtotal * CAFE_METADATA.taxRate * 100) / 100;
-  const grandTotal = cartSubtotal + deliveryFee + tax + tip;
+  const tax = 0;
+  const grandTotal = cartSubtotal + deliveryFee;
 
   const handleCheckoutClick = () => {
     setCartDrawerOpen(false);
@@ -90,9 +88,9 @@ export function CartDrawer() {
               <div className="flex items-center justify-between text-xs font-medium text-[#173612] mb-1.5">
                 <span className="text-emerald-700 font-bold flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-                  <span>🚚 100% Free Doorstep Delivery Unlocked For All Items!</span>
+                  <span>Free Doorstep Delivery Unlocked For All Items!</span>
                 </span>
-                <span className="font-bold text-emerald-700">100%</span>
+                <span className="font-bold text-emerald-700">Free</span>
               </div>
               <div className="w-full bg-emerald-100 rounded-full h-2 overflow-hidden">
                 <div
@@ -199,33 +197,8 @@ export function CartDrawer() {
           {/* Footer & Checkout Area */}
           {cart.length > 0 && (
             <div className="p-5 border-t border-[#EAF3E4] bg-[#F5FAF0] space-y-4">
-              {/* Delivery Partner Tip with balanced buttons */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0F240B]">
-                    Organic Delivery Partner Tip
-                  </span>
-                  {tip > 0 && <span className="text-[#173612] font-black">₹{tip}</span>}
-                </div>
-                <div className="flex gap-2">
-                  {[0, 20, 30, 50].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setTip(amount)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
-                        tip === amount
-                          ? 'bg-[#173612] text-white border-[#173612] shadow-sm'
-                          : 'bg-white text-[#173612] border-gray-200 hover:border-[#173612]'
-                      }`}
-                    >
-                      {amount === 0 ? 'None' : `₹${amount}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Price Breakdown */}
-              <div className="space-y-1.5 text-xs text-[#173612] border-t border-gray-200 pt-3">
+              <div className="space-y-1.5 text-xs text-[#173612] pt-1">
                 <div className="flex justify-between">
                   <span>Item Subtotal</span>
                   <span className="font-bold text-[#0F240B]">₹{cartSubtotal}</span>
@@ -236,16 +209,6 @@ export function CartDrawer() {
                     {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>GST (5%)</span>
-                  <span>₹{tax}</span>
-                </div>
-                {tip > 0 && (
-                  <div className="flex justify-between">
-                    <span>Partner Tip</span>
-                    <span>₹{tip}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-sm font-black text-[#0F240B] border-t border-gray-200 pt-2 font-bebas tracking-wide text-base">
                   <span>To Pay</span>
                   <span className="text-[#0F240B] text-xl">₹{grandTotal.toFixed(2)}</span>

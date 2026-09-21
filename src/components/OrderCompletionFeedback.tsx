@@ -15,7 +15,7 @@ interface FeedbackProps {
 
 const COMPLIMENT_TAGS = [
   '🥛 Ultra Fresh Milk',
-  '❄️ Chilled to Doorstep',
+  '❄️ Fresh to Doorstep',
   '⏱️ Speedy Farm Dispatch',
   '📦 Tamper-Proof Sealed',
   '🧈 Rich Creamy Texture',
