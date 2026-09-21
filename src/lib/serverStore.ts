@@ -262,13 +262,11 @@ export function getLocalMenu(): MenuItem[] {
 }
 
 export function getLocalMemberships(phone?: string): Membership[] {
-  if (!serverStore.memberships) {
-    serverStore.memberships = [];
-  }
-  if (!phone) return serverStore.memberships;
+  const list = serverStore.memberships || [];
+  if (!phone) return list;
   const clean = phone.replace(/[^0-9]/g, '');
   const ten = clean.slice(-10);
-  return serverStore.memberships.filter((m) => {
+  return list.filter((m) => {
     const mPhone = m.phone.replace(/[^0-9]/g, '');
     return mPhone.includes(clean) || clean.includes(mPhone) || (ten && mPhone.includes(ten));
   });
@@ -278,16 +276,18 @@ export function saveLocalMembership(membership: Membership): Membership {
   if (!serverStore.memberships) {
     serverStore.memberships = [];
   }
+  const currentList = serverStore.memberships;
+
   // If phone already has membership, replace or prepend
   const clean = membership.phone.replace(/[^0-9]/g, '').slice(-10);
-  const idx = serverStore.memberships.findIndex(
+  const idx = currentList.findIndex(
     (m) => m.id === membership.id || (clean.length === 10 && m.phone.replace(/[^0-9]/g, '').slice(-10) === clean)
   );
   if (idx > -1) {
-    serverStore.memberships[idx] = membership;
+    currentList[idx] = membership;
   } else {
-    serverStore.memberships.unshift(membership);
+    currentList.unshift(membership);
   }
+  serverStore.memberships = currentList;
   return membership;
 }
-

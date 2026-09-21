@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useOrder } from '@/context/OrderContext';
-import { ChevronDown, ChevronRight, ShoppingBag } from 'lucide-react';
+import { ChevronDown, ChevronRight, ShoppingBag, Crown } from 'lucide-react';
 
 const HERO_VIDEOS = [
   {
@@ -118,13 +118,13 @@ export function ZafirooHero() {
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex flex-col xs:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 w-full max-w-md">
+        <div className="flex flex-col xs:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2 w-full max-w-lg">
           <Link
             href="/menu"
             className="w-full xs:w-auto px-6 sm:px-8 py-3.5 bg-white hover:bg-white/90 text-[#173612] font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl hover:scale-105 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4 text-[#173612]" />
-            <span>Shop Milk & Eggs</span>
+            <span>Shop Milk &amp; Eggs</span>
           </Link>
           <a
             href="#shop"
@@ -133,6 +133,13 @@ export function ZafirooHero() {
           >
             <span>Browse Farm Items</span>
           </a>
+          <Link
+            href="/membership"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black text-sm shadow-md transition active:scale-95"
+          >
+            <Crown className="w-4 h-4 fill-[#0F240B]" />
+            <span>Join Membership</span>
+          </Link>
         </div>
       </div>
 

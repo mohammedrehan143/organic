@@ -3,6 +3,9 @@ import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
 import { getLocalMemberships, saveLocalMembership } from '@/lib/serverStore';
 import { Membership, MembershipPlanType, MembershipBillingType } from '@/types/cafe';
 
+// Cache whether the remote Supabase project has the memberships table created
+let supabaseTableAvailable = true;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -13,14 +16,18 @@ export async function GET(req: NextRequest) {
       const client = supabaseAdmin || supabase;
       let allMemberships: Membership[] = [];
 
-      if (isSupabaseConfigured && client) {
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
         try {
           const { data, error } = await client
             .from('memberships')
             .select('*')
             .order('created_at', { ascending: false });
 
-          if (!error && data) {
+          if (error) {
+            if (error.code === 'PGRST205') {
+              supabaseTableAvailable = false;
+            }
+          } else if (data) {
             allMemberships = data.map((row: any) => {
               const now = new Date();
               const endDate = new Date(row.end_date);
@@ -50,11 +57,13 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Merge with local memberships
-      const localAll = getLocalMemberships();
-      for (const loc of localAll) {
-        if (!allMemberships.some((m) => m.id === loc.id || m.phone.replace(/[^0-9]/g, '').slice(-10) === loc.phone.replace(/[^0-9]/g, '').slice(-10))) {
-          allMemberships.push(loc);
+      // When Supabase table is not available, fall back to in-memory store
+      if (!supabaseTableAvailable || !isSupabaseConfigured || !client) {
+        const localAll = getLocalMemberships();
+        for (const loc of localAll) {
+          if (!allMemberships.some((m) => m.id === loc.id || m.phone.replace(/[^0-9]/g, '').slice(-10) === loc.phone.replace(/[^0-9]/g, '').slice(-10))) {
+            allMemberships.push(loc);
+          }
         }
       }
 
@@ -79,7 +88,7 @@ export async function GET(req: NextRequest) {
     const client = supabaseAdmin || supabase;
 
     // 1. Try querying Supabase Database
-    if (isSupabaseConfigured && client) {
+    if (isSupabaseConfigured && client && supabaseTableAvailable) {
       try {
         const { data, error } = await client
           .from('memberships')
@@ -88,7 +97,11 @@ export async function GET(req: NextRequest) {
           .order('created_at', { ascending: false })
           .limit(1);
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          if (error.code === 'PGRST205') {
+            supabaseTableAvailable = false;
+          }
+        } else if (data && data.length > 0) {
           const row = data[0];
           const now = new Date();
           const endDate = new Date(row.end_date);
@@ -127,7 +140,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. Fallback to serverStore in-memory records
+    // 2. Fallback to serverStore in-memory records (when Supabase table unavailable)
     const localMatches = getLocalMemberships(cleanInput);
     if (localMatches.length > 0) {
       const row = localMatches[0];
@@ -211,11 +224,11 @@ export async function POST(req: NextRequest) {
       updatedAt: startDate.toISOString(),
     };
 
-    // 1. Save to Supabase database if configured
+    // 1. Save to Supabase database if configured and table is available
     const client = supabaseAdmin || supabase;
     let dbSaved = false;
 
-    if (isSupabaseConfigured && client) {
+    if (isSupabaseConfigured && client && supabaseTableAvailable) {
       try {
         const { error: insertErr } = await client
           .from('memberships')
@@ -241,14 +254,19 @@ export async function POST(req: NextRequest) {
           dbSaved = true;
         } else {
           console.warn('[Membership API] DB insert notice:', insertErr.message);
+          if (insertErr.code === 'PGRST205') {
+            supabaseTableAvailable = false;
+          }
         }
       } catch (dbErr) {
         console.warn('[Membership API] DB write failed:', dbErr);
       }
     }
 
-    // 2. Save to server store
-    saveLocalMembership(newMembership);
+    // 2. When Supabase table is not available, save to in-memory store
+    if (!dbSaved) {
+      saveLocalMembership(newMembership);
+    }
 
     return NextResponse.json(
       {
@@ -286,7 +304,7 @@ export async function PATCH(req: NextRequest) {
         updated_at: now.toISOString(),
       };
 
-      if (isSupabaseConfigured && client) {
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
         try {
           await client
             .from('memberships')
@@ -324,7 +342,7 @@ export async function PATCH(req: NextRequest) {
         updated_at: now.toISOString(),
       };
 
-      if (isSupabaseConfigured && client) {
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
         try {
           await client
             .from('memberships')
@@ -365,7 +383,7 @@ export async function PATCH(req: NextRequest) {
         updated_at: now.toISOString(),
       };
 
-      if (isSupabaseConfigured && client) {
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
         try {
           await client
             .from('memberships')

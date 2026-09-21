@@ -231,13 +231,11 @@ export default function AdminPage() {
     refreshOrders();
     refreshDeliveryAgents();
     refreshSosAlerts();
-    fetchAdminMemberships();
 
     const interval = setInterval(() => {
       refreshOrders();
       refreshDeliveryAgents();
       refreshSosAlerts();
-      fetchAdminMemberships();
     }, 5000);
 
     return () => clearInterval(interval);

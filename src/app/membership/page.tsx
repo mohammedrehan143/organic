@@ -461,7 +461,7 @@ export default function MembershipPage() {
                   {/* Benefits Checklist */}
                   <div className="space-y-3 pt-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      VIP Club Privileges:
+                      VIP Membership Privileges:
                     </span>
                     <ul className="space-y-2.5 text-xs text-emerald-50">
                       <li className="flex items-start gap-2.5">

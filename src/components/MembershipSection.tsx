@@ -59,7 +59,7 @@ export function MembershipSection() {
           </h2>
 
           <p className="text-sm sm:text-base text-white/85 max-w-2xl mx-auto leading-relaxed">
-            Join the Zafiroo Organic Club with our <strong>1-Month Postpaid</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
+            Join the Zafiroo Organic Membership with our <strong>1-Month Postpaid</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
           </p>
 
           <div className="pt-2 flex flex-wrap justify-center gap-3">
@@ -134,7 +134,7 @@ export function MembershipSection() {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
                   <Crown className="w-3 h-3 fill-amber-300" />
-                  <span>PREPAID VIP CLUB</span>
+                  <span>PREPAID VIP MEMBERSHIP</span>
                 </span>
                 <span className="text-xs text-gray-300 font-mono">180 Days</span>
               </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Order, Membership } from '@/types/cafe';
+import { Order } from '@/types/cafe';
 import {
   Search,
   Clock,
@@ -19,10 +19,6 @@ import {
   AlertTriangle,
   MapPin,
   CheckCircle,
-  Crown,
-  Calendar,
-  ShieldCheck,
-  ArrowRight,
   XCircle,
 } from 'lucide-react';
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
@@ -490,9 +486,6 @@ function TrackPageContent() {
 
   const [searchQuery, setSearchQuery] = useState(phoneParam || tokenParam || '');
   const [searchedPhone, setSearchedPhone] = useState('');
-  const [membership, setMembership] = useState<Membership | null>(null);
-  const [membershipDaysLeft, setMembershipDaysLeft] = useState<number | null>(null);
-  const [membershipExpired, setMembershipExpired] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [selectedOrderForBill, setSelectedOrderForBill] = useState<Order | null>(null);
   const [billModalOpen, setBillModalOpen] = useState(false);
@@ -516,31 +509,11 @@ function TrackPageContent() {
         sessionStorage.setItem('zafiroo_tracked_phone', cleanDigits.slice(-10));
       }
 
-      // 1. If 10-digit phone, lookup active membership & customer orders in parallel
+      // 1. If 10-digit phone, lookup customer orders
       if (isPhoneSearch) {
         const phoneTen = cleanDigits.slice(-10);
 
-        const [memRes, ordRes] = await Promise.all([
-          fetch(`/api/membership?phone=${encodeURIComponent(phoneTen)}`),
-          fetch(`/api/orders?phone=${encodeURIComponent(phoneTen)}&limit=50`),
-        ]);
-
-        if (memRes.ok) {
-          const memData = await memRes.json();
-          if (memData.success && memData.membership) {
-            setMembership(memData.membership);
-            setMembershipDaysLeft(typeof memData.daysRemaining === 'number' ? memData.daysRemaining : null);
-            setMembershipExpired(Boolean(memData.isExpired));
-          } else {
-            setMembership(null);
-            setMembershipDaysLeft(null);
-            setMembershipExpired(false);
-          }
-        } else {
-          setMembership(null);
-          setMembershipDaysLeft(null);
-          setMembershipExpired(false);
-        }
+        const ordRes = await fetch(`/api/orders?phone=${encodeURIComponent(phoneTen)}&limit=50`);
 
         if (ordRes.ok) {
           const ordData = await ordRes.json();
@@ -556,10 +529,6 @@ function TrackPageContent() {
         }
       } else {
         // Search by Token ID or Order ID
-        setMembership(null);
-        setMembershipDaysLeft(null);
-        setMembershipExpired(false);
-
         const ordRes = await fetch(`/api/orders?token=${encodeURIComponent(q)}&limit=10`);
         if (ordRes.ok) {
           const ordData = await ordRes.json();
@@ -642,10 +611,10 @@ function TrackPageContent() {
           <span>Customer Portal & Order Tracking</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-[#0F240B] font-bebas tracking-tight">
-          Track Memberships & Farm Orders
+          Track Your Farm Orders
         </h1>
         <p className="text-xs sm:text-sm text-[#173612]/80">
-          Enter your 10-digit mobile number to check your active membership status, time remaining, and live order tracking.
+          Enter your 10-digit mobile number or Token ID to check your live order status and delivery tracking.
         </p>
 
         {/* Search Input Form */}
@@ -695,125 +664,12 @@ function TrackPageContent() {
         <div className="p-12 text-center bg-white rounded-3xl border border-[#EAF3E4] shadow-sm space-y-3">
           <Loader2 className="w-8 h-8 text-[#173612] animate-spin mx-auto" />
           <p className="text-xs font-bold text-[#0F240B]">
-            Loading your membership profile and orders...
+            Loading your orders...
           </p>
         </div>
       )}
 
-      {/* 1. MEMBERSHIP PROFILE SECTION (When phone searched) */}
-      {!isLoading && hasSearched && searchedPhone && (
-        <div className="space-y-4">
-          {membership ? (
-            <div className="bg-gradient-to-br from-[#0F240B] to-[#1E4314] text-white p-6 sm:p-8 rounded-3xl shadow-xl border-2 border-[#CBE0A3]/40 relative overflow-hidden space-y-5">
-              {/* Decorative Background Icon */}
-              <div className="absolute right-[-15px] bottom-[-20px] opacity-10 pointer-events-none">
-                <Crown className="w-60 h-60 text-amber-300" />
-              </div>
-
-              {/* Membership Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/15 pb-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400 text-black flex items-center justify-center font-black shadow-md shrink-0">
-                    <Crown className="w-6 h-6 fill-black" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] bg-amber-400 text-black font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Active VIP Farm Member
-                      </span>
-                      <span className="text-xs text-white/75 font-mono">
-                        +91 {membership.phone}
-                      </span>
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white font-bebas tracking-wide mt-0.5">
-                      {membership.planName}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="text-left sm:text-right">
-                  <span className="text-[10px] uppercase font-bold text-white/70 block tracking-wider">
-                    Time Left For Membership
-                  </span>
-                  <p className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
-                    {membershipExpired ? (
-                      <span className="text-rose-300">Expired</span>
-                    ) : (
-                      `${membershipDaysLeft ?? 0} Days Left`
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Countdown & Expiry Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between text-xs text-white/80 font-medium gap-2">
-                  <span>
-                    Started: <strong>{new Date(membership.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                  </span>
-                  <span>
-                    Valid Until: <strong className="text-amber-300">{new Date(membership.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                  </span>
-                </div>
-                {/* Visual Progress Bar */}
-                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden p-0.5">
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, Math.max(5, ((membershipDaysLeft ?? 0) / (membership.planType === '6_months' ? 180 : 30)) * 100))}%`,
-                    }}
-                  />
-                </div>
-                <p className="text-[11px] text-white/70">
-                  {membership.billingType === 'postpaid'
-                    ? '⚡ 1-Month Postpaid Scheme: Zero advance payment. Pay at month-end after enjoying fresh daily deliveries.'
-                    : '🌟 6-Month Prepaid Scheme: Paid upfront with guaranteed priority morning milk allocation.'}
-                </p>
-              </div>
-
-              {/* VIP Member Perks */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
-                <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="font-semibold">100% Free Daily Deliveries</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="font-semibold">Priority A2 Milk Allocation</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="font-semibold">VIP Farm WhatsApp Care</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-5 sm:p-6 bg-amber-50 border-2 border-amber-200 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0">
-                  <Crown className="w-6 h-6 text-amber-800" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-950 text-sm">
-                    No active membership found for +91 {searchedPhone}
-                  </h4>
-                  <p className="text-amber-800 mt-0.5">
-                    Unlock 100% free daily deliveries with 1-Month Postpaid (₹299/mo) or 6-Months Prepaid (₹1,499).
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/membership"
-                className="w-full sm:w-auto px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-center shadow-sm transition active:scale-95 shrink-0"
-              >
-                Join Farm Membership
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 2. ORDERS SECTION */}
+      {/* ORDERS SECTION */}
       {!isLoading && hasSearched && (
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-2 border-b border-gray-200">
@@ -843,8 +699,7 @@ function TrackPageContent() {
                 href="/menu"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-bold text-xs rounded-full shadow-md transition"
               >
-                <span>Shop Fresh Milk & Eggs</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Shop Fresh Milk &amp; Eggs</span>
               </Link>
             </div>
           ) : activeOrders.length > 0 ? (

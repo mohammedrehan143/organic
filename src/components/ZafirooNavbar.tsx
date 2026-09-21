@@ -95,15 +95,13 @@ export function ZafirooNavbar() {
 
         {/* Right Actions: Membership, Tracking & Cart */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Membership Club Button */}
+          {/* Membership Icon Button (Crown Only) */}
           <Link
             href="/membership"
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] text-xs sm:text-sm font-black shadow-xs hover:shadow-md transition transform hover:scale-105 active:scale-95 cursor-pointer"
-            title="Zafiroo Farm Membership (1 Month Postpaid / 6 Months Prepaid)"
+            title="Membership"
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-50 border border-amber-300 hover:bg-amber-100 transition"
           >
-            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0F240B] fill-[#0F240B] shrink-0" />
-            <span className="hidden md:inline font-black">Membership</span>
-            <span className="md:hidden font-black text-xs">Club</span>
+            <Crown className="w-5 h-5 text-amber-600 fill-amber-400" />
           </Link>
 
           {/* Tracking Option Button */}
