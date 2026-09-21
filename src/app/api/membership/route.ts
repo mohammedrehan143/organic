@@ -94,42 +94,48 @@ export async function GET(req: NextRequest) {
           .from('memberships')
           .select('*')
           .or(`phone.ilike.%${cleanInput}%,phone.ilike.%${tenDigit}%`)
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .order('created_at', { ascending: false });
 
         if (error) {
           if (error.code === 'PGRST205') {
             supabaseTableAvailable = false;
           }
         } else if (data && data.length > 0) {
-          const row = data[0];
           const now = new Date();
-          const endDate = new Date(row.end_date);
-          const diffMs = endDate.getTime() - now.getTime();
-          const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-          const isExpired = diffMs <= 0;
+          const allMemberships: Membership[] = data.map((row: any) => {
+            const endDate = new Date(row.end_date);
+            const diffMs = endDate.getTime() - now.getTime();
+            const isExpired = diffMs <= 0;
+            return {
+              id: row.id,
+              phone: row.phone,
+              customerName: row.customer_name,
+              customerEmail: row.customer_email || undefined,
+              address: row.address || undefined,
+              planType: row.plan_type,
+              planName: row.plan_name,
+              billingType: row.billing_type,
+              price: Number(row.price) || 0,
+              status: isExpired ? 'expired' : row.status || 'active',
+              paymentStatus: row.payment_status || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle'),
+              startDate: row.start_date,
+              endDate: row.end_date,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+            };
+          });
 
-          const membership: Membership = {
-            id: row.id,
-            phone: row.phone,
-            customerName: row.customer_name,
-            customerEmail: row.customer_email || undefined,
-            address: row.address || undefined,
-            planType: row.plan_type,
-            planName: row.plan_name,
-            billingType: row.billing_type,
-            price: Number(row.price) || 0,
-            status: isExpired ? 'expired' : row.status || 'active',
-            paymentStatus: row.payment_status || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle'),
-            startDate: row.start_date,
-            endDate: row.end_date,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-          };
+          // Primary: most recently created active/valid membership
+          const primary = allMemberships.find(m => m.status === 'active') || allMemberships[0];
+          const primaryEnd = new Date(primary.endDate);
+          const primaryDiff = primaryEnd.getTime() - now.getTime();
+          const daysRemaining = Math.max(0, Math.ceil(primaryDiff / (1000 * 60 * 60 * 24)));
+          const isExpired = primaryDiff <= 0;
 
           return NextResponse.json({
             success: true,
-            membership,
+            membership: primary,
+            memberships: allMemberships,
             daysRemaining,
             isExpired,
             source: 'database',
@@ -143,15 +149,16 @@ export async function GET(req: NextRequest) {
     // 2. Fallback to serverStore in-memory records (when Supabase table unavailable)
     const localMatches = getLocalMemberships(cleanInput);
     if (localMatches.length > 0) {
-      const row = localMatches[0];
       const now = new Date();
-      const endDate = new Date(row.endDate);
+      const primary = localMatches.find(m => m.status === 'active') || localMatches[0];
+      const endDate = new Date(primary.endDate);
       const diffMs = endDate.getTime() - now.getTime();
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
       return NextResponse.json({
         success: true,
-        membership: row,
+        membership: primary,
+        memberships: localMatches,
         daysRemaining,
         isExpired: diffMs <= 0,
         source: 'local_store',
@@ -199,7 +206,7 @@ export async function POST(req: NextRequest) {
       ? '6 Months VIP Club (Prepaid)'
       : '1 Month Organic Pass (Postpaid)';
     const billingType: MembershipBillingType = isSixMonths ? 'prepaid' : 'postpaid';
-    const price = isSixMonths ? 1499 : 299;
+    const price = isSixMonths ? 12600 : 2160;
     const durationDays = isSixMonths ? 180 : 30;
 
     const startDate = new Date();
@@ -326,7 +333,7 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Fast-forwarded 30 days. Month-end bill of ₹299 is now due for settlement.',
+        message: 'Fast-forwarded 30 days. Month-end bill of ₹2,160 is now due for settlement.',
       });
     }
 
@@ -364,7 +371,7 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Month-end bill of ₹299 paid successfully! Membership renewed for next 30 days.',
+        message: 'Month-end bill of ₹2,160 paid successfully! Membership renewed for next 30 days.',
       });
     }
 

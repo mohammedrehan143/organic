@@ -46,7 +46,6 @@ import {
   AlertOctagon,
   Ban,
   Crown,
-  FastForward,
   Check,
   ExternalLink,
   MessageSquare,
@@ -96,6 +95,7 @@ export default function AdminPage() {
   const [membershipSearch, setMembershipSearch] = useState('');
   const [membershipActionLoading, setMembershipActionLoading] = useState<string | null>(null);
   const [membershipActionMsg, setMembershipActionMsg] = useState('');
+  const [extendConfirmMembership, setExtendConfirmMembership] = useState<Membership | null>(null);
 
   const fetchAdminMemberships = async () => {
     setMembershipsLoading(true);
@@ -137,32 +137,8 @@ export default function AdminPage() {
     }
   };
 
-  const handleSimulateMembershipDue = async (membership: Membership) => {
-    setMembershipActionLoading(membership.id);
-    setMembershipActionMsg('');
-    try {
-      const res = await fetch('/api/membership', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: membership.id,
-          phone: membership.phone,
-          action: 'skip_to_due',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMembershipActionMsg(`⏩ Fast-forwarded 30 days for ${membership.customerName}. Bill is now due.`);
-        await fetchAdminMemberships();
-      }
-    } catch (err) {
-      console.error('Error skipping to due:', err);
-    } finally {
-      setMembershipActionLoading(null);
-    }
-  };
-
   const handleExtendMembership30 = async (membership: Membership) => {
+    setExtendConfirmMembership(null);
     setMembershipActionLoading(membership.id);
     setMembershipActionMsg('');
     try {
@@ -179,9 +155,12 @@ export default function AdminPage() {
       if (res.ok && data.success) {
         setMembershipActionMsg(`✓ Extended membership by 30 days for ${membership.customerName}.`);
         await fetchAdminMemberships();
+      } else {
+        setMembershipActionMsg(`✗ Failed to extend membership. Please try again.`);
       }
     } catch (err) {
       console.error('Error extending membership:', err);
+      setMembershipActionMsg(`✗ Network error. Please try again.`);
     } finally {
       setMembershipActionLoading(null);
     }
@@ -1554,7 +1533,7 @@ export default function AdminPage() {
                 {adminMemberships.filter((m) => m.planType === '6_months').length}
               </p>
               <p className="text-[11px] text-amber-700 font-medium">
-                ₹1,499 paid upfront (180 days)
+                ₹12,600 paid upfront (180 days)
               </p>
             </div>
 
@@ -1566,7 +1545,7 @@ export default function AdminPage() {
                 {adminMemberships.filter((m) => m.planType === '1_month').length}
               </p>
               <p className="text-[11px] text-emerald-700 font-medium">
-                ₹299/mo postpaid cycle
+                ₹2,160/mo postpaid cycle
               </p>
             </div>
 
@@ -1647,7 +1626,7 @@ export default function AdminPage() {
 
                 const waMessage = encodeURIComponent(
                   isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹299 for 30 days of free daily deliveries is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹2,160 for 30 days of free daily deliveries is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
                     : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
                 );
 
@@ -1701,7 +1680,7 @@ export default function AdminPage() {
                         {isDue ? (
                           <>
                             <AlertTriangle className="w-3 h-3" />
-                            <span>🚨 MONTH-END BILL DUE (₹299)</span>
+                            <span>🚨 MONTH-END BILL DUE (₹2,160)</span>
                           </>
                         ) : (
                           <>
@@ -1798,7 +1777,7 @@ export default function AdminPage() {
                           <div className="flex justify-between items-center">
                             <span className="text-espresso-600">Scheme Rate:</span>
                             <strong className="text-espresso-950 font-black">
-                              {m.planType === '6_months' ? '₹1,499.00' : '₹299.00 / mo'}
+                              {m.planType === '6_months' ? '₹12,600.00' : '₹2,160.00 / mo'}
                             </strong>
                           </div>
                           <div className="flex justify-between items-center">
@@ -1817,7 +1796,7 @@ export default function AdminPage() {
                               }`}
                             >
                               {isDue
-                                ? '₹299 DUE NOW'
+                                ? '₹2,160 DUE NOW'
                                 : m.billingType === 'prepaid'
                                 ? 'PAID UPFRONT'
                                 : 'POSTPAID ACTIVE'}
@@ -1868,24 +1847,12 @@ export default function AdminPage() {
                             className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Mark Month-End Bill Paid (₹299)</span>
-                          </button>
-                        )}
-
-                        {!isDue && m.billingType === 'postpaid' && (
-                          <button
-                            onClick={() => handleSimulateMembershipDue(m)}
-                            disabled={membershipActionLoading === m.id}
-                            className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-                            title="Simulate 30 days passed to test bill payment flow"
-                          >
-                            <FastForward className="w-3.5 h-3.5" />
-                            <span>Simulate Due Bill (Test)</span>
+                            <span>Mark Month-End Bill Paid ({m.planType === '6_months' ? '₹12,600' : '₹2,160'})</span>
                           </button>
                         )}
 
                         <button
-                          onClick={() => handleExtendMembership30(m)}
+                          onClick={() => setExtendConfirmMembership(m)}
                           disabled={membershipActionLoading === m.id}
                           className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50"
                         >
@@ -1901,7 +1868,51 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 8. SOS ACTION CENTER MODAL (Admin inspection of active alerts) */}
+      {/* 8. EXTEND 30 DAYS CONFIRMATION MODAL */}
+      {extendConfirmMembership && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 border border-cream-200 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center mx-auto">
+                <Crown className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-black text-espresso-950">Extend Membership?</h3>
+              <p className="text-xs text-espresso-600">
+                You are about to extend <strong>{extendConfirmMembership.customerName}&apos;s</strong> membership by <strong>30 days</strong> from their current expiry date.
+              </p>
+            </div>
+
+            <div className="bg-cream-50 rounded-2xl p-3 border border-cream-200 text-xs text-espresso-700 space-y-1">
+              <div className="flex justify-between"><span>Customer</span><strong>{extendConfirmMembership.customerName}</strong></div>
+              <div className="flex justify-between"><span>Phone</span><strong className="font-mono">{extendConfirmMembership.phone}</strong></div>
+              <div className="flex justify-between"><span>Plan</span><strong>{extendConfirmMembership.planType === '6_months' ? '6-Month VIP' : '1-Month Postpaid'}</strong></div>
+              <div className="flex justify-between"><span>Current Expiry</span><strong>{new Date(extendConfirmMembership.endDate).toLocaleDateString('en-IN')}</strong></div>
+              <div className="flex justify-between text-emerald-700"><span>New Expiry</span><strong>{new Date(new Date(extendConfirmMembership.endDate).getTime() + 30*24*60*60*1000).toLocaleDateString('en-IN')}</strong></div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setExtendConfirmMembership(null)}
+                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleExtendMembership30(extendConfirmMembership)}
+                className="flex-1 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider shadow transition active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Confirm Extend
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. SOS ACTION CENTER MODAL (Admin inspection of active alerts) */}
       {sosActionCenterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-fadeIn">
           <div

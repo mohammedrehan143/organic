@@ -9,11 +9,6 @@ import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2, Crown } from 'lu
 export function ZafirooNavbar() {
   const pathname = usePathname();
 
-  // Hide customer navbar on admin routes
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
-
   const {
     cartCount,
     setCartDrawerOpen,
@@ -23,6 +18,11 @@ export function ZafirooNavbar() {
     autoDetectLocation,
     isDetectingLocation,
   } = useOrder();
+
+  // Hide customer navbar on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#EAF3E4] shadow-sm text-[#173612]">

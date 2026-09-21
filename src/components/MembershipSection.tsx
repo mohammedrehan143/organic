@@ -100,7 +100,7 @@ export function MembershipSection() {
                 </p>
               </div>
               <div className="text-3xl font-black text-white">
-                ₹299 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid)</span>
+                ₹2,160 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid, 1L/day × ₹72)</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-300">
                 <li className="flex items-center gap-2">
@@ -141,11 +141,11 @@ export function MembershipSection() {
               <div>
                 <h3 className="text-2xl font-black text-white font-serif">6 Months VIP Club</h3>
                 <p className="text-xs text-emerald-100/80 mt-1">
-                  Prepaid upfront activation with ₹300 instant savings and free insulated cooler bag.
+                  Prepaid upfront activation with ₹360 instant savings and free insulated cooler bag.
                 </p>
               </div>
               <div className="text-3xl font-black text-amber-300">
-                ₹1,499 <span className="text-xs text-gray-400 line-through">₹1,794</span>
+                ₹12,600 <span className="text-xs text-gray-400 line-through">₹12,960</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-200">
                 <li className="flex items-center gap-2">
