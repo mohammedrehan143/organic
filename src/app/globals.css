@@ -212,6 +212,9 @@
     background: white;
     color: black;
     box-shadow: none;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    height: max-content;
   }
 }
 

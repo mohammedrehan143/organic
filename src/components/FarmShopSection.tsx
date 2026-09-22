@@ -53,7 +53,7 @@ export function FarmShopSection() {
             Fresh Organic Milk & Farm Eggs
           </h2>
           <p className="text-xs sm:text-base text-[#173612] font-sans px-2">
-            Certified organic milk in reusable glass bottles, normal white eggs in 12 & 30 packs, and authentic pasture-raised Nati eggs delivered cold to your doorstep with <strong>zero delivery fees</strong>.
+            Certified organic milk in reusable glass bottles, normal white eggs in 12 & 30 packs, and authentic pasture-raised Nati eggs delivered fresh to your doorstep with <strong>zero delivery fees</strong>.
           </p>
         </div>
 

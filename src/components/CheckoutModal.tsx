@@ -59,6 +59,7 @@ export function CheckoutModal() {
     setActiveTrackingOrder,
     userLocation,
     setUserLocation,
+    orders,
   } = useOrder();
 
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
@@ -247,7 +248,7 @@ export function CheckoutModal() {
     setShowSandboxModal(false);
     setActiveTrackingOrder(order);
     setPlacedOrder(order);
-    setBillModalOpen(true); // Automatically generate bill receipt after order is placed
+    // Bill modal only opens when customer manually clicks 'Print Bill' button
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -400,16 +401,20 @@ export function CheckoutModal() {
   };
 
   if (placedOrder) {
-    const isCancelled = placedOrder.status === 'cancelled';
+    // Always look up the live/latest order from the context orders array for real-time status updates
+    const liveOrder = orders.find((o) => o.id === placedOrder.id || o.tokenId === placedOrder.tokenId) || placedOrder;
+    const isCancelled = liveOrder.status === 'cancelled';
     const stages = [
       { key: 'new', label: 'Order Placed', icon: Clock },
       {
         key: 'delivering',
-        label: placedOrder.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Hub',
+        label: liveOrder.deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Ready at Hub',
         icon: Bike,
       },
       { key: 'completed', label: 'Delivered', icon: CheckCircle2 },
     ];
+    const statusStepMap: Record<string, number> = { new: 0, preparing: 0, ready: 1, delivering: 1, completed: 2, cancelled: -1 };
+    const currentStep = statusStepMap[liveOrder.status] ?? 0;
 
     return (
       <>
@@ -449,8 +454,8 @@ export function CheckoutModal() {
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-900 text-xs">
                   <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <strong className="block font-black text-rose-950 uppercase">Order Cancelled By Customer</strong>
-                    <p>You cancelled this order before dispatch. No harvesting or doorstep delivery will take place.</p>
+                    <strong className="block font-black text-rose-950 uppercase">Order Cancelled</strong>
+                    <p>This order has been cancelled. No harvesting or doorstep delivery will take place.</p>
                     <p className="text-[#385A2A] font-bold text-[11px] bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
                       💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment source.
                     </p>
@@ -465,7 +470,7 @@ export function CheckoutModal() {
                     Order Token
                   </span>
                   <span className="text-lg font-black text-[#0F240B] font-mono">
-                    #{placedOrder.tokenId}
+                    #{liveOrder.tokenId}
                   </span>
                 </div>
                 <div>
@@ -473,33 +478,31 @@ export function CheckoutModal() {
                     Order ID
                   </span>
                   <span className="text-xs font-bold text-[#173612] font-mono">
-                    #{placedOrder.id}
+                    #{liveOrder.id}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#385A2A] block">
-                    Estimated Delivery
-                  </span>
-                  <span className="text-xs font-black text-emerald-800">
-                    {placedOrder.estimatedTime}
-                  </span>
-                </div>
+
               </div>
 
               {/* Fulfillment Pipeline */}
               <div className="p-4 rounded-2xl bg-[#F5FAF0] border border-[#CBE0A3] space-y-3">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#0F240B] block">
-                  Live Fulfillment Status: Order Placed
+                  Live Fulfillment Status: {isCancelled ? 'Order Cancelled' : stages[Math.max(0, currentStep)]?.label || 'Order Placed'}
                 </span>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {stages.map((stage, idx) => {
                     const Icon = stage.icon;
-                    const isActive = idx === 0;
+                    const isCompleted = idx < currentStep;
+                    const isActive = idx === currentStep && !isCancelled;
                     return (
                       <div key={stage.key} className="flex flex-col items-center">
                         <div
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center ${
-                            isActive
+                            isCancelled
+                              ? 'bg-rose-100 text-rose-400'
+                              : isCompleted
+                              ? 'bg-emerald-600 text-white'
+                              : isActive
                               ? 'bg-[#173612] text-white ring-2 ring-emerald-500'
                               : 'bg-gray-100 text-gray-400'
                           }`}
@@ -508,7 +511,11 @@ export function CheckoutModal() {
                         </div>
                         <span
                           className={`text-[9px] sm:text-[10px] mt-1 font-bold ${
-                            isActive ? 'text-[#0F240B]' : 'text-gray-400'
+                            isCancelled
+                              ? 'text-rose-400'
+                              : isCompleted || isActive
+                              ? 'text-[#0F240B]'
+                              : 'text-gray-400'
                           }`}
                         >
                           {stage.label}
@@ -525,31 +532,31 @@ export function CheckoutModal() {
                   <MapPin className="w-4 h-4 text-[#173612] shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-[#0F240B] block">
-                      {placedOrder.customer.name} ({placedOrder.customer.phone})
+                      {liveOrder.customer.name} ({liveOrder.customer.phone})
                     </span>
                     <p className="text-gray-600 mt-0.5">
-                      {placedOrder.customer.address}
+                      {liveOrder.customer.address}
                     </p>
-                    {placedOrder.customer.unitOrApt && (
+                    {liveOrder.customer.unitOrApt && (
                       <p className="text-[#385A2A] font-bold mt-1 text-[11px] bg-[#ECF5DE] px-2.5 py-0.5 rounded-md inline-block border border-[#CBE0A3]">
-                        📍 Landmark / Flat: {placedOrder.customer.unitOrApt}
+                        📍 Landmark / Flat: {liveOrder.customer.unitOrApt}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-                  <span>Method: {placedOrder.deliveryMethod === 'delivery' ? 'Direct Farm Delivery' : 'Farm Hub Pickup'}</span>
-                  <span>Payment: <strong className="text-[#0F240B]">{placedOrder.paymentMethod}</strong></span>
+                  <span>Method: {liveOrder.deliveryMethod === 'delivery' ? 'Direct Farm Delivery' : 'Farm Hub Pickup'}</span>
+                  <span>Payment: <strong className="text-[#0F240B]">{liveOrder.paymentMethod}</strong></span>
                 </div>
               </div>
 
               {/* Ordered Items Breakdown */}
               <div className="p-4 rounded-2xl bg-white border border-[#EAF3E4] space-y-3">
                 <span className="text-xs font-black uppercase tracking-wider text-[#0F240B] block">
-                  Items Ordered ({placedOrder.items.length})
+                  Items Ordered ({liveOrder.items.length})
                 </span>
                 <div className="divide-y divide-gray-100 max-h-40 overflow-y-auto">
-                  {placedOrder.items.map((it, idx) => {
+                  {liveOrder.items.map((it, idx) => {
                     const itemName = it.menuItem?.name || (it as any).name || 'Farm Item';
                     const itemPrice = it.itemTotal ?? ((it.menuItem?.priceNumber || (it as any).price || 0) * it.quantity);
                     return (
@@ -569,27 +576,18 @@ export function CheckoutModal() {
                 </div>
                 <div className="pt-2 border-t border-gray-100 flex items-center justify-between font-black text-sm">
                   <span>Grand Total</span>
-                  <span className="text-base text-emerald-800">₹{placedOrder.total.toFixed(2)}</span>
+                  <span className="text-base text-emerald-800">₹{liveOrder.total.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBillModalOpen(true)}
-                    className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 hover:bg-[#F5FAF0] text-[#173612] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Print 80mm Bill Receipt</span>
-                  </button>
-
+                <div className="grid grid-cols-1 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       handleCloseModal();
-                      router.push(`/track?token=${placedOrder.tokenId}`);
+                      router.push(`/track?token=${liveOrder.tokenId}`);
                     }}
                     className="w-full py-3 px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
                   >
@@ -629,7 +627,7 @@ export function CheckoutModal() {
                 <XCircle className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-black text-[#0F240B]">Cancel Order #{placedOrder.tokenId}?</h3>
+                <h3 className="text-lg font-black text-[#0F240B]">Cancel Order #{liveOrder.tokenId}?</h3>
                 <p className="text-xs text-gray-600">
                   Are you sure you want to cancel this order? Once cancelled, organic farm harvest and packaging will be stopped immediately.
                 </p>
@@ -699,7 +697,7 @@ export function CheckoutModal() {
                 Zafiroo Farm Checkout
               </h2>
               <p className="text-xs text-[#2E6125] font-semibold">
-                Freshly packed in temperature-controlled cold pouches
+                Fresh organic produce — direct farm to your doorstep
               </p>
             </div>
           </div>
@@ -1113,7 +1111,7 @@ export function CheckoutModal() {
                   ₹{grandTotal.toFixed(2)}
                 </div>
                 <p className="text-[11px] text-[#173612]/80">
-                  {cart.length} Farm Products • Fast cold-chain delivery
+                  {cart.length} Farm Products • Fresh farm delivery
                 </p>
               </div>
 

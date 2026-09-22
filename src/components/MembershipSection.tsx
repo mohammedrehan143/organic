@@ -20,8 +20,8 @@ export function MembershipSection() {
   const perks = [
     {
       icon: Clock,
-      title: 'Daily Sunrise Delivery',
-      desc: 'Wake up to freshly bottled organic milk fresh and waiting at your doorstep before 8:30 AM.',
+      title: 'Daily Morning Delivery',
+      desc: 'Freshly bottled organic milk waiting at your doorstep every morning.',
     },
     {
       icon: RefreshCw,
@@ -141,7 +141,7 @@ export function MembershipSection() {
               <div>
                 <h3 className="text-2xl font-black text-white font-serif">6 Months VIP Club</h3>
                 <p className="text-xs text-emerald-100/80 mt-1">
-                  Prepaid upfront activation with ₹360 instant savings and free insulated cooler bag.
+                  Prepaid upfront activation with ₹360 instant savings.
                 </p>
               </div>
               <div className="text-3xl font-black text-amber-300">
@@ -152,14 +152,8 @@ export function MembershipSection() {
                   <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
                   <span>180 days uninterrupted free daily deliveries</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>Complimentary Thermal Milk Cooler Bag (worth ₹450)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>10% extra discount on seasonal farm specials</span>
-                </li>
+
+
               </ul>
             </div>
             <Link

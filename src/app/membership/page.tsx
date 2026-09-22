@@ -302,7 +302,7 @@ export default function MembershipPage() {
               FARM MEMBERSHIP SCHEMES
             </h1>
             <p className="text-sm sm:text-base text-[#385A2A] font-medium leading-relaxed">
-              Unlock 100% Free Daily Doorstep Deliveries, priority sunrise harvesting, zero bottle breakage fees, and exclusive member savings.
+              Unlock 100% Free Daily Doorstep Deliveries, priority morning harvesting, zero bottle breakage fees, and exclusive member savings.
             </p>
 
             {/* Navigation Tabs */}
@@ -394,10 +394,6 @@ export default function MembershipPage() {
                       </li>
                       <li className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Priority Morning Dispatch</strong> (6:00 AM – 8:30 AM early morning window)</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <span><strong>Zero Deposit Required:</strong> Glass milk bottle security deposit waived</span>
                       </li>
                       <li className="flex items-start gap-2.5">
@@ -470,22 +466,6 @@ export default function MembershipPage() {
                     <ul className="space-y-2.5 text-xs text-emerald-50">
                       <li className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-                        <span><strong>180 Days Guaranteed Free Daily Delivery</strong> (Save ₹1,800+ in delivery)</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <Gift className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-                        <span><strong>FREE Thermal Insulated Milk Bag</strong> (Keeps glass bottles fresh & protected)</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-                        <span><strong>10% Extra Discount</strong> on Farm Value Trays, Desi Ghee & Fresh Curd</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-                        <span><strong>VIP Monsoon & Festival Priority:</strong> Guaranteed delivery during heavy rain</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
                         <span><strong>Zero Monthly Reminders:</strong> Completely prepaid and hassle-free for 6 months</span>
                       </li>
                     </ul>
@@ -531,9 +511,9 @@ export default function MembershipPage() {
                   <div className="w-10 h-10 rounded-xl bg-[#EAF3E4] text-[#173612] flex items-center justify-center mx-auto">
                     <Clock className="w-5 h-5" />
                   </div>
-                  <h4 className="font-bold text-sm text-[#0F240B]">Sunrise Delivery</h4>
+                  <h4 className="font-bold text-sm text-[#0F240B]">Morning Delivery</h4>
                   <p className="text-xs text-gray-600">
-                    Fresh from our Bylanarasapura farm before 8:30 AM so your breakfast tea is never delayed.
+                    Fresh farm produce delivered every morning to your doorstep.
                   </p>
                 </div>
                 <div className="p-4 bg-white rounded-2xl border border-[#D8ECCE] space-y-2">
@@ -841,7 +821,7 @@ export default function MembershipPage() {
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Early Sunrise Slot Priority</span>
+                            <span>Priority Morning Delivery</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
@@ -852,7 +832,7 @@ export default function MembershipPage() {
                             <span>
                               {m.billingType === 'postpaid'
                                 ? 'Month-End Postpaid Settlement'
-                                : 'VIP Monsoon Guarantee + Insulated Bag'}
+                                : 'VIP Prepaid — 6 Months Active'}
                             </span>
                           </div>
                         </div>
@@ -1231,10 +1211,6 @@ export default function MembershipPage() {
                   <div className="flex justify-between text-emerald-800">
                     <span>180 Days Daily Delivery Charges:</span>
                     <strong>₹0.00 (Free)</strong>
-                  </div>
-                  <div className="flex justify-between text-emerald-800">
-                    <span>FREE Thermal Insulated Milk Bag:</span>
-                    <strong>INCLUDED (₹0)</strong>
                   </div>
                   <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
                     <span>Total Prepaid Amount:</span>

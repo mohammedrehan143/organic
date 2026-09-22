@@ -181,6 +181,7 @@ export default function AdminPage() {
   const [fullScreenSosAlert, setFullScreenSosAlert] = useState<SosAlert | null>(null);
   const [sosCountdown, setSosCountdown] = useState(5);
   const [sosActionCenterOpen, setSosActionCenterOpen] = useState(false);
+  const [shownSosIds, setShownSosIds] = useState<Set<string>>(new Set());
 
   // Rider SOS Modal
   const [riderSosModalOpen, setRiderSosModalOpen] = useState(false);
@@ -249,10 +250,11 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts]);
 
-  // Monitor latestActiveSos for 5-Second Red Alert Takeover
+  // Monitor latestActiveSos for 5-Second Red Alert Takeover — only shows ONCE per unique SOS ID
   useEffect(() => {
-    if (latestActiveSos && latestActiveSos.status === 'active') {
-      // Trigger takeover if not already dismissed for this alert
+    if (latestActiveSos && latestActiveSos.status === 'active' && !shownSosIds.has(latestActiveSos.id)) {
+      // Only trigger if this SOS ID has not been shown yet (prevents looping to all riders)
+      setShownSosIds((prev) => new Set([...prev, latestActiveSos.id]));
       setFullScreenSosAlert(latestActiveSos);
       setSosCountdown(5);
       playSosSiren();
@@ -270,7 +272,7 @@ export default function AdminPage() {
 
       return () => clearInterval(timer);
     }
-  }, [latestActiveSos, playSosSiren]);
+  }, [latestActiveSos, playSosSiren, shownSosIds]);
 
   // Auth Handler - Server & Database Verified
   const handlePinSubmit = async (e: React.FormEvent) => {
@@ -1074,14 +1076,14 @@ export default function AdminPage() {
                                   <label className="block text-[10px] font-bold uppercase text-espresso-600 mb-1">
                                     Or Assign Courier Directly:
                                   </label>
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    {deliveryAgents.map((agent) => (
+                                  <div className="grid grid-cols-1 gap-1.5">
+                                    {deliveryAgents.slice(0, 1).map((agent) => (
                                       <button
                                         key={agent.id}
                                         onClick={() => assignDeliveryAgent(order.id, agent.id)}
                                         className="px-2 py-1.5 bg-white hover:bg-banhmi-card border border-cream-300 rounded-lg text-[11px] font-bold text-espresso-900 truncate transition active:scale-95 text-left"
                                       >
-                                        🛵 {agent.name.split(' ')[0]}
+                                        🛵 {agent.name} - {agent.phone}
                                       </button>
                                     ))}
                                   </div>
@@ -1105,6 +1107,17 @@ export default function AdminPage() {
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>Delivered Successfully</span>
                             </div>
+                          )}
+
+                          {/* Admin Cancel Order Button - available for any non-completed, non-cancelled order */}
+                          {order.status !== 'completed' && (
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                              className="w-full py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Ban className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Cancel Order (Admin)</span>
+                            </button>
                           )}
                         </>
                       )}
@@ -1162,13 +1175,13 @@ export default function AdminPage() {
                   Quick Switch Active Courier Partner:
                 </span>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {deliveryAgents.map((a) => (
+                  {deliveryAgents.slice(0, 1).map((a) => (
                     <button
                       key={a.id}
                       onClick={() => setCurrentRider(a)}
                       className="px-3 py-1.5 bg-cream-100 hover:bg-cream-200 rounded-xl text-xs font-semibold text-espresso-800 border border-cream-300 transition"
                     >
-                      {a.name} ({a.vehicleType.split(' ')[0]})
+                      {a.name} - {a.phone}
                     </button>
                   ))}
                 </div>

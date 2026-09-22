@@ -484,9 +484,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           (payload) => {
             const newAlert = payload.new as SosAlert;
             setSosAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
-            if (newAlert.status === 'active') {
-              playSosSiren();
-            }
+            // NOTE: Siren is played by the admin page useEffect when it detects latestActiveSos.
+            // We do NOT play the siren here globally to avoid all rider clients hearing each other's SOS.
           }
         )
         .subscribe();

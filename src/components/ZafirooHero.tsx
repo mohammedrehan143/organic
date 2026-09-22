@@ -113,7 +113,7 @@ export function ZafirooHero() {
             ORGANIC STORE
           </h1>
           <p className="text-sm xs:text-base sm:text-xl font-medium text-white/95 max-w-2xl mx-auto drop-shadow-md leading-relaxed px-2">
-            Pure organic milk in glass bottles & farm-fresh white eggs delivered cold from our local pastures in Bylanarasapura, Hoskote to your table.
+            Pure organic milk in glass bottles & farm-fresh white eggs delivered fresh from our local pastures in Bylanarasapura, Hoskote to your table.
           </p>
         </div>
 

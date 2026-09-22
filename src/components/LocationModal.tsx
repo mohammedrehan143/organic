@@ -155,7 +155,7 @@ export function LocationModal() {
                 Select Delivery Location
               </h3>
               <p className="text-[11px] sm:text-xs text-[#2E6125] font-medium leading-tight">
-                Fresh organic milk & farm goods delivered cold
+                Fresh organic milk & farm goods delivered fresh
               </p>
             </div>
           </div>
@@ -298,7 +298,7 @@ export function LocationModal() {
             </div>
             <div>
               <span className="text-xs font-bold text-[#0F240B] block">
-                30-45 Min Cold-Chain Delivery
+                30-45 Min Fresh Farm Delivery
               </span>
               <span className="text-[10px] sm:text-[11px] text-[#2E6125] block leading-tight">
                 Insulated transport maintains optimal farm freshness until doorstep.

@@ -191,13 +191,6 @@ function OrderCard({
             </button>
           )}
 
-          <button
-            onClick={() => onOpenBill(order)}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-gray-200 hover:bg-[#F5FAF0] text-[#173612] text-xs font-bold transition shadow-sm cursor-pointer"
-          >
-            <Printer className="w-4 h-4 text-[#173612]" />
-            <span>Print 80mm Bill Receipt</span>
-          </button>
         </div>
       </div>
 
@@ -794,13 +787,6 @@ function TrackPageContent() {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleOpenBill(order)}
-                      className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 text-[#173612] font-semibold text-xs flex items-center gap-1.5 transition shrink-0 cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>View Receipt</span>
-                    </button>
                   </div>
                 ))}
               </div>

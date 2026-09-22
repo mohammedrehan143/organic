@@ -38,7 +38,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Glass Bottle Fresh", "Rich Cream Layer", "Free Delivery"],
     featured: true,
     signature: true,
-    prepTime: "Cold Dispatched",
+    prepTime: "Farm Dispatched",
     isAvailable: true,
     displayOrder: 1,
     customizationOptions: {
@@ -59,7 +59,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Glass Bottle 500ml", "Naturally Sweet", "Free Delivery"],
     featured: false,
     signature: false,
-    prepTime: "Cold Dispatched",
+    prepTime: "Farm Dispatched",
     isAvailable: true,
     displayOrder: 2,
     customizationOptions: {

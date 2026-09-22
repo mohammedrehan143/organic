@@ -142,9 +142,7 @@ export function OrderTrackingModal() {
                     #{currentOrder.tokenId}
                   </span>
                 </div>
-                <p className="text-xs text-[#2E6125] font-semibold">
-                  Estimated Delivery: <strong>{currentOrder.estimatedTime}</strong>
-                </p>
+
               </div>
             </div>
 
@@ -161,14 +159,6 @@ export function OrderTrackingModal() {
                 </button>
               )}
 
-              <button
-                onClick={() => setBillOpen(true)}
-                className="px-3 py-1.5 rounded-xl hover:bg-gray-100 text-[#173612] transition flex items-center gap-1.5 text-xs font-bold border border-gray-300"
-                title="Print Thermal Bill"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Bill</span>
-              </button>
               <button
                 onClick={() => setTrackingModalOpen(false)}
                 className="p-2 rounded-full hover:bg-gray-200/60 text-[#173612] transition"
