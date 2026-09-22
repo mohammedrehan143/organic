@@ -165,10 +165,6 @@ function OrderCard({
             {formattedDate && (
               <span>Placed: <strong>{formattedDate}</strong></span>
             )}
-            <span>•</span>
-            <span>
-              Delivery Window: <strong className="text-[#0F240B] font-bold">{order.estimatedTime}</strong>
-            </span>
           </div>
 
           {/* Out for Delivery Notice: Cancellation locked */}
@@ -273,18 +269,21 @@ function OrderCard({
 
       {/* Stepper Pipeline OR Cancelled Notice */}
       {isCancelled ? (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 text-xs text-red-900">
-          <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-bold text-red-800 text-sm">
-              This Order Was Cancelled
-            </p>
-            <p className="text-[11px] text-red-700">
-              Cancelled before courier handover. No farm harvesting or doorstep delivery will take place.
-            </p>
-            <p className="text-[11px] text-[#385A2A] font-bold bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
-              💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment account.
-            </p>
+        <div className="px-4 py-3 bg-red-50 border-y border-red-100 flex items-start gap-2.5">
+          <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5 w-full">
+            <p className="text-[11px] font-bold text-red-900 uppercase">Cancellation Recorded</p>
+            <p className="text-[10px] text-red-700">This delivery route was aborted before dispatch.</p>
+            {order.paymentStatus === 'refunded' ? (
+              <div className="mt-2 text-[10px] text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 rounded-lg p-1.5 flex items-center gap-1.5 w-full">
+                <CheckCircle className="w-3 h-3" />
+                Refund Processed Successfully
+              </div>
+            ) : (
+              <div className="mt-2 text-[10px] text-[#385A2A] font-bold bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 w-full">
+                💳 Refund will be credited within 24-48 hrs for online payments.
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -582,9 +581,17 @@ function TrackPageContent() {
       let hasChanges = false;
       const updated = prev.map((order) => {
         const live = liveOrders.find((lo) => lo.id === order.id || lo.tokenId === order.tokenId);
-        if (live && live.status !== order.status) {
-          hasChanges = true;
-          return { ...order, status: live.status, riderName: live.riderName, riderPhone: live.riderPhone };
+        if (live) {
+          // Compare relevant fields that might change
+          if (
+            live.status !== order.status ||
+            live.paymentStatus !== order.paymentStatus ||
+            live.riderName !== order.riderName ||
+            live.riderPhone !== order.riderPhone
+          ) {
+            hasChanges = true;
+            return { ...order, ...live };
+          }
         }
         return order;
       });

@@ -42,7 +42,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, riderName, riderPhone, deliveryAgentId, rating, feedbackTags, feedbackNote } = body;
+    const { status, riderName, riderPhone, deliveryAgentId, rating, feedbackTags, feedbackNote, paymentStatus } = body;
 
     const extra: any = {};
     if (riderName !== undefined) extra.riderName = riderName;
@@ -51,6 +51,7 @@ export async function PATCH(
     if (rating !== undefined) extra.rating = rating;
     if (feedbackTags !== undefined) extra.feedbackTags = feedbackTags;
     if (feedbackNote !== undefined) extra.feedbackNote = feedbackNote;
+    if (paymentStatus !== undefined) extra.paymentStatus = paymentStatus;
 
     const client = supabaseAdmin || supabase;
     let dbUpdatedOrder: any = null;
@@ -90,6 +91,7 @@ export async function PATCH(
       if (rating !== undefined) updateData.rating = rating;
       if (feedbackTags !== undefined) updateData.feedback_tags = feedbackTags;
       if (feedbackNote !== undefined) updateData.feedback_note = feedbackNote;
+      if (paymentStatus !== undefined) updateData.payment_status = paymentStatus;
       if (status === 'completed') updateData.delivered_at = new Date().toISOString();
 
       const { data, error } = await client

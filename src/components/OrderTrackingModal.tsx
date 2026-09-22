@@ -185,9 +185,16 @@ export function OrderTrackingModal() {
                   <p className="text-[11px] text-red-700">
                     This order was cancelled by the customer before courier handover. No delivery will take place.
                   </p>
-                  <p className="text-[11px] text-[#385A2A] font-bold bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
-                    💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment account.
-                  </p>
+                  {currentOrder.paymentStatus === 'refunded' ? (
+                    <p className="text-[11px] text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 rounded-lg p-2 mt-1 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Refund Processed: Your refund has been successfully processed to your original payment account.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-[#385A2A] font-bold bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
+                      💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment account.
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
