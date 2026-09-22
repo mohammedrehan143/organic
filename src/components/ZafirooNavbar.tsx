@@ -95,13 +95,13 @@ export function ZafirooNavbar() {
 
         {/* Right Actions: Membership, Tracking & Cart */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Membership Icon Button (Crown Only) */}
+          {/* Membership Icon Button (Crown Only - Shining Golden Button) */}
           <Link
             href="/membership"
-            title="Membership"
-            className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-50 border border-amber-300 hover:bg-amber-100 transition"
+            title="Farm Membership Schemes"
+            className="btn-shining-gold flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition transform hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <Crown className="w-5 h-5 text-amber-600 fill-amber-400" />
+            <Crown className="w-5 h-5 text-[#261603] fill-[#261603] drop-shadow-xs" />
           </Link>
 
           {/* Tracking Option Button */}

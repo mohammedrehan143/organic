@@ -52,6 +52,9 @@ import {
   Mail,
   MapPin,
   Zap,
+  RotateCcw,
+  Copy,
+  CreditCard,
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
@@ -187,6 +190,32 @@ export default function AdminPage() {
 
   // Bill Receipt Modal
   const [activeBillOrder, setActiveBillOrder] = useState<Order | null>(null);
+
+  // Customer Refund Details Modal
+  const [refundModalOrder, setRefundModalOrder] = useState<Order | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+
+  const handleMarkAsRefunded = async (orderId: string) => {
+    setIsProcessingRefund(true);
+    try {
+      const updated = await updateOrderStatus(orderId, 'cancelled', { paymentStatus: 'refunded' });
+      if (updated && refundModalOrder && refundModalOrder.id === orderId) {
+        setRefundModalOrder(updated);
+      }
+    } catch (err) {
+      console.error('Failed to mark order as refunded:', err);
+      alert('Failed to update refund status. Please try again.');
+    } finally {
+      setIsProcessingRefund(false);
+    }
+  };
+
+  const handleCopyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
 
   // Status Filter in KDS: Order Placed ('new'), Out for Delivery ('delivering'), Delivered ('completed'), Cancelled ('cancelled')
   const [kdsFilter, setKdsFilter] = useState<'all' | 'new' | 'delivering' | 'completed' | 'cancelled'>('all');
@@ -842,9 +871,19 @@ export default function AdminPage() {
                           🚨 ORDER CANCELLED BY CUSTOMER
                         </span>
                       </div>
-                      <span className="text-[10px] bg-white text-red-700 font-black px-2 py-0.5 rounded uppercase shadow-xs">
-                        DO NOT DISPATCH
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] bg-white/90 text-red-800 font-black px-2 py-0.5 rounded uppercase shadow-xs hidden sm:inline">
+                          DO NOT DISPATCH
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRefundModalOrder(order)}
+                          className="text-[10px] bg-white hover:bg-cream-100 text-amber-900 font-black px-2.5 py-1 rounded-md uppercase shadow-xs transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3 text-amber-700" />
+                          <span>Refund Info</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -994,9 +1033,29 @@ export default function AdminPage() {
                     {/* Action Area: Blocked if Cancelled vs Normal Progression */}
                     <div className="space-y-2">
                       {isCancelled ? (
-                        <div className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
-                          <Ban className="w-4 h-4 text-white" />
-                          <span>ORDER CANCELLED — DISPATCH BLOCKED</span>
+                        <div className="space-y-2">
+                          <div className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
+                            <Ban className="w-4 h-4 text-white shrink-0" />
+                            <span>ORDER CANCELLED — DISPATCH BLOCKED</span>
+                          </div>
+
+                          {/* Prominent Refund Action Button */}
+                          <button
+                            type="button"
+                            onClick={() => setRefundModalOrder(order)}
+                            className={`w-full py-2.5 px-4 rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-md transition active:scale-95 cursor-pointer ${
+                              order.paymentStatus === 'refunded'
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'bg-amber-600 hover:bg-amber-700 text-white'
+                            }`}
+                          >
+                            <RotateCcw className="w-4 h-4 shrink-0" />
+                            <span>
+                              {order.paymentStatus === 'refunded'
+                                ? '✓ Refund Processed (View Details)'
+                                : 'Process Refund • View Customer Details'}
+                            </span>
+                          </button>
                         </div>
                       ) : (
                         <>
@@ -1046,15 +1105,6 @@ export default function AdminPage() {
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>Delivered Successfully</span>
                             </div>
-                          )}
-
-                          {order.status !== 'completed' && order.status !== 'cancelled' && (
-                            <button
-                              onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                              className="w-full text-center text-[10px] text-espresso-400 hover:text-rose-600 pt-1 cursor-pointer"
-                            >
-                              Cancel Order
-                            </button>
                           )}
                         </>
                       )}
@@ -2103,7 +2153,211 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 9. BILL RECEIPT MODAL */}
+      {/* 9. CUSTOMER REFUND DETAILS MODAL */}
+      {refundModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn text-espresso-950">
+          <div
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-amber-400 space-y-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-amber-600 to-amber-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-tight">
+                    Customer Refund Details
+                  </h3>
+                  <p className="text-xs text-amber-100 font-mono">
+                    Order #{refundModalOrder.tokenId} • {refundModalOrder.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefundModalOrder(null)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white transition cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Order Cancellation Notice */}
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-xs text-red-900">
+                <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-black text-red-950 uppercase">Order Cancelled By Customer</strong>
+                  <span>This order was cancelled prior to courier dispatch. Customer name, phone number, and refund processing options are provided below.</span>
+                </div>
+              </div>
+
+              {/* Customer Contact Details Card (Name & Phone Prominently Displayed) */}
+              <div className="p-4 bg-cream-50 rounded-2xl border border-cream-300 space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-espresso-600 block border-b border-cream-200 pb-1.5">
+                  Customer Information
+                </span>
+
+                <div className="space-y-2.5">
+                  {/* Name */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-espresso-600 font-bold">Customer Name:</span>
+                    <span className="text-base font-black text-espresso-950 font-sans">
+                      {refundModalOrder.customer.name}
+                    </span>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-cream-200/60">
+                    <span className="text-xs text-espresso-600 font-bold">Phone Number:</span>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`tel:${refundModalOrder.customer.phone}`}
+                        className="text-sm font-black font-mono text-banhmi-red hover:underline flex items-center gap-1.5 bg-white px-3 py-1 rounded-xl border border-cream-300 shadow-2xs"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-banhmi-red" />
+                        <span>{refundModalOrder.customer.phone}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPhone(refundModalOrder.customer.phone)}
+                        className="p-1.5 rounded-xl border border-cream-300 bg-white hover:bg-cream-100 text-espresso-700 transition cursor-pointer"
+                        title="Copy phone number"
+                      >
+                        {copiedPhone ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Address & Landmark */}
+                  <div className="pt-2 border-t border-cream-200/60 text-xs">
+                    <span className="text-espresso-600 font-bold block mb-1">Delivery Address & Landmark:</span>
+                    <p className="text-espresso-900 leading-relaxed bg-white p-2.5 rounded-xl border border-cream-200">
+                      📍 {refundModalOrder.customer.address}
+                    </p>
+                    {refundModalOrder.customer.unitOrApt && (
+                      <p className="mt-1.5 text-[11px] text-[#385A2A] font-bold bg-[#ECF5DE] px-2.5 py-0.5 rounded-md inline-block border border-[#CBE0A3]">
+                        Landmark / Unit: {refundModalOrder.customer.unitOrApt}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Order & Payment Summary */}
+              <div className="p-4 bg-white rounded-2xl border border-cream-300 space-y-3 shadow-xs">
+                <span className="text-[11px] font-black uppercase tracking-wider text-espresso-600 block border-b border-cream-200 pb-1.5">
+                  Refund & Payment Details
+                </span>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-espresso-600 font-semibold block text-[11px]">Amount to Refund:</span>
+                    <span className="text-xl font-black text-espresso-950 font-mono">
+                      ₹{refundModalOrder.total.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-espresso-600 font-semibold block text-[11px]">Payment Method:</span>
+                    <span className="font-bold text-espresso-900 block truncate">
+                      {refundModalOrder.paymentMethod}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-espresso-600 font-semibold block text-[11px]">Payment Status:</span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                        refundModalOrder.paymentStatus === 'refunded'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
+                      }`}
+                    >
+                      {refundModalOrder.paymentStatus === 'refunded' ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>Refund Processed</span>
+                        </>
+                      ) : (
+                        <span>{refundModalOrder.paymentStatus || 'Pending Refund'}</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-espresso-600 font-semibold block text-[11px]">Order Created At:</span>
+                    <span className="font-medium text-espresso-800 text-[11px]">
+                      {new Date(refundModalOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Refund SLA Policy Alert */}
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-black text-amber-950">
+                    <CreditCard className="w-4 h-4 text-amber-700" />
+                    <span>Online Payment Refund SLA (24 - 48 Hours)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                    Refunds for online payments will be credited back to the customer&apos;s source account within <strong>24 to 48 hours</strong> of cancellation.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-1">
+                {refundModalOrder.paymentStatus !== 'refunded' ? (
+                  <button
+                    type="button"
+                    disabled={isProcessingRefund}
+                    onClick={() => handleMarkAsRefunded(refundModalOrder.id)}
+                    className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isProcessingRefund ? (
+                      <span>Updating Status...</span>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Confirm & Mark Refund as Processed</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-center text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Refund Marked as Processed for this Order</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={`tel:${refundModalOrder.customer.phone}`}
+                    className="py-2.5 px-4 bg-white hover:bg-cream-100 border border-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-banhmi-red" />
+                    <span>Call Customer</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setRefundModalOrder(null)}
+                    className="py-2.5 px-4 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. BILL RECEIPT MODAL */}
       <BillModal
         order={activeBillOrder}
         isOpen={Boolean(activeBillOrder)}

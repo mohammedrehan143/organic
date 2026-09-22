@@ -7,6 +7,7 @@ import {
   Search,
   Sparkles,
   Plus,
+  Minus,
   Clock,
   Check,
   Milk,
@@ -27,16 +28,32 @@ const CATEGORIES = [
 ];
 
 export default function MenuPage() {
-  const { menuItems, setSelectedMenuDetail, addToCart, userLocation, setLocationModalOpen } = useOrder();
+  const { menuItems, setSelectedMenuDetail, addToCart, updateQuantity, removeFromCart, cart, userLocation, setLocationModalOpen } = useOrder();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non-veg' | 'vegan'>('all');
-  const [addedId, setAddedId] = useState<string | null>(null);
 
-  const handleQuickAdd = (item: MenuItem) => {
+  const getItemQuantity = (itemId: string) => {
+    return cart
+      .filter((ci) => ci.menuItem?.id === itemId || (ci as any).itemId === itemId)
+      .reduce((sum, ci) => sum + (ci.quantity || 0), 0);
+  };
+
+  const handleIncrement = (item: MenuItem, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     addToCart(item, 1);
-    setAddedId(item.id);
-    setTimeout(() => setAddedId(null), 1800);
+  };
+
+  const handleDecrement = (item: MenuItem, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const matching = cart.filter((ci) => ci.menuItem?.id === item.id || (ci as any).itemId === item.id);
+    if (matching.length === 0) return;
+    const lastItem = matching[matching.length - 1];
+    if (lastItem.quantity > 1) {
+      updateQuantity(lastItem.id, lastItem.quantity - 1);
+    } else {
+      removeFromCart(lastItem.id);
+    }
   };
 
   const filteredItems = useMemo(() => {
@@ -201,124 +218,159 @@ export default function MenuPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto gap-6 sm:gap-8">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-[#EAF3E4] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
-              >
-                {/* Photo & badges */}
+            {filteredItems.map((item) => {
+              const itemQty = getItemQuantity(item.id);
+              const isInCart = itemQty > 0;
+
+              return (
                 <div
-                  onClick={() => setSelectedMenuDetail(item)}
-                  className="relative w-full aspect-square bg-[#FAF9F6] cursor-pointer overflow-hidden group"
+                  key={item.id}
+                  className={`bg-white rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 ${
+                    isInCart
+                      ? 'border-[#173612] shadow-md ring-1 ring-[#173612]/30'
+                      : 'border-[#EAF3E4] shadow-sm hover:shadow-xl'
+                  }`}
                 >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 left-3 bg-[#173612] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-white/30">
-                    Free Delivery
+                  {/* Photo & badges */}
+                  <div
+                    onClick={() => setSelectedMenuDetail(item)}
+                    className="relative w-full aspect-square bg-[#FAF9F6] cursor-pointer overflow-hidden group"
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 left-3 bg-[#173612] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-white/30">
+                      Free Delivery
+                    </div>
+
+                    {!item.isAvailable ? (
+                      <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow animate-pulse">
+                        Out of Stock
+                      </div>
+                    ) : isInCart ? (
+                      <div className="absolute top-3 right-3 bg-[#173612] text-[#ECF5DE] border border-[#CBE0A3] text-[10px] font-black px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                        <Check className="w-3 h-3 text-[#CBE0A3]" />
+                        <span>{itemQty} in basket</span>
+                      </div>
+                    ) : item.signature ? (
+                      <div className="absolute top-3 right-3 bg-white text-[#173612] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-[#173612]/20">
+                        Farm Classic
+                      </div>
+                    ) : null}
+
+                    {item.category === 'Organic Milk' && (
+                      <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
+                        Sterilized Glass Bottle
+                      </div>
+                    )}
                   </div>
 
-                  {!item.isAvailable ? (
-                    <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow animate-pulse">
-                      Out of Stock
-                    </div>
-                  ) : item.signature ? (
-                    <div className="absolute top-3 right-3 bg-white text-[#173612] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow border border-[#173612]/20">
-                      Farm Classic
-                    </div>
-                  ) : null}
-
-                  {item.category === 'Organic Milk' && (
-                    <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-                      Sterilized Glass Bottle
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
-                        {item.category}
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        Free Delivery
-                      </span>
-                    </div>
-                    <h3
-                      onClick={() => setSelectedMenuDetail(item)}
-                      className="text-lg font-bold text-[#0F240B] mt-1 hover:text-[#43670F] transition cursor-pointer"
-                    >
-                      {item.name}
-                    </h3>
-                    <p className="text-xs text-[#173612]/80 mt-2 line-clamp-2 leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-
-                  {/* Taste / Purity Notes */}
-                  {item.tasteNotes && item.tasteNotes.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {item.tasteNotes.slice(0, 3).map((note, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] px-2.5 py-0.5 bg-[#F5FAF0] text-[#173612] rounded-md border border-[#CBE0A3] font-semibold"
-                        >
-                          {note}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Price & Add to Cart with balanced button layout */}
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                  {/* Content */}
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                     <div>
-                      <span className="text-[10px] text-[#385A2A] uppercase font-bold block">Price</span>
-                      <span className="text-2xl font-black text-[#0F240B] font-bebas">{item.price}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#43670F]">
+                          {item.category}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          Free Delivery
+                        </span>
+                      </div>
+                      <h3
+                        onClick={() => setSelectedMenuDetail(item)}
+                        className="text-lg font-bold text-[#0F240B] mt-1 hover:text-[#43670F] transition cursor-pointer"
+                      >
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-[#173612]/80 mt-2 line-clamp-2 leading-relaxed">
+                        {item.description}
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedMenuDetail(item)}
-                        className="h-10 px-4 bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center cursor-pointer"
-                      >
-                        Details
-                      </button>
+                    {/* Taste / Purity Notes */}
+                    {item.tasteNotes && item.tasteNotes.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {item.tasteNotes.slice(0, 3).map((note, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-2.5 py-0.5 bg-[#F5FAF0] text-[#173612] rounded-md border border-[#CBE0A3] font-semibold"
+                          >
+                            {note}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-                      {!item.isAvailable ? (
+                    {/* Price & Add to Cart with balanced button layout */}
+                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] text-[#385A2A] uppercase font-bold block">Price</span>
+                        <span className="text-2xl font-black text-[#0F240B] font-bebas">{item.price}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
-                          disabled
-                          className="h-10 px-4 bg-gray-100 border border-gray-300 text-gray-500 rounded-xl font-bold text-xs cursor-not-allowed"
+                          type="button"
+                          onClick={() => setSelectedMenuDetail(item)}
+                          className="h-10 px-4 bg-[#F5FAF0] hover:bg-[#EAF3E4] text-[#173612] border border-[#CBE0A3] rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center cursor-pointer"
                         >
-                          Out of Stock
+                          Details
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => handleQuickAdd(item)}
-                          className="h-10 px-4 btn-motive text-[#173612] rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer"
-                          title="Add to Farm Basket"
-                        >
-                          {addedId === item.id ? (
-                            <>
-                              <Check className="w-4 h-4 text-[#173612]" />
-                              <span>Added</span>
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="w-4 h-4" />
-                              <span>Add</span>
-                            </>
-                          )}
-                        </button>
-                      )}
+
+                        {!item.isAvailable ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="h-10 px-4 bg-gray-100 border border-gray-300 text-gray-500 rounded-xl font-bold text-xs cursor-not-allowed"
+                          >
+                            Out of Stock
+                          </button>
+                        ) : isInCart ? (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-10 px-2 rounded-xl bg-[#173612] text-white flex items-center justify-between gap-2 shadow-sm border border-[#173612]"
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => handleDecrement(item, e)}
+                              className="w-8 h-8 rounded-lg hover:bg-white/20 active:scale-90 flex items-center justify-center text-white transition cursor-pointer"
+                              title="Decrease quantity"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+                            <span className="font-black text-sm min-w-[20px] text-center text-[#ECF5DE]">
+                              {itemQty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleIncrement(item, e)}
+                              className="w-8 h-8 rounded-lg hover:bg-white/20 active:scale-90 flex items-center justify-center text-white transition cursor-pointer"
+                              title="Increase quantity"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handleIncrement(item, e)}
+                            className="h-10 px-4 bg-[#173612] hover:bg-[#0F240B] text-white rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer"
+                            title="Add to Farm Basket"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Add</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

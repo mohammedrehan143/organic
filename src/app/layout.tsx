@@ -8,6 +8,7 @@ import { CheckoutModal } from '@/components/CheckoutModal';
 import { MenuDetailModal } from '@/components/MenuDetailModal';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal';
 import { LocationModal } from '@/components/LocationModal';
+import { FloatingCartBar } from '@/components/FloatingCartBar';
 
 export const metadata: Metadata = {
   title: 'Zafiroo Organic Store | Farm-Fresh Pure A2 Milk, Artisan Dairy & Wholesome Goods',
@@ -51,6 +52,7 @@ export default function RootLayout({
           <CheckoutModal />
           <MenuDetailModal />
           <OrderTrackingModal />
+          <FloatingCartBar />
         </OrderProvider>
       </body>
     </html>

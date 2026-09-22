@@ -42,8 +42,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: true,
     displayOrder: 1,
     customizationOptions: {
-      portion: ["1 Litre Glass Bottle (₹72)", "Half Litre - 500ml Glass Bottle (₹38)"],
-      temperature: ["Freshly Chilled", "Room Temp Bottle"]
+      portion: ["1 Litre Glass Bottle (₹72)", "Half Litre - 500ml Glass Bottle (₹38)"]
     }
   },
   {
@@ -64,8 +63,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: true,
     displayOrder: 2,
     customizationOptions: {
-      portion: ["Half Litre - 500ml Glass Bottle (₹38)", "1 Litre Glass Bottle (₹72)"],
-      temperature: ["Freshly Chilled", "Room Temp Bottle"]
+      portion: ["Half Litre - 500ml Glass Bottle (₹38)", "1 Litre Glass Bottle (₹72)"]
     }
   },
 

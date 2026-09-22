@@ -65,11 +65,11 @@ export function MembershipSection() {
           <div className="pt-2 flex flex-wrap justify-center gap-3">
             <Link
               href="/membership"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black text-xs uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition"
+              className="btn-shining-gold inline-flex items-center gap-2 px-6 py-3 rounded-full text-[#261603] font-black text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition"
             >
-              <Crown className="w-4 h-4 fill-[#0F240B]" />
+              <Crown className="w-4 h-4 text-[#261603] fill-[#261603] drop-shadow-xs" />
               <span>Explore Membership Schemes</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#261603]" />
             </Link>
 
             <Link
@@ -164,9 +164,9 @@ export function MembershipSection() {
             </div>
             <Link
               href="/membership"
-              className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black rounded-2xl text-xs uppercase tracking-wider text-center transition block shadow-md"
+              className="btn-shining-gold w-full py-3.5 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider text-center transition block shadow-xl"
             >
-              Select 6-Months Prepaid
+              <span>Select 6-Months Prepaid</span>
             </Link>
           </div>
         </div>

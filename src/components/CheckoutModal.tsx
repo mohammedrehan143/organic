@@ -25,6 +25,7 @@ import {
   Clock,
   Bike,
   CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
@@ -54,6 +55,7 @@ export function CheckoutModal() {
     cart,
     cartSubtotal,
     placeOrder,
+    updateOrderStatus,
     setActiveTrackingOrder,
     userLocation,
     setUserLocation,
@@ -78,9 +80,31 @@ export function CheckoutModal() {
   const [sandboxOrderData, setSandboxOrderData] = useState<any>(null);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [billModalOpen, setBillModalOpen] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelPlacedOrder = async () => {
+    if (!placedOrder) return;
+    setIsCancelling(true);
+    try {
+      const res = await updateOrderStatus(placedOrder.id, 'cancelled');
+      if (res) {
+        setPlacedOrder(res);
+      } else {
+        setPlacedOrder((prev) => (prev ? { ...prev, status: 'cancelled' } : null));
+      }
+      setShowCancelModal(false);
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+      alert('Failed to cancel order. It may already be out for delivery.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleCloseModal = () => {
     setPlacedOrder(null);
+    setShowCancelModal(false);
     setCheckoutModalOpen(false);
   };
 
@@ -127,8 +151,8 @@ export function CheckoutModal() {
         lng: loc.lng,
       });
 
-      setGeocodeMessage('✓ GPS location locked!');
-      setTimeout(() => setGeocodeMessage(''), 3000);
+      setGeocodeMessage('✓ GPS location locked! Please enter your House/Flat No. & Landmark below.');
+      setTimeout(() => setGeocodeMessage(''), 5000);
     } catch (err: any) {
       console.warn('Geolocation error:', err);
       setGeocodeMessage('Could not retrieve GPS coordinates. Please type address manually.');
@@ -241,9 +265,16 @@ export function CheckoutModal() {
       return;
     }
 
-    if (deliveryMethod === 'delivery' && !line1.trim()) {
-      setErrorMessage('Please enter your delivery street/address.');
-      return;
+    if (deliveryMethod === 'delivery') {
+      if (!line1.trim()) {
+        setErrorMessage('Please enter your delivery street / road / locality (Line 1).');
+        return;
+      }
+
+      if (!line2.trim() || line2.trim().length < 3) {
+        setErrorMessage('Please enter your complete address (House/Flat No.) and Landmark (Line 2 is mandatory for delivery).');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -369,6 +400,7 @@ export function CheckoutModal() {
   };
 
   if (placedOrder) {
+    const isCancelled = placedOrder.status === 'cancelled';
     const stages = [
       { key: 'new', label: 'Order Placed', icon: Clock },
       {
@@ -387,17 +419,17 @@ export function CheckoutModal() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-[#EAF3E4] bg-[#F5FAF0] flex items-center justify-between">
+            <div className={`p-4 sm:p-5 border-b border-[#EAF3E4] ${isCancelled ? 'bg-rose-50' : 'bg-[#F5FAF0]'} flex items-center justify-between`}>
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 border-2 border-emerald-700 flex items-center justify-center text-emerald-800 shadow-sm shrink-0">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+                <div className={`w-10 h-10 rounded-xl ${isCancelled ? 'bg-rose-100 border-2 border-rose-600 text-rose-700' : 'bg-emerald-100 border-2 border-emerald-700 text-emerald-800'} flex items-center justify-center shadow-sm shrink-0`}>
+                  {isCancelled ? <XCircle className="w-6 h-6 text-rose-600" /> : <CheckCircle2 className="w-6 h-6 text-emerald-700" />}
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-[#0F240B] font-bebas tracking-wide">
-                    Order Placed Successfully!
+                    {isCancelled ? 'Order Cancelled' : 'Order Placed Successfully!'}
                   </h2>
-                  <p className="text-xs text-emerald-800 font-semibold">
-                    Order Details & Live Dispatch Tracking
+                  <p className={`text-xs ${isCancelled ? 'text-rose-700' : 'text-emerald-800'} font-semibold`}>
+                    {isCancelled ? 'Cancelled prior to courier dispatch' : 'Order Details & Live Dispatch Tracking'}
                   </p>
                 </div>
               </div>
@@ -412,6 +444,20 @@ export function CheckoutModal() {
 
             {/* Content Container */}
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
+              {/* Cancelled Alert Banner */}
+              {isCancelled && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-900 text-xs">
+                  <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="block font-black text-rose-950 uppercase">Order Cancelled By Customer</strong>
+                    <p>You cancelled this order before dispatch. No harvesting or doorstep delivery will take place.</p>
+                    <p className="text-[#385A2A] font-bold text-[11px] bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
+                      💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment source.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Order Meta Bar */}
               <div className="p-4 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -484,6 +530,11 @@ export function CheckoutModal() {
                     <p className="text-gray-600 mt-0.5">
                       {placedOrder.customer.address}
                     </p>
+                    {placedOrder.customer.unitOrApt && (
+                      <p className="text-[#385A2A] font-bold mt-1 text-[11px] bg-[#ECF5DE] px-2.5 py-0.5 rounded-md inline-block border border-[#CBE0A3]">
+                        📍 Landmark / Flat: {placedOrder.customer.unitOrApt}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
@@ -547,6 +598,17 @@ export function CheckoutModal() {
                   </button>
                 </div>
 
+                {!isCancelled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelModal(true)}
+                    className="w-full py-2.5 px-4 rounded-xl border-2 border-rose-200 bg-rose-50/80 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <XCircle className="w-4 h-4 text-rose-600" />
+                    <span>Cancel Order</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleCloseModal}
@@ -558,6 +620,58 @@ export function CheckoutModal() {
             </div>
           </div>
         </div>
+
+        {/* Customer Cancel Confirmation Modal */}
+        {showCancelModal && placedOrder && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-200 shadow-2xl space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto text-rose-600">
+                <XCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-[#0F240B]">Cancel Order #{placedOrder.tokenId}?</h3>
+                <p className="text-xs text-gray-600">
+                  Are you sure you want to cancel this order? Once cancelled, organic farm harvest and packaging will be stopped immediately.
+                </p>
+              </div>
+
+              {/* Refund Policy Notice */}
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-left space-y-1">
+                <p className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                  <span>💳 Online Payment Refund Note:</span>
+                </p>
+                <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                  For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment method.
+                </p>
+              </div>
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={isCancelling}
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-300 hover:bg-gray-100 text-xs font-bold text-gray-700 transition"
+                >
+                  Keep Order
+                </button>
+                <button
+                  type="button"
+                  disabled={isCancelling}
+                  onClick={handleCancelPlacedOrder}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    <span>Yes, Cancel</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <BillModal
           order={placedOrder}
@@ -740,18 +854,34 @@ export function CheckoutModal() {
                 )}
               </div>
 
-              {/* Line 2: Flat / House / Landmark */}
+              {/* Line 2: Flat / House / Landmark (Compulsory) */}
               <div>
-                <label className="block text-xs font-bold text-[#173612] mb-1">
-                  Line 2: House No., Flat, Floor, Landmark
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[#173612]">
+                    Line 2: House No., Flat & Landmark <span className="text-rose-600">*</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                    Mandatory
+                  </span>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. Flat 402, Oakwood Palms, Opposite Sony Center"
+                  required
+                  placeholder="e.g. Flat 402, Oakwood Palms, Near Sony Center / Landmark"
                   value={line2}
-                  onChange={(e) => setLine2(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612] shadow-sm"
+                  onChange={(e) => {
+                    setLine2(e.target.value);
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-xs font-semibold text-[#173612] focus:outline-none shadow-sm transition ${
+                    errorMessage && (!line2.trim() || line2.trim().length < 3)
+                      ? 'border-rose-400 ring-1 ring-rose-300 bg-rose-50/20'
+                      : 'border-gray-300 focus:border-[#173612]'
+                  }`}
                 />
+                <p className="text-[10px] text-[#385A2A] font-semibold mt-1">
+                  Complete address (House / Flat No.) and a nearby Landmark are compulsory for accurate doorstep delivery.
+                </p>
               </div>
 
               {/* 1-Line Preview Banner */}
@@ -759,6 +889,11 @@ export function CheckoutModal() {
                 <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#CBE0A3] text-[11px] text-[#173612]">
                   <span className="font-bold text-[#0F240B]">Delivery Destination: </span>
                   {formatFullOneLineAddress(line1, line2)}
+                  {!line2.trim() && (
+                    <span className="block text-rose-600 font-bold mt-1 text-[10px]">
+                      ⚠️ Please enter House/Flat No. & Landmark above to complete your delivery address.
+                    </span>
+                  )}
                 </div>
               )}
 

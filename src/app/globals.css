@@ -142,6 +142,57 @@
   transform: scale(0.98);
 }
 
+/* Shining Golden Luxury Button (24K Gold with Continuous Sweeping Specular Sheen) */
+@keyframes goldSheenSweep {
+  0% {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  30%, 100% {
+    transform: translateX(280%) skewX(-20deg);
+  }
+}
+
+.btn-shining-gold {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #D4AF37 0%, #FFF3A8 28%, #E5C158 52%, #B38728 80%, #F5DE88 100%);
+  background-size: 200% 200%;
+  color: #261603 !important;
+  font-weight: 800;
+  border: 1px solid rgba(255, 245, 180, 0.85);
+  box-shadow: 0 4px 15px -2px rgba(184, 134, 11, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-shining-gold::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -20%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: goldSheenSweep 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.btn-shining-gold:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 8px 25px -2px rgba(218, 165, 32, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+  filter: brightness(1.05);
+}
+
+.btn-shining-gold:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px -1px rgba(184, 134, 11, 0.5);
+}
+
 /* 80mm Thermal Receipt Print Styling */
 @media print {
   body * {

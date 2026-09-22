@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { X, Plus, Minus, Clock, Flame, Sparkles, Check } from 'lucide-react';
+import { X, Plus, Minus, Clock, Flame, Sparkles, Check, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
 export function MenuDetailModal() {
-  const { selectedMenuDetail, setSelectedMenuDetail, addToCart, menuItems } = useOrder();
+  const { selectedMenuDetail, setSelectedMenuDetail, addToCart, menuItems, cart } = useOrder();
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
@@ -16,7 +16,7 @@ export function MenuDetailModal() {
       const initial: Record<string, string> = {};
       if (selectedMenuDetail.customizationOptions) {
         Object.entries(selectedMenuDetail.customizationOptions).forEach(([cat, opts]) => {
-          if (opts && opts.length > 0) {
+          if (cat.toLowerCase() !== 'temperature' && opts && opts.length > 0) {
             initial[cat] = opts[0];
           }
         });
@@ -49,6 +49,10 @@ export function MenuDetailModal() {
   const unitPrice = activeItem.priceNumber;
   const totalPrice = unitPrice * quantity;
 
+  const currentCartQty = cart
+    .filter((ci) => ci.menuItem?.id === activeItem.id || (ci as any).itemId === activeItem.id)
+    .reduce((sum, ci) => sum + (ci.quantity || 0), 0);
+
   const handleAddToCart = () => {
     addToCart(activeItem, quantity, selectedOptions);
     setSelectedMenuDetail(null);
@@ -60,10 +64,22 @@ export function MenuDetailModal() {
         className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-[#EAF3E4]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Top Back & Close Buttons */}
         <button
+          type="button"
           onClick={() => setSelectedMenuDetail(null)}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 hover:bg-white text-[#173612] shadow-md transition-transform active:scale-90"
+          className="absolute top-4 left-4 z-20 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-[#173612] text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer backdrop-blur-md border border-[#CBE0A3]/60 group hover:shadow-lg"
+          aria-label="Back to products"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedMenuDetail(null)}
+          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/95 hover:bg-white text-[#173612] shadow-md transition-transform active:scale-90 border border-[#CBE0A3]/60"
+          aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
@@ -81,7 +97,7 @@ export function MenuDetailModal() {
           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/30" />
           
           {/* Dietary & Stock Badge */}
-          <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+          <div className="absolute bottom-4 left-4 z-10 flex gap-2 flex-wrap">
             {!activeItem.isAvailable ? (
               <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-md animate-pulse">
                 Out of Stock
@@ -113,14 +129,26 @@ export function MenuDetailModal() {
           </div>
         </div>
 
-        {/* Content Container */}
+        {/* Content Container (Details Section) */}
         <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
           <div>
+            {/* Back Button & Category in Details Section */}
+            <div className="flex items-center justify-between gap-3 mb-2.5">
+              <button
+                type="button"
+                onClick={() => setSelectedMenuDetail(null)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#385A2A] hover:text-[#0F240B] bg-[#F5FAF0] hover:bg-[#EAF3E4] border border-[#CBE0A3] px-3 py-1 rounded-full transition-all active:scale-95 cursor-pointer group shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-[#173612]" />
+                <span>Back to Products</span>
+              </button>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
+                {activeItem.category}
+              </span>
+            </div>
+
             <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-[#43670F]">
-                  {activeItem.category}
-                </span>
                 <h2 className="text-2xl sm:text-3xl font-black text-[#0F240B] mt-1 font-bebas tracking-wide">
                   {activeItem.name}
                 </h2>
@@ -176,7 +204,7 @@ export function MenuDetailModal() {
               </h3>
 
               {Object.entries(selectedMenuDetail.customizationOptions).map(([category, options]) => {
-                if (!options || options.length === 0) return null;
+                if (category.toLowerCase() === 'temperature' || !options || options.length === 0) return null;
                 const currentVal = selectedOptions[category];
 
                 return (
@@ -210,10 +238,34 @@ export function MenuDetailModal() {
             </div>
           )}
 
-          {/* Bottom Bar: Quantity and Add to Cart with balanced button layout */}
-          <div className="pt-4 flex items-center justify-between gap-4 border-t border-gray-100">
+          {/* Current In-Cart Banner */}
+          {currentCartQty > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] text-xs font-bold text-[#173612]">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#173612]" />
+                <span>Currently in your basket:</span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#173612] text-white font-black text-xs">
+                {currentCartQty} {currentCartQty === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+          )}
+
+          {/* Bottom Bar: Back, Quantity and Add to Cart with balanced button layout */}
+          <div className="pt-4 flex items-center justify-between gap-2.5 sm:gap-4 border-t border-gray-100">
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={() => setSelectedMenuDetail(null)}
+              className="h-12 px-3.5 sm:px-4 rounded-2xl border border-[#CBE0A3] bg-white hover:bg-[#F5FAF0] text-[#173612] text-xs sm:text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
+              title="Back to products"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden xs:inline">Back</span>
+            </button>
+
             {/* Quantity Selector */}
-            <div className="flex items-center gap-3 bg-[#F5FAF0] px-3.5 py-2.5 rounded-2xl border border-[#CBE0A3] shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3 bg-[#F5FAF0] px-2.5 sm:px-3.5 py-2.5 rounded-2xl border border-[#CBE0A3] shadow-sm">
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -222,7 +274,7 @@ export function MenuDetailModal() {
               >
                 <Minus className="w-4 h-4" />
               </button>
-              <span className="font-bold text-[#0F240B] text-sm w-6 text-center">
+              <span className="font-bold text-[#0F240B] text-sm w-5 sm:w-6 text-center">
                 {quantity}
               </span>
               <button
@@ -251,8 +303,17 @@ export function MenuDetailModal() {
                 className="flex-1 h-12 flex items-center justify-between px-4 sm:px-6 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl shadow-md hover:shadow-xl transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer"
               >
                 <span>
-                  <span className="hidden xs:inline">Add to Farm Basket</span>
-                  <span className="xs:hidden">Add to Basket</span>
+                  {currentCartQty > 0 ? (
+                    <>
+                      <span className="hidden xs:inline">Add +{quantity} More (Basket Total: {currentCartQty + quantity})</span>
+                      <span className="xs:hidden">Add +{quantity} (Total {currentCartQty + quantity})</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden xs:inline">Add to Farm Basket</span>
+                      <span className="xs:hidden">Add to Basket</span>
+                    </>
+                  )}
                 </span>
                 <span>₹{totalPrice}</span>
               </button>

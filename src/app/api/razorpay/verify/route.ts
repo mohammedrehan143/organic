@@ -1,3 +1,9 @@
+// SECURITY: All Razorpay credentials are stored in .env.local (server-side only)
+// RAZORPAY_KEY_ID — Your Razorpay Key ID (test: rzp_test_xxx, live: rzp_live_xxx)
+// RAZORPAY_KEY_SECRET — Your Razorpay Key Secret (NEVER expose this to the frontend)
+// The KEY_ID is safe to return to the client for the Razorpay checkout SDK.
+// The KEY_SECRET is only used server-side for HMAC signature verification.
+
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 

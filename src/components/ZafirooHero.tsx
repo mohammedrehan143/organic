@@ -135,10 +135,10 @@ export function ZafirooHero() {
           </a>
           <Link
             href="/membership"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black text-sm shadow-md transition active:scale-95"
+            className="btn-shining-gold inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[#261603] font-black text-sm shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <Crown className="w-4 h-4 fill-[#0F240B]" />
-            <span>Join Membership</span>
+            <Crown className="w-4 h-4 text-[#261603] fill-[#261603] drop-shadow-xs" />
+            <span className="tracking-wide uppercase text-xs font-black">Join Membership</span>
           </Link>
         </div>
       </div>

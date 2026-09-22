@@ -52,7 +52,7 @@ export default function MembershipPage() {
   // Settlement modal state (for 1-month postpaid month-end bill)
   const [settlementModalOpen, setSettlementModalOpen] = useState(false);
   const [settlementLoading, setSettlementLoading] = useState(false);
-  const [settlementMethod, setSettlementMethod] = useState<'razorpay' | 'cod' | 'cashfree'>('razorpay');
+  const [settlementMethod, setSettlementMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [settlementSuccessMsg, setSettlementSuccessMsg] = useState('');
 
   // Enrollment modal state
@@ -62,7 +62,7 @@ export default function MembershipPage() {
   const [enrollPhone, setEnrollPhone] = useState('');
   const [enrollAddress, setEnrollAddress] = useState('');
   const [enrollEmail, setEnrollEmail] = useState('');
-  const [prepaidPaymentMethod, setPrepaidPaymentMethod] = useState<'razorpay' | 'cod' | 'cashfree'>('razorpay');
+  const [prepaidPaymentMethod, setPrepaidPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState('');
   const [enrollSuccess, setEnrollSuccess] = useState<Membership | null>(null);
@@ -390,7 +390,7 @@ export default function MembershipPage() {
                       </li>
                       <li className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Postpaid Settlement:</strong> Enjoy 1L of fresh milk delivered daily; pay ₹2,160 at month-end</span>
+                        <span><strong>Postpaid Settlement:</strong> Enjoy 1L farm milk daily; pay ₹2,160 at month-end</span>
                       </li>
                       <li className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -418,11 +418,11 @@ export default function MembershipPage() {
                     }}
                     className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <span>Enroll in 1-Month Postpaid (₹0 Today)</span>
+                    <span>Enroll in 1-Month Postpaid (₹0 Advance)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <p className="text-[11px] text-gray-500 text-center mt-2">
-                    No upfront payment. Billed upon 30-day monthly cycle completion.
+                    1L milk/day at ₹72/L. Pay ₹2,160 at month-end.
                   </p>
                 </div>
               </div>
@@ -452,13 +452,9 @@ export default function MembershipPage() {
                   <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 space-y-1">
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl sm:text-4xl font-black text-amber-300">₹12,600</span>
-                      <span className="text-xs text-emerald-200 line-through">₹12,960</span>
-                      <span className="text-xs bg-amber-400 text-black font-black px-2 py-0.5 rounded-full">
-                        SAVE ₹360
-                      </span>
                     </div>
                     <div className="text-[11px] font-bold text-emerald-200">
-                      1L/day × ₹70 × 180 days
+                      1L/day at ₹70/L for 180 days
                     </div>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200">
                       <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
@@ -504,13 +500,13 @@ export default function MembershipPage() {
                       setEnrollSuccess(null);
                       setEnrollError('');
                     }}
-                    className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition active:scale-95 flex items-center justify-center gap-2"
+                    className="btn-shining-gold w-full py-3.5 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>Enroll in 6-Months Prepaid (₹12,600)</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 text-[#261603]" />
                   </button>
                   <p className="text-[11px] text-emerald-200 text-center mt-2">
-                    Prepaid upfront checkout. Data permanently registered in database.
+                    1L milk/day at ₹70/L. Prepaid upfront for 180 days.
                   </p>
                 </div>
               </div>
@@ -905,7 +901,7 @@ export default function MembershipPage() {
             {/* Bill Summary */}
             <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
-                <span>1-Month Organic Pass (30 Days Cycle):</span>
+                <span>1-Month Organic Pass (30 Days, 1L/day @ ₹72):</span>
                 <strong className="text-[#0F240B]">₹2,160.00</strong>
               </div>
               <div className="flex justify-between text-emerald-800">
@@ -931,7 +927,7 @@ export default function MembershipPage() {
               <label className="block text-xs font-black uppercase tracking-wider text-gray-700">
                 Select Settlement Payment Method:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 <label
                   className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
                     settlementMethod === 'razorpay'
@@ -970,26 +966,6 @@ export default function MembershipPage() {
                     />
                   </div>
                   <span className="text-[11px]">Pay to Partner</span>
-                </label>
-
-                <label
-                  className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
-                    settlementMethod === 'cashfree'
-                      ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <ShieldCheck className="w-4 h-4 text-[#173612]" />
-                    <input
-                      type="radio"
-                      name="settle_pay"
-                      checked={settlementMethod === 'cashfree'}
-                      onChange={() => setSettlementMethod('cashfree')}
-                      className="accent-[#173612]"
-                    />
-                  </div>
-                  <span className="text-[11px]">Cashfree PG</span>
                 </label>
               </div>
             </div>
@@ -1271,7 +1247,7 @@ export default function MembershipPage() {
                   <label className="block text-xs font-black uppercase tracking-wider text-gray-700">
                     Select Prepaid Payment Method:
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <label
                       className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
                         prepaidPaymentMethod === 'razorpay'
@@ -1311,26 +1287,6 @@ export default function MembershipPage() {
                       </div>
                       <span className="text-[11px]">Pay on First Delivery</span>
                     </label>
-
-                    <label
-                      className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
-                        prepaidPaymentMethod === 'cashfree'
-                          ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
-                          : 'border-gray-200 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <ShieldCheck className="w-4 h-4 text-[#173612]" />
-                        <input
-                          type="radio"
-                          name="prepaid_pay"
-                          checked={prepaidPaymentMethod === 'cashfree'}
-                          onChange={() => setPrepaidPaymentMethod('cashfree')}
-                          className="accent-[#173612]"
-                        />
-                      </div>
-                      <span className="text-[11px]">Cashfree PG</span>
-                    </label>
                   </div>
                 </div>
 
@@ -1339,16 +1295,16 @@ export default function MembershipPage() {
                   <button
                     onClick={handleCompletePrepaidPayment}
                     disabled={enrollLoading}
-                    className="w-full py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0F240B] font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="btn-shining-gold w-full py-4 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {enrollLoading ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#261603]" />
                         <span>Processing VIP Activation...</span>
                       </>
                     ) : (
                       <>
-                        <Crown className="w-4 h-4 fill-[#0F240B]" />
+                        <Crown className="w-4 h-4 text-[#261603] fill-[#261603]" />
                         <span>⚡ Pay ₹12,600 & Activate VIP Pass</span>
                       </>
                     )}

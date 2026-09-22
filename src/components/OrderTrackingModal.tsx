@@ -190,10 +190,13 @@ export function OrderTrackingModal() {
             {isCancelled ? (
               <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 text-xs text-red-900">
                 <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <p className="font-bold text-red-800 text-sm">Order Cancelled Prior to Dispatch</p>
                   <p className="text-[11px] text-red-700">
                     This order was cancelled by the customer before courier handover. No delivery will take place.
+                  </p>
+                  <p className="text-[11px] text-[#385A2A] font-bold bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
+                    💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment account.
                   </p>
                 </div>
               </div>
@@ -274,6 +277,16 @@ export function OrderTrackingModal() {
                       <span>Total Amount:</span>
                       <span>₹{typeof currentOrder.total === 'number' ? currentOrder.total.toFixed(2) : currentOrder.total}</span>
                     </div>
+                  </div>
+
+                  {/* Online Payment Refund Note */}
+                  <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-left space-y-1">
+                    <p className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                      <span>💳 Online Payment Refund Note:</span>
+                    </p>
+                    <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                      For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment account.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <button

@@ -1,3 +1,9 @@
+// SECURITY: All Razorpay credentials are stored in .env.local (server-side only)
+// RAZORPAY_KEY_ID — Your Razorpay Key ID (test: rzp_test_xxx, live: rzp_live_xxx)
+// RAZORPAY_KEY_SECRET — Your Razorpay Key Secret (NEVER expose this to the frontend)
+// The KEY_ID is safe to return to the client for the Razorpay checkout SDK.
+// The KEY_SECRET is only used server-side for HMAC signature verification.
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -5,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { amount, currency = 'INR', receipt, notes } = await req.json();
 
     const amountInPaise = Math.round(Number(amount) * 100);
-    const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
     // If real keys are provided and not placeholders, call Razorpay Orders API

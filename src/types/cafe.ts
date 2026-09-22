@@ -16,7 +16,6 @@ export interface UserLocation {
 
 export interface CustomizationOptions {
   milk?: string[];
-  temperature?: string[];
   sweetness?: string[];
   portion?: string[];
   flavor?: string[];

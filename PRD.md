@@ -15,9 +15,9 @@
 ### Core Objectives
 1. **Uncompromised Quality & Freshness:** Direct morning dispatch from our Bylanarasapura farm directly to Bangalore homes with zero middlemen and zero chemical preservatives.
 2. **Transparent, Zero-Friction Customer Experience:** Streamlined cart, building-level GPS geocoding, 0% GST (tax-free farm produce), zero hidden platform fees, and instant printable 80mm thermal receipts.
-3. **Dual Membership Program:**
-   - **1-Month Organic Pass (Postpaid):** ₹299 / 30 days with ₹0 advance payment, settling at month-end.
-   - **6-Month VIP Club (Prepaid):** ₹1,499 / 180 days upfront (save ₹300), free thermal insulated milk bag, and 10% extra farm discount.
+3. **Dual Membership Program (1L Milk / Day):**
+   - **1-Month Organic Pass (Postpaid):** ₹2,160 / 30 days (1L/day @ ₹72) with ₹0 advance payment, settling at month-end.
+   - **6-Month VIP Club (Prepaid):** ₹12,600 / 180 days upfront (1L/day @ ₹70, save ₹360), free thermal insulated milk bag, and 10% extra farm discount.
    - Real-time membership profile lookup by 10-digit mobile number.
 4. **Kitchen Display System (KDS) & Logistics Dispatch:**
    - 2 streamlined fulfillment statuses: **Order Placed** and **Out for Delivery** (with terminal **Delivered** state).
@@ -79,7 +79,8 @@ flowchart TD
 ### 3.2 Geolocation & Address Precision
 - **GPS Building Detection:** One-click GPS locator pulls latitude, longitude, building name, road, suburb, and postal code.
 - **Address Autocomplete:** Instant search suggestions powered by OpenStreetMap Nominatim.
-- **Clean One-Line Formatting:** Automatically formats addresses to `{flat/door}, {street}, {suburb}, {city}`.
+- **Mandatory Landmark & House Details:** Line 2 (House/Flat No. & Landmark) is strictly compulsory for all delivery orders to eliminate delivery failures.
+- **Clean One-Line Formatting:** Automatically formats addresses to `{flat/door/landmark}, {street}, {suburb}, {city}`.
 
 ### 3.3 Checkout & Payment Methods
 Customers can select between:
@@ -121,6 +122,7 @@ The order fulfillment pipeline operates strictly with **two operational states**
 
 ### 4.2 Customer Cancellation Rules
 - **Cancellation Window:** Orders may **only** be cancelled by the customer while in the `Order Placed` state.
+- **Online Payment Refund SLA:** For orders placed via online payments (UPI, Cards, Net Banking), refunds will be processed and returned to the customer's original payment account within **24 to 48 hours** of cancellation.
 - **Dispatch Lock:** Once an order transitions to `Out for Delivery` or `Delivered`, cancellation is **strictly blocked** both in the frontend UI and by the backend server (`/api/orders/[id]` returns HTTP 400).
 - **KDS High-Priority Alert:** When an order is cancelled:
   - Admin KDS displays a thick red border and pulsating badge.
@@ -138,8 +140,8 @@ Customers can enroll in two schemes designed to eliminate daily delivery fees:
 ┌──────────────────────────────────────────────┬──────────────────────────────────────────────┐
 │       1-MONTH ORGANIC PASS (POSTPAID)        │          6-MONTH VIP CLUB (PREPAID)          │
 ├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
-│ Rate: ₹299 / 30 Days                         │ Rate: ₹1,499 / 180 Days (Save ₹300)          │
-│ Upfront Payment: ₹0 (Zero Advance)           │ Upfront Payment: ₹1,499 Upfront              │
+│ Rate: ₹2,160 / 30 Days (1L/day @ ₹72)        │ Rate: ₹12,600 / 180 Days (Save ₹360 @ ₹70/L) │
+│ Upfront Payment: ₹0 (Zero Advance)           │ Upfront Payment: ₹12,600 Upfront             │
 │ Billing Type: Postpaid (Settle at month-end) │ Billing Type: Prepaid (Single payment)       │
 │ Glass Bottle Deposit: Waived (₹0)            │ Glass Bottle Deposit: Waived (₹0)            │
 │ Delivery Fee: 100% Free Daily                │ Delivery Fee: 100% Free Daily (Save ₹1,800+) │
@@ -153,9 +155,9 @@ Customers can enroll in two schemes designed to eliminate daily delivery fees:
 - Enrolling in the 6-Month VIP Club uses a 2-step checkout:
   - **Step 1:** Customer enters Name, Mobile Number, Delivery Address, and Email.
   - **Step 2 (Prepaid VIP Payment Page):**
-    - Itemized breakdown: ₹1,794 standard value, -₹295 VIP discount, Net Payable: **₹1,499.00**.
-    - Payment selector: Razorpay UPI/Cards, Cashfree PG, Pay on First Delivery.
-    - One-click `⚡ Pay ₹1,499 & Activate VIP Pass` instant simulator.
+    - Itemized breakdown: ₹12,960 standard value, -₹360 VIP discount, Net Payable: **₹12,600.00**.
+    - Payment selector: Razorpay UPI/Cards, Pay on First Delivery.
+    - One-click `⚡ Pay ₹12,600 & Activate VIP Pass` instant simulator.
     - On completion: Triggers celebratory confetti and stores the record with `billingType: 'prepaid'`, `paymentStatus: 'paid'`, and 180 days validity.
 
 ### 5.2 1-Month Postpaid Flow & Skip Button
@@ -166,9 +168,9 @@ Customers can enroll in two schemes designed to eliminate daily delivery fees:
     - `⏩ Fast-Forward 30 Days (Skip to Month-End Bill)`
     - Simulates the completion of 30 days in one click via `PATCH /api/membership` (`action: 'skip_to_due'`).
   - **Month-End Postpaid Settlement Payment Page:**
-    - When due, a pulsing alert banner displays: `🚨 Month-End Bill Due: ₹299 for 30 Days of Free Daily Deliveries`.
-    - Clicking `Pay Month-End Bill (₹299)` opens the settlement modal with invoice details (GST: ₹0, Delivery: ₹0, Total: ₹299).
-    - Supports Razorpay UPI/Cards, Cashfree, or Pay to Courier.
+    - When due, a pulsing alert banner displays: `🚨 Month-End Bill Due: ₹2,160 for 30 Days of Free Daily Deliveries`.
+    - Clicking `Pay Month-End Bill (₹2,160)` opens the settlement modal with invoice details (GST: ₹0, Delivery: ₹0, Total: ₹2,160).
+    - Supports Razorpay UPI/Cards or Pay to Courier.
     - Settling marks `paymentStatus: 'paid'`, triggers confetti, and renews the pass for the next 30 days.
 
 ---
@@ -197,7 +199,7 @@ Located directly beside Analytics, this section renders customer membership card
   - Search by customer name, 10-digit mobile number, or Member ID.
   - Filter tabs: `All`, `6-Mo VIP`, `1-Mo Postpaid`, `🚨 Bill Due`, `Active`.
 - **Vertical Member Card Layout:**
-  - **Header:** Scheme badge (Gold VIP or Emerald Postpaid), Member ID, and pulsating status badge (`ACTIVE MEMBER` or `🚨 MONTH-END BILL DUE (₹299)`).
+  - **Header:** Scheme badge (Gold VIP or Emerald Postpaid), Member ID, and pulsating status badge (`ACTIVE MEMBER` or `🚨 MONTH-END BILL DUE (₹2,160)`).
   - **Customer Profile:** Name, Phone Number, Delivery Address, Email.
   - **Validity Countdown:** Visual progress bar, days remaining counter, started date, and expiry date.
   - **Billing Status:** Scheme rate, payment mode, and payment status pill.
@@ -205,7 +207,7 @@ Located directly beside Analytics, this section renders customer membership card
     - `Call Member` (instant `tel:` link).
     - `WhatsApp Reminder` (pre-filled WhatsApp message with renewal link).
     - `View Orders` (opens `/track?phone=...`).
-    - `✓ Mark Month-End Bill Paid (₹299)` (settles invoice and adds 30 days).
+    - `✓ Mark Month-End Bill Paid (₹2,160)` (settles invoice and adds 30 days).
     - `⏩ Simulate Due Bill (Test)` (fast-forwards 30 days for testing).
     - `+ Extend 30 Days` (extends validity).
 
@@ -231,7 +233,7 @@ Located directly beside Analytics, this section renders customer membership card
 | `plan_type` | `VARCHAR(20)` | NOT NULL | `'1_month'` or `'6_months'` |
 | `plan_name` | `VARCHAR(100)` | NOT NULL | Display name of plan |
 | `billing_type` | `VARCHAR(20)` | NOT NULL | `'postpaid'` or `'prepaid'` |
-| `price` | `NUMERIC(10,2)` | NOT NULL | Plan price (₹299.00 or ₹1,499.00) |
+| `price` | `NUMERIC(10,2)` | NOT NULL | Plan price (₹2,160.00 or ₹12,600.00) |
 | `status` | `VARCHAR(20)` | DEFAULT `'active'` | `'active'`, `'expired'`, `'cancelled'`, `'paused'` |
 | `payment_status` | `VARCHAR(20)` | DEFAULT `'due'` | `'paid'`, `'due'`, `'postpaid_cycle'` |
 | `start_date` | `TIMESTAMPTZ` | DEFAULT `NOW()` | Start timestamp |
