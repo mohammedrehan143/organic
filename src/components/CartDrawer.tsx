@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useOrder } from '@/context/OrderContext';
 import { CAFE_METADATA } from '@/data/cafeData';
 import { X, Plus, Minus, Trash2, ShoppingBag, Sparkles, ArrowRight, MapPin } from 'lucide-react';
 import Image from 'next/image';
 
 export function CartDrawer() {
+  const router = useRouter();
   const {
     cart,
     cartDrawerOpen,
@@ -114,7 +116,10 @@ export function CartDrawer() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setCartDrawerOpen(false)}
+                  onClick={() => {
+                    setCartDrawerOpen(false);
+                    router.push('/menu');
+                  }}
                   className="btn-darkgreen px-6 py-2.5 text-xs font-bold rounded-full shadow transition"
                 >
                   Explore Menu
