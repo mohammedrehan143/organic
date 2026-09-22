@@ -853,7 +853,9 @@ export default function AdminPage() {
                 <div
                   key={order.id}
                   className={`rounded-3xl border overflow-hidden flex flex-col justify-between transition-all ${
-                    isCancelled
+                    isCancelled && order.paymentStatus === 'refunded'
+                      ? 'border-2 border-emerald-500 bg-emerald-50/70 shadow-lg shadow-emerald-200/50 ring-2 ring-emerald-400/40'
+                      : isCancelled
                       ? 'border-2 border-red-500 bg-red-50/70 shadow-lg shadow-red-200/50 ring-2 ring-red-400/40'
                       : order.status === 'new'
                       ? 'bg-white border-amber-400 ring-2 ring-amber-300/40 shadow-warm-sm'
@@ -864,26 +866,30 @@ export default function AdminPage() {
                       : 'bg-white border-cream-200 shadow-warm-sm'
                   }`}
                 >
-                  {/* Top Red Cancelled Banner Across Card Header */}
+                  {/* Top Cancelled / Refunded Banner Across Card Header */}
                   {isCancelled && (
-                    <div className="bg-red-600 text-white px-4 py-2.5 flex items-center justify-between shadow-sm">
+                    <div className={`${order.paymentStatus === 'refunded' ? 'bg-emerald-600' : 'bg-red-600'} text-white px-4 py-2.5 flex items-center justify-between shadow-sm`}>
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-white animate-pulse shrink-0" />
+                        {order.paymentStatus === 'refunded' ? (
+                          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-white animate-pulse shrink-0" />
+                        )}
                         <span className="font-black text-xs uppercase tracking-wider">
-                          🚨 ORDER CANCELLED BY CUSTOMER
+                          {order.paymentStatus === 'refunded' ? 'REFUND PROCESSED' : '🚨 ORDER CANCELLED'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] bg-white/90 text-red-800 font-black px-2 py-0.5 rounded uppercase shadow-xs hidden sm:inline">
-                          DO NOT DISPATCH
+                        <span className={`text-[10px] bg-white/90 ${order.paymentStatus === 'refunded' ? 'text-emerald-900' : 'text-red-800'} font-black px-2 py-0.5 rounded uppercase shadow-xs hidden sm:inline`}>
+                          {order.paymentStatus === 'refunded' ? 'RESOLVED' : 'DO NOT DISPATCH'}
                         </span>
                         <button
                           type="button"
                           onClick={() => setRefundModalOrder(order)}
-                          className="text-[10px] bg-white hover:bg-cream-100 text-amber-900 font-black px-2.5 py-1 rounded-md uppercase shadow-xs transition flex items-center gap-1 cursor-pointer"
+                          className="text-[10px] bg-white hover:bg-cream-100 text-espresso-900 font-black px-2.5 py-1 rounded-md uppercase shadow-xs transition flex items-center gap-1 cursor-pointer"
                         >
-                          <RotateCcw className="w-3 h-3 text-amber-700" />
-                          <span>Refund Info</span>
+                          <RotateCcw className="w-3 h-3 text-espresso-600" />
+                          <span>Details</span>
                         </button>
                       </div>
                     </div>
@@ -892,7 +898,9 @@ export default function AdminPage() {
                   {/* Card Header */}
                   <div
                     className={`p-5 border-b flex items-center justify-between ${
-                      isCancelled
+                      isCancelled && order.paymentStatus === 'refunded'
+                        ? 'border-emerald-200 bg-emerald-100/60'
+                        : isCancelled
                         ? 'border-red-200 bg-red-100/60'
                         : 'border-cream-100 bg-cream-50/50'
                     }`}
@@ -925,7 +933,9 @@ export default function AdminPage() {
 
                     <span
                       className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
-                        isCancelled
+                        order.paymentStatus === 'refunded'
+                          ? 'bg-emerald-600 text-white font-black border border-emerald-700 shadow-sm flex items-center gap-1'
+                          : isCancelled
                           ? 'bg-red-600 text-white font-black border border-red-700 shadow-sm flex items-center gap-1 animate-pulse'
                           : order.status === 'new' || order.status === 'preparing'
                           ? 'bg-amber-100 text-amber-900 border border-amber-300'
@@ -936,7 +946,12 @@ export default function AdminPage() {
                           : 'bg-rose-100 text-rose-700'
                       }`}
                     >
-                      {isCancelled ? (
+                      {order.paymentStatus === 'refunded' ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Refunded</span>
+                        </>
+                      ) : isCancelled ? (
                         <>
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Cancelled</span>
@@ -953,16 +968,26 @@ export default function AdminPage() {
                     </span>
                   </div>
 
-                  {/* Red Alert Note If Cancelled */}
+                  {/* Alert Note If Cancelled or Refunded */}
                   {isCancelled && (
-                    <div className="mx-5 mt-4 p-3.5 bg-red-100/90 border-2 border-red-300 rounded-2xl flex items-start gap-3 text-xs text-red-900">
-                      <AlertOctagon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className={`mx-5 mt-4 p-3.5 border-2 rounded-2xl flex items-start gap-3 text-xs ${
+                      order.paymentStatus === 'refunded'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                        : 'bg-red-100/90 border-red-300 text-red-900'
+                    }`}>
+                      {order.paymentStatus === 'refunded' ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertOctagon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      )}
                       <div className="space-y-0.5">
-                        <p className="font-black text-red-900 uppercase tracking-wide">
-                          Cancelled Before Courier Dispatch
+                        <p className={`font-black uppercase tracking-wide ${order.paymentStatus === 'refunded' ? 'text-emerald-900' : 'text-red-900'}`}>
+                          {order.paymentStatus === 'refunded' ? 'Cancelled & Refund Processed' : 'Cancelled Before Courier Dispatch'}
                         </p>
-                        <p className="text-[11px] text-red-800 leading-relaxed font-medium">
-                          The customer cancelled this order prior to delivery dispatch. Keep organic products in cold storage. Do not pack or dispatch.
+                        <p className={`text-[11px] leading-relaxed font-medium ${order.paymentStatus === 'refunded' ? 'text-emerald-800' : 'text-red-800'}`}>
+                          {order.paymentStatus === 'refunded' 
+                            ? 'The customer cancelled this order and the online refund has been successfully processed.' 
+                            : 'The customer cancelled this order prior to delivery dispatch. Keep organic products in cold storage. Do not pack or dispatch.'}
                         </p>
                       </div>
                     </div>
@@ -1036,10 +1061,17 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {isCancelled ? (
                         <div className="space-y-2">
-                          <div className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
-                            <Ban className="w-4 h-4 text-white shrink-0" />
-                            <span>ORDER CANCELLED — DISPATCH BLOCKED</span>
-                          </div>
+                          {order.paymentStatus === 'refunded' ? (
+                            <div className="py-2.5 px-4 bg-emerald-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
+                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                              <span>ORDER CANCELLED & REFUNDED</span>
+                            </div>
+                          ) : (
+                            <div className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-black text-center tracking-wider uppercase flex items-center justify-center gap-2 shadow-sm">
+                              <Ban className="w-4 h-4 text-white shrink-0" />
+                              <span>ORDER CANCELLED — DISPATCH BLOCKED</span>
+                            </div>
+                          )}
 
                           {/* Prominent Refund Action Button */}
                           <button

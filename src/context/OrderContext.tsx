@@ -453,6 +453,39 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     playOrderChime();
   }, [playOrderChime]);
 
+  // Active Tracking Order Background Poller (Fallback if websocket fails)
+  useEffect(() => {
+    if (!activeTrackingOrder) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/${encodeURIComponent(activeTrackingOrder.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.order) {
+            setActiveTrackingOrder(prev => {
+              if (prev && (prev.status !== data.order.status || prev.paymentStatus !== data.order.paymentStatus)) {
+                return data.order;
+              }
+              return prev;
+            });
+            setOrders(prev => {
+              let hasChange = false;
+              const next = prev.map(o => {
+                if ((o.id === data.order.id || o.tokenId === data.order.tokenId) && (o.status !== data.order.status || o.paymentStatus !== data.order.paymentStatus)) {
+                  hasChange = true;
+                  return data.order;
+                }
+                return o;
+              });
+              return hasChange ? next : prev;
+            });
+          }
+        }
+      } catch (err) {}
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeTrackingOrder]);
+
   // Supabase Realtime Listener (with event batching)
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;

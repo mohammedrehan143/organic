@@ -501,14 +501,16 @@ function TrackPageContent() {
   const [hasSearched, setHasSearched] = useState(false);
 
   // Stable search function: queries membership and customer orders strictly for the provided input
-  const executeSearch = useCallback(async (query: string) => {
+  const executeSearch = useCallback(async (query: string, silent = false) => {
     const q = query.trim();
     if (!q) return;
 
     const cleanDigits = q.replace(/[^0-9]/g, '');
     const isPhoneSearch = cleanDigits.length >= 10;
 
-    setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     setHasSearched(true);
     setSearchedPhone(isPhoneSearch ? cleanDigits.slice(-10) : '');
 
@@ -552,7 +554,9 @@ function TrackPageContent() {
     } catch (err) {
       console.error('Failed to query customer profile and orders:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -598,6 +602,15 @@ function TrackPageContent() {
       return hasChanges ? updated : prev;
     });
   }, [liveOrders]);
+
+  // Fallback Polling: Ensure customer orders are fresh even if WebSocket RLS blocks anonymous users
+  useEffect(() => {
+    if (!searchQuery || !hasSearched) return;
+    const timer = setInterval(() => {
+      executeSearch(searchQuery, true);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [searchQuery, hasSearched, executeSearch]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
