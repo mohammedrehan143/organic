@@ -456,9 +456,16 @@ export function CheckoutModal() {
                   <div className="space-y-1">
                     <strong className="block font-black text-rose-950 uppercase">Order Cancelled</strong>
                     <p>This order has been cancelled. No harvesting or doorstep delivery will take place.</p>
-                    <p className="text-[#385A2A] font-bold text-[11px] bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
-                      💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment source.
-                    </p>
+                    {liveOrder.paymentStatus === 'refunded' ? (
+                      <p className="text-[11px] text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 rounded-lg p-2 mt-1 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Refund Processed: Your refund has been successfully processed to your original payment source.
+                      </p>
+                    ) : (
+                      <p className="text-[#385A2A] font-bold text-[11px] bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-1">
+                        💳 <strong>Refund Policy:</strong> For online payments, refunds will be given within <strong>24 to 48 hours</strong> of cancellation to your original payment source.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

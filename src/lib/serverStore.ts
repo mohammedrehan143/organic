@@ -50,31 +50,7 @@ const DEFAULT_SERVER_AGENTS: DeliveryAgent[] = [
     status: "active",
     vehicleType: "Electric Eco-Van",
     ordersDeliveredCount: 142,
-  },
-  {
-    id: "AGT-9876-02",
-    name: "Priya Nair",
-    phone: "9876543202",
-    status: "active",
-    vehicleType: "Insulated Farm Cargo Bike",
-    ordersDeliveredCount: 98,
-  },
-  {
-    id: "AGT-9876-03",
-    name: "Rahul Verma",
-    phone: "9876543203",
-    status: "active",
-    vehicleType: "Electric Eco-Van",
-    ordersDeliveredCount: 215,
-  },
-  {
-    id: "AGT-9876-04",
-    name: "Deepak Patel",
-    phone: "9876543204",
-    status: "active",
-    vehicleType: "Insulated Farm Cargo Bike",
-    ordersDeliveredCount: 64,
-  },
+  }
 ];
 
 if (!global.__zafiroo_server_store__) {

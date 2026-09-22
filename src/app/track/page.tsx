@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useOrder } from '@/context/OrderContext';
 import { Order } from '@/types/cafe';
 import {
   Search,
@@ -487,6 +488,7 @@ function OrderCard({
 }
 
 function TrackPageContent() {
+  const { orders: liveOrders } = useOrder();
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get('token');
   const phoneParam = searchParams.get('phone');
@@ -571,6 +573,24 @@ function TrackPageContent() {
       }
     }
   }, [phoneParam, tokenParam, executeSearch]);
+
+  // Real-time synchronization: sync any live updates from OrderContext into our local customerOrders state
+  useEffect(() => {
+    if (customerOrders.length === 0 || liveOrders.length === 0) return;
+
+    setCustomerOrders((prev) => {
+      let hasChanges = false;
+      const updated = prev.map((order) => {
+        const live = liveOrders.find((lo) => lo.id === order.id || lo.tokenId === order.tokenId);
+        if (live && live.status !== order.status) {
+          hasChanges = true;
+          return { ...order, status: live.status, riderName: live.riderName, riderPhone: live.riderPhone };
+        }
+        return order;
+      });
+      return hasChanges ? updated : prev;
+    });
+  }, [liveOrders]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
