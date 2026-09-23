@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLocalOrders, addLocalOrder, upsertLocalOrder } from '@/lib/serverStore';
+import { getLocalOrders, addLocalOrder, upsertLocalOrder, clearLocalOrders } from '@/lib/serverStore';
 import {
   isSupabaseConfigured,
   supabase,
@@ -65,57 +65,87 @@ export async function GET(req: NextRequest) {
 
         const { data, error, count } = await sbQuery;
 
-        if (!error && data && data.length > 0) {
-          dbOrders = data.map(formatDbOrderToModel);
-          totalCount = count || dbOrders.length;
+        if (!error) {
+          if (data && data.length > 0) {
+            dbOrders = data.map(formatDbOrderToModel);
+          }
+          totalCount = count ?? dbOrders.length;
           sourceFlags.push('supabase');
-        } else if (error) {
-          console.warn('Supabase query error (will merge with local):', error.message);
+
+          // When viewing the first page without search filters, synchronize in-memory store
+          // with authoritative Supabase database state so deleted records are purged from RAM.
+          if (offset === 0 && !cleanPhone && !cleanToken && !cleanQuery && !status) {
+            clearLocalOrders();
+            for (const o of dbOrders) {
+              upsertLocalOrder(o);
+            }
+          }
         } else {
-          console.warn('Supabase returned empty result (will merge with local)');
+          console.warn('Supabase query error (will fallback to local):', error.message);
         }
       } catch (err: any) {
-        console.warn('Supabase query exception (will merge with local):', err.message);
+        console.warn('Supabase query exception (will fallback to local):', err.message);
       }
     }
 
-    // Local in-memory fallback — ALWAYS merged with Supabase so the UI never flickers.
-    const localFiltered = getLocalOrders({
-      status: status || undefined,
-      phone: cleanPhone || undefined,
-      query: cleanToken || cleanQuery || undefined,
-      limit,
-      offset,
-    });
-
-    if (localFiltered.length > 0) {
-      sourceFlags.push('local');
+    let finalOrders: Order[];
+    // If Supabase is configured and successfully queried, Supabase is the single source of truth!
+    // If Supabase has 0 orders (e.g. database was cleared), we must return 0 orders.
+    if (sourceFlags.includes('supabase')) {
+      finalOrders = dbOrders;
+    } else {
+      // Supabase is unavailable or not configured: fallback to in-memory local store
+      const localFiltered = getLocalOrders({
+        status: status || undefined,
+        phone: cleanPhone || undefined,
+        query: cleanToken || cleanQuery || undefined,
+        limit,
+        offset,
+      });
+      if (localFiltered.length > 0) {
+        sourceFlags.push('local');
+      }
+      totalCount = localFiltered.length;
+      finalOrders = localFiltered;
     }
-
-    // Merge by id: Local in-memory orders first (fallback), then Supabase database orders
-    // overwrite matching IDs so authoritative database status (e.g. completed/delivering)
-    // is never clobbered by stale local store copies.
-    const mergedMap = new Map<string, Order>();
-    for (const o of localFiltered) {
-      mergedMap.set(o.id, o);
-    }
-    for (const o of dbOrders) {
-      mergedMap.set(o.id, o);
-      // Synchronize authoritative DB state into local server store
-      upsertLocalOrder(o);
-    }
-    const merged = Array.from(mergedMap.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit);
 
     return NextResponse.json({
       success: true,
-      orders: merged,
-      totalCount: Math.max(totalCount, merged.length),
+      orders: finalOrders,
+      totalCount: Math.max(totalCount, finalOrders.length),
       page,
       limit,
-      count: merged.length,
+      count: finalOrders.length,
       source: sourceFlags.length ? sourceFlags.join('+') : 'none',
+    });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE: Bulk purge / clear all orders (Admin utility)
+export async function DELETE(req: NextRequest) {
+  try {
+    const client = supabaseAdmin || supabase;
+    let deletedCount = 0;
+
+    if (isSupabaseConfigured && client) {
+      const { data, error } = await client
+        .from('orders')
+        .delete()
+        .neq('id', '__dummy_never_match__');
+
+      if (error) {
+        console.error('Supabase bulk delete error:', error.message);
+      }
+    }
+
+    // Always clear local in-memory store
+    clearLocalOrders();
+
+    return NextResponse.json({
+      success: true,
+      message: 'All orders have been permanently cleared from database and memory cache.',
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -31,9 +31,12 @@ export async function GET(req: NextRequest) {
         }
 
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
-          dbOrders = data.map(formatDbOrderToModel);
-        } else if (error) {
+        if (!error) {
+          if (data && data.length > 0) {
+            dbOrders = data.map(formatDbOrderToModel);
+          }
+          return NextResponse.json({ success: true, orders: dbOrders, source: 'supabase' });
+        } else {
           console.warn('Rider orders Supabase query error:', error.message);
         }
       } catch (err: any) {
@@ -41,8 +44,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Fallback to local in-memory store ONLY if Supabase is unavailable or errored
     const localOrders = getLocalOrders({ limit: 100 });
-    let filtered = [...dbOrders];
     const localFiltered = localOrders.filter((o) => {
       if (showReadyUnassigned) return o.status === 'ready' && !o.deliveryAgentId;
       if (agentId) return o.deliveryAgentId === agentId;
@@ -55,17 +58,7 @@ export async function GET(req: NextRequest) {
       return true;
     });
 
-    // Merge local + DB: DB orders take precedence over local store fallback
-    const map = new Map<string, Order>();
-    for (const o of localFiltered) map.set(o.id, o);
-    for (const o of filtered) {
-      map.set(o.id, o);
-      upsertLocalOrder(o);
-    }
-    filtered = Array.from(map.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    return NextResponse.json({ success: true, orders: filtered, source: filtered.length ? 'merged' : 'none' });
+    return NextResponse.json({ success: true, orders: localFiltered, source: 'local' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

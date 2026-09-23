@@ -235,6 +235,39 @@ export function updateLocalOrderStatus(id: string, status: OrderStatus, extra?: 
   return updated;
 }
 
+export function deleteLocalOrder(id: string): boolean {
+  if (!id) return false;
+  const query = id.trim().toLowerCase();
+  const existing = serverStore.indexById.get(query) || serverStore.indexByToken.get(query);
+  const targetId = existing ? existing.id : id;
+
+  const initialLen = serverStore.orders.length;
+  serverStore.orders = serverStore.orders.filter(
+    (o) => o.id.toLowerCase() !== query && o.id !== targetId && o.tokenId?.toLowerCase() !== query && o.tokenId !== id
+  );
+
+  serverStore.indexById.delete(query);
+  if (existing?.id) serverStore.indexById.delete(existing.id.toLowerCase());
+  if (existing?.tokenId) serverStore.indexByToken.delete(existing.tokenId.toLowerCase());
+  if (existing?.trackingCode) serverStore.indexByToken.delete(existing.trackingCode.toLowerCase());
+
+  return serverStore.orders.length < initialLen;
+}
+
+export function clearLocalOrders(): void {
+  serverStore.orders = [];
+  serverStore.indexById.clear();
+  serverStore.indexByToken.clear();
+  serverStore.indexByPhone.clear();
+}
+
+export function syncLocalOrdersWithDb(dbOrders: Order[]): void {
+  clearLocalOrders();
+  for (const o of dbOrders) {
+    upsertLocalOrder(o);
+  }
+}
+
 export function getLocalSosAlerts(): SosAlert[] {
   return serverStore.sosAlerts;
 }

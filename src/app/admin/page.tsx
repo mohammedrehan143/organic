@@ -55,6 +55,7 @@ import {
   RotateCcw,
   Copy,
   CreditCard,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
@@ -66,6 +67,8 @@ export default function AdminPage() {
     orders,
     refreshOrders,
     updateOrderStatus,
+    deleteOrder,
+    clearAllOrders,
     assignDeliveryAgent,
     dispatchOrder,
     deliveryAgents,
@@ -829,6 +832,28 @@ export default function AdminPage() {
 
             <div className="flex items-center gap-2 shrink-0">
               <button
+                onClick={() => refreshOrders()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition cursor-pointer"
+                title="Force refresh and sync directly with database"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Sync DB</span>
+              </button>
+              {orders.length > 0 && (
+                <button
+                  onClick={async () => {
+                    if (confirm('Permanently delete all orders from database and memory? This cannot be undone.')) {
+                      await clearAllOrders();
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition cursor-pointer"
+                  title="Purge all orders"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Clear All</span>
+                </button>
+              )}
+              <button
                 onClick={playOrderChime}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cream-50 hover:bg-cream-100 border border-cream-300 text-espresso-700 text-xs font-semibold transition"
                 title="Test Web Audio API Chime"
@@ -897,8 +922,27 @@ export default function AdminPage() {
           )}
 
           {/* KDS Active Order Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredKdsOrders.map((order) => {
+          {filteredKdsOrders.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-cream-200 p-12 text-center space-y-3 shadow-warm-sm">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto text-2xl font-bold border border-emerald-200">
+                ✓
+              </div>
+              <h3 className="text-base font-black text-espresso-950">No Orders in Database</h3>
+              <p className="text-xs text-espresso-600 max-w-md mx-auto leading-relaxed">
+                The database order queue is completely clear. New customer orders and delivery runs will appear here automatically in real time.
+              </p>
+              <button
+                type="button"
+                onClick={() => refreshOrders()}
+                className="px-4 py-2 bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sync with Database</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredKdsOrders.map((order) => {
               const isDelivery = order.deliveryMethod === 'delivery';
               const isCancelled = order.status === 'cancelled';
 
@@ -1334,6 +1378,20 @@ export default function AdminPage() {
                               <span>Cancel Order (Admin)</span>
                             </button>
                           )}
+
+                          {/* Permanent Delete Order Button */}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (confirm(`Permanently delete order #${order.tokenId} (${order.id}) from database?`)) {
+                                await deleteOrder(order.id);
+                              }
+                            }}
+                            className="w-full py-1.5 px-3 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-xl text-[11px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3 text-gray-400" />
+                            <span>Delete from Database</span>
+                          </button>
                         </>
                       )}
                     </div>
@@ -1342,6 +1400,7 @@ export default function AdminPage() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 

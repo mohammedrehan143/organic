@@ -117,6 +117,8 @@ export interface OrderContextType {
   findOrderByIdOrPhone: (query: string) => Order | null;
   placeOrder: (orderData: Omit<Order, 'id' | 'tokenId' | 'trackingCode' | 'createdAt' | 'status' | 'deliveryOtp'>) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, extra?: Partial<Order>) => Promise<Order | null>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
+  clearAllOrders: () => Promise<boolean>;
   submitOrderFeedback: (orderId: string, rating: number, tags: string[], note?: string) => Promise<boolean>;
 
   // Delivery & Verification
@@ -506,6 +508,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${encodeURIComponent(activeTrackingOrder.id)}`);
+        if (res.status === 404) {
+          // Order was deleted from database
+          setActiveTrackingOrder(null);
+          setOrders(prev => prev.filter(o => o.id !== activeTrackingOrder.id && o.tokenId !== activeTrackingOrder.id));
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.order) {
@@ -564,6 +572,21 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
               // Instant flush within 50ms for immediate real-time screen reflection
               if (batchFlushTimeoutRef.current) clearTimeout(batchFlushTimeoutRef.current);
               batchFlushTimeoutRef.current = setTimeout(flushOrderQueue, 50);
+            } else if (payload.eventType === 'DELETE') {
+              const deletedId = (payload.old as any)?.id;
+              if (deletedId) {
+                setOrders((prev) => {
+                  const filtered = prev.filter((o) => o.id !== deletedId && o.tokenId !== deletedId);
+                  safeSetStorage(ORDERS_STORAGE_KEY, filtered.slice(0, MAX_SAVED_LOCAL_ORDERS));
+                  return filtered;
+                });
+                setActiveTrackingOrder((current) => {
+                  if (current && (current.id === deletedId || current.tokenId === deletedId)) {
+                    return null;
+                  }
+                  return current;
+                });
+              }
             }
           }
         )
@@ -594,29 +617,42 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [flushOrderQueue, playSosSiren]);
 
   // Administrative Orders Refresh function (used strictly by Admin & Rider Portal)
-  // MERGES fetched orders into existing state with monotonicity guard so that
-  // orders already marked Delivered/Dispatched never get reverted to placed/dispatch.
+  // Reflects the authoritative database state without keeping deleted ghost orders,
+  // while preserving status monotonicity (e.g. Delivered status) and ultra-recent user actions.
   const refreshOrders = useCallback(async () => {
     try {
       const res = await fetch('/api/orders?limit=100');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
-        setOrders((prev) => {
-          const map = new Map<string, Order>();
-          // 1. Existing orders first (never drop what we already show)
-          for (const o of prev) map.set(o.id, o);
+        if (data.orders.length === 0) {
+          // The database currently has 0 orders (e.g. user cleared / deleted all orders)
+          setOrders((prev) => {
+            const ultraRecent = prev.filter(
+              (o) => Date.now() - new Date(o.createdAt).getTime() < 15000
+            );
+            if (ultraRecent.length === 0) {
+              safeSetStorage(ORDERS_STORAGE_KEY, []);
+              setActiveTrackingOrder(null);
+              return [];
+            }
+            return ultraRecent;
+          });
+          return;
+        }
 
-          // 2. Incoming orders override existing copies of the same id, but NEVER downgrade status
+        setOrders((prev) => {
+          // Authoritative orders returned by server
+          const incomingMap = new Map<string, Order>();
           for (const inc of data.orders) {
-            const ex = map.get(inc.id);
+            const ex = prev.find((p) => p.id === inc.id || (p.tokenId && p.tokenId === inc.tokenId));
             if (ex) {
               const recent = recentStatusChangesRef.current.get(inc.id) || (inc.tokenId ? recentStatusChangesRef.current.get(inc.tokenId) : undefined);
               const isRecentLock = recent && Date.now() - recent.timestamp < 15000;
               const targetStatus = isRecentLock ? recent.status : inc.status;
 
               if (shouldPreserveExistingStatus(ex.status, targetStatus)) {
-                map.set(inc.id, {
+                incomingMap.set(inc.id, {
                   ...inc,
                   status: ex.status,
                   deliveredAt: ex.deliveredAt || inc.deliveredAt,
@@ -625,15 +661,23 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   deliveryAgentId: ex.deliveryAgentId || inc.deliveryAgentId,
                 });
               } else {
-                map.set(inc.id, inc);
+                incomingMap.set(inc.id, inc);
               }
             } else {
-              map.set(inc.id, inc);
+              incomingMap.set(inc.id, inc);
             }
           }
 
-          const combined = Array.from(map.values());
+          // Retain order placed locally in the last 15s if it hasn't indexed yet
+          for (const p of prev) {
+            if (!incomingMap.has(p.id) && Date.now() - new Date(p.createdAt).getTime() < 15000) {
+              incomingMap.set(p.id, p);
+            }
+          }
+
+          const combined = Array.from(incomingMap.values());
           combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          safeSetStorage(ORDERS_STORAGE_KEY, combined.slice(0, MAX_SAVED_LOCAL_ORDERS));
           return combined.slice(0, MAX_CLIENT_ORDERS);
         });
       }
@@ -835,6 +879,45 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
 
     return updatedOrder;
+  };
+
+  const deleteOrder = async (orderId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'DELETE',
+      });
+      setOrders((prev) => {
+        const filtered = prev.filter((o) => o.id !== orderId && o.tokenId !== orderId);
+        safeSetStorage(ORDERS_STORAGE_KEY, filtered.slice(0, MAX_SAVED_LOCAL_ORDERS));
+        return filtered;
+      });
+      setActiveTrackingOrder((current) => {
+        if (current && (current.id === orderId || current.tokenId === orderId)) {
+          return null;
+        }
+        return current;
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('Delete order error:', e);
+      return false;
+    }
+  };
+
+  const clearAllOrders = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/orders', { method: 'DELETE' });
+      setOrders([]);
+      setActiveTrackingOrder(null);
+      safeSetStorage(ORDERS_STORAGE_KEY, []);
+      return res.ok;
+    } catch (e) {
+      console.warn('Clear all orders error:', e);
+      setOrders([]);
+      setActiveTrackingOrder(null);
+      safeSetStorage(ORDERS_STORAGE_KEY, []);
+      return false;
+    }
   };
 
   const submitOrderFeedback = async (
@@ -1078,6 +1161,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         findOrderByIdOrPhone,
         placeOrder,
         updateOrderStatus,
+        deleteOrder,
+        clearAllOrders,
         submitOrderFeedback,
         deliveryAgents,
         refreshDeliveryAgents,

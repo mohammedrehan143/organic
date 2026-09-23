@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findLocalOrder, updateLocalOrderStatus, upsertLocalOrder, serverStore } from '@/lib/serverStore';
+import { findLocalOrder, updateLocalOrderStatus, upsertLocalOrder, deleteLocalOrder, serverStore } from '@/lib/serverStore';
 import { isSupabaseConfigured, supabase, supabaseAdmin, formatDbOrderToModel } from '@/lib/supabase';
 
 export async function GET(
@@ -19,8 +19,13 @@ export async function GET(
         .limit(1)
         .maybeSingle();
 
-      if (!error && data) {
-        return NextResponse.json({ success: true, order: formatDbOrderToModel(data) });
+      if (!error) {
+        if (data) {
+          return NextResponse.json({ success: true, order: formatDbOrderToModel(data) });
+        }
+        // Explicitly does not exist in Supabase (order was deleted or never existed)
+        deleteLocalOrder(id);
+        return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
       }
     }
 
@@ -30,6 +35,33 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, order, source: 'local' });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const client = supabaseAdmin || supabase;
+
+    if (isSupabaseConfigured && client) {
+      const { error } = await client
+        .from('orders')
+        .delete()
+        .or(`id.eq.${id},token_id.eq.${id},tracking_code.eq.${id}`);
+
+      if (error) {
+        console.error('Supabase order delete error:', error.message);
+      }
+    }
+
+    deleteLocalOrder(id);
+
+    return NextResponse.json({ success: true, message: `Order ${id} deleted successfully` });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
