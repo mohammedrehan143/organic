@@ -170,9 +170,9 @@ export async function POST(req: NextRequest) {
         if (!error && data) {
           supabaseSuccess = true;
         } else {
-          console.warn('Supabase insert error:', error?.message);
-          // Retry without FKs if constraint error
-          if (error?.code === '23503') {
+          console.warn('Supabase insert attempt warning:', error?.message);
+          // Retry without FKs if constraint error (e.g. customer_id or delivery_agent_id)
+          if (error?.code === '23503' || /violates foreign key/i.test(error?.message || '')) {
             const safeRow = { ...dbRow, customer_id: null, delivery_agent_id: null };
             const { error: err2, data: data2 } = await client
               .from('orders')
@@ -182,34 +182,12 @@ export async function POST(req: NextRequest) {
             if (!err2 && data2) {
               supabaseSuccess = true;
             } else if (err2) {
-              console.warn('Supabase insert (FK fallback) error:', err2.message);
-            }
-          }
-          // Retry without payment_received_* columns if table not yet migrated
-          if (!supabaseSuccess && (error?.code === '42703' || /payment_received/.test(error?.message || ''))) {
-            const legacyRow = { ...dbRow };
-            delete legacyRow.payment_received_at;
-            delete legacyRow.payment_received_by;
-            delete legacyRow.payment_received_by_phone;
-            try {
-              const { error: err3, data: data3 } = await client
-                .from('orders')
-                .insert(legacyRow)
-                .select()
-                .single();
-              if (!err3 && data3) {
-                supabaseSuccess = true;
-                console.log('Order persisted to Supabase (legacy columns fallback)');
-              } else if (err3) {
-                console.warn('Supabase insert (legacy fallback) error:', err3.message);
-              }
-            } catch (e) {
-              console.warn('Supabase legacy insert exception:', e);
+              console.error('Supabase insert (FK fallback) error:', err2.message);
             }
           }
         }
       } catch (e) {
-        console.warn('Supabase insert exception:', e);
+        console.error('Supabase insert exception:', e);
       }
     }
 

@@ -26,11 +26,13 @@ import {
   Bike,
   CheckCircle2,
   XCircle,
+  MessageSquare,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import { Order } from '@/types/cafe';
 import { BillModal } from './BillModal';
+import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 
 // Helper to load official Razorpay Checkout SDK
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -596,11 +598,21 @@ export function CheckoutModal() {
                       handleCloseModal();
                       router.push(`/track?token=${liveOrder.tokenId}`);
                     }}
-                    className="w-full py-3 px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                   >
                     <Bike className="w-4 h-4" />
                     <span>Live Order Tracking</span>
                   </button>
+
+                  <a
+                    href={WHATSAPP_COMMUNITY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer shadow-sm text-center"
+                  >
+                    <MessageSquare className="w-4 h-4 fill-white" />
+                    <span>Join WhatsApp Community</span>
+                  </a>
                 </div>
 
                 {!isCancelled && (

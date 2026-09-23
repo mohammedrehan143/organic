@@ -7,21 +7,28 @@ export async function GET() {
     const client = supabaseAdmin || supabase;
 
     if (isSupabaseConfigured && client) {
-      const [ordersRes, customersRes, agentsRes] = await Promise.all([
+      const startTime = Date.now();
+      const [ordersRes, customersRes, agentsRes, sosRes, memRes] = await Promise.all([
         client.from('orders').select('*', { count: 'exact', head: true }),
         client.from('customers').select('*', { count: 'exact', head: true }),
         client.from('delivery_agents').select('*', { count: 'exact', head: true }),
+        client.from('sos_alerts').select('*', { count: 'exact', head: true }),
+        client.from('memberships').select('*', { count: 'exact', head: true }),
       ]);
+      const latencyMs = Date.now() - startTime;
 
       if (!ordersRes.error) {
         return NextResponse.json({
           status: 'connected',
           database: 'Supabase PostgreSQL (High-Concurrency Ready)',
           configured: true,
+          latencyMs,
           tables: {
             orders: { count: ordersRes.count ?? 0, status: 'healthy' },
             customers: { count: customersRes.count ?? 0, status: customersRes.error ? 'table_missing_or_error' : 'healthy' },
             delivery_agents: { count: agentsRes.count ?? 0, status: agentsRes.error ? 'table_missing_or_error' : 'healthy' },
+            sos_alerts: { count: sosRes.count ?? 0, status: sosRes.error ? 'table_missing_or_error' : 'healthy' },
+            memberships: { count: memRes.count ?? 0, status: memRes.error ? 'table_missing_or_error' : 'healthy' },
           },
           concurrencyOptimized: true,
           realtimeConfigured: true,

@@ -67,6 +67,7 @@ export default function AdminPage() {
     refreshOrders,
     updateOrderStatus,
     assignDeliveryAgent,
+    dispatchOrder,
     deliveryAgents,
     refreshDeliveryAgents,
     sosAlerts,
@@ -245,7 +246,7 @@ export default function AdminPage() {
       refreshOrders();
       refreshDeliveryAgents();
       refreshSosAlerts();
-    }, 5000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts]);
@@ -1150,36 +1151,71 @@ export default function AdminPage() {
                       ) : (
                         <>
                           {(order.status === 'new' || order.status === 'preparing') && (
-                            <div className="space-y-2">{isDelivery && deliveryAgents.length > 0 && (<div className="pt-1"><label className="block text-[10px] font-bold uppercase text-espresso-600 mb-1">Assign Courier:</label><div className="grid grid-cols-1 gap-1.5">
-                                    {deliveryAgents.slice(0, 1).map((agent) => (
-                                      <button
-                                        key={agent.id}
-                                        onClick={() => assignDeliveryAgent(order.id, agent.id)}
-                                        className="px-2 py-1.5 bg-white hover:bg-banhmi-card border border-cream-300 rounded-lg text-[11px] font-bold text-espresso-900 truncate transition active:scale-95 text-left"
-                                      >
-                                        🛵 {agent.name} - {agent.phone}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                            <div className="space-y-2">
+                              <button
+                                onClick={async () => {
+                                  await dispatchOrder(order.id);
+                                }}
+                                className="w-full py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-[#2E6125]"
+                              >
+                                <Bike className="w-4 h-4 text-emerald-400" />
+                                <span>🚀 Dispatch Order (Syed)</span>
+                              </button>
+                              <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 bg-cream-100 rounded-lg text-espresso-700 font-medium border border-cream-200">
+                                <span>🛵 Partner: <strong className="text-espresso-950 font-bold">Syed</strong> (Electric Eco-Van)</span>
+                                <span className="font-mono text-espresso-600 font-semibold">{order.riderPhone || '7259635948'}</span>
+                              </div>
                             </div>
                           )}
 
                           {(order.status === 'delivering' || order.status === 'ready') && (
-                            <button
-                              onClick={() => updateOrderStatus(order.id, 'completed')}
-                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Mark Order Delivered</span>
-                            </button>
+                            <div className="space-y-2.5">
+                              {/* Courier In Transit Info & WhatsApp Shortcuts */}
+                              <div className="p-3 bg-blue-50/90 border border-blue-200 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                                    <Bike className="w-4 h-4 text-blue-600 animate-pulse" />
+                                    <span>Out for Delivery with Syed</span>
+                                  </span>
+                                  <span className="text-[11px] font-mono text-blue-800 font-bold">
+                                    {order.riderPhone || '7259635948'}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-blue-100">
+                                  <a
+                                    href={`tel:${order.riderPhone || '7259635948'}`}
+                                    className="py-1.5 px-2 bg-white hover:bg-blue-100/70 border border-blue-300 rounded-lg text-center text-[10px] font-bold text-blue-900 transition flex items-center justify-center gap-1"
+                                  >
+                                    <Phone className="w-3 h-3 text-blue-600" />
+                                    <span>Call Syed</span>
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${(order.riderPhone || '917259635948').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`📦 *Order #${order.tokenId} Delivery Details*\nCustomer: ${order.customer.name}\nPhone: ${order.customer.phone}\nAddress: ${order.customer.address}\nAmount: ₹${order.total}\nOTP: ${order.deliveryOtp}`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-center text-[10px] font-bold transition flex items-center justify-center gap-1"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                    <span>WhatsApp Syed</span>
+                                  </a>
+                                </div>
+                              </div>
+
+                              {/* Primary Action Button: Mark Order Delivered */}
+                              <button
+                                onClick={() => updateOrderStatus(order.id, 'completed')}
+                                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-white" />
+                                <span>✓ Mark Order Delivered</span>
+                              </button>
+                            </div>
                           )}
 
                           {order.status === 'completed' && (
-                            <div className="py-2 px-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold text-center border border-emerald-200 flex items-center justify-center gap-1.5">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Delivered Successfully</span>
+                            <div className="py-2.5 px-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold text-center border border-emerald-200 flex items-center justify-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span>Delivered Successfully by Syed {order.deliveredAt ? `(${new Date(order.deliveredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}</span>
                             </div>
                           )}
 
@@ -1243,23 +1279,22 @@ export default function AdminPage() {
                 </button>
               </form>
 
-              {/* Quick Select Rider Pills */}
-              <div className="pt-2 border-t border-cream-100">
                 <span className="text-[11px] font-bold text-espresso-500 uppercase tracking-wider block mb-2 text-center">
-                  Quick Switch Active Courier Partner:
+                  Sole Delivery Partner:
                 </span>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {deliveryAgents.slice(0, 1).map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={() => setCurrentRider(a)}
-                      className="px-3 py-1.5 bg-cream-100 hover:bg-cream-200 rounded-xl text-xs font-semibold text-espresso-800 border border-cream-300 transition"
-                    >
-                      {a.name} - {a.phone}
-                    </button>
-                  ))}
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const syed = deliveryAgents.find((a) => a.id === 'AGT-SYED-01') || deliveryAgents[0];
+                      if (syed) setCurrentRider(syed);
+                    }}
+                    className="px-5 py-2.5 bg-[#173612] hover:bg-[#0F240B] text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Bike className="w-4 h-4 text-emerald-400" />
+                    <span>Quick Access as Syed (7259635948)</span>
+                  </button>
                 </div>
-              </div>
             </div>
           ) : (
             <div className="space-y-6">

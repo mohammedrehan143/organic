@@ -96,10 +96,6 @@ export async function PATCH(
       if (feedbackTags !== undefined) updateData.feedback_tags = feedbackTags;
       if (feedbackNote !== undefined) updateData.feedback_note = feedbackNote;
       if (paymentStatus !== undefined) updateData.payment_status = paymentStatus;
-      if (billApproved !== undefined) updateData.bill_approved = billApproved;
-      if (paymentReceivedAt !== undefined) updateData.payment_received_at = paymentReceivedAt;
-      if (paymentReceivedBy !== undefined) updateData.payment_received_by = paymentReceivedBy;
-      if (paymentReceivedByPhone !== undefined) updateData.payment_received_by_phone = paymentReceivedByPhone;
       if (status === 'completed') updateData.delivered_at = new Date().toISOString();
 
       const { data, error } = await client
@@ -121,26 +117,7 @@ export async function PATCH(
           }
         }
       } else if (error) {
-        // Retry without payment_received_* columns if table not yet migrated
-        if (error.code === '42703' || /payment_received/.test(error.message || '')) {
-          const safeUpdate = { ...updateData };
-          delete safeUpdate.payment_received_at;
-          delete safeUpdate.payment_received_by;
-          delete safeUpdate.payment_received_by_phone;
-          const { data: data2, error: err2 } = await client
-            .from('orders')
-            .update(safeUpdate)
-            .or(`id.eq.${id},token_id.eq.${id}`)
-            .select('*')
-            .maybeSingle();
-          if (!err2 && data2) {
-            dbUpdatedOrder = formatDbOrderToModel(data2);
-          } else if (err2) {
-            console.warn('Supabase update (legacy fallback) error:', err2.message);
-          }
-        } else {
-          console.warn('Supabase update error:', error.message);
-        }
+        console.error('Supabase update error:', error.message);
       }
     }
 

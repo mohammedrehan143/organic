@@ -11,6 +11,7 @@ import {
   Sparkles,
   Phone,
   MessageCircle,
+  MessageSquare,
   Printer,
   ChevronRight,
   XCircle,
@@ -20,6 +21,7 @@ import {
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
 import { BillModal } from './BillModal';
 import { OrderCompletionFeedback } from './OrderCompletionFeedback';
+import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 import Link from 'next/link';
 
 export function OrderTrackingModal() {
@@ -417,6 +419,31 @@ export function OrderTrackingModal() {
                 onOpenBill={() => setBillOpen(true)}
               />
             )}
+
+            {/* WhatsApp Community Invitation Card */}
+            <div className="p-4 sm:p-5 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <MessageSquare className="w-5 h-5 fill-white" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-[#0F240B] uppercase tracking-wide">
+                    Join Zafiroo WhatsApp Community
+                  </h4>
+                  <p className="text-[11px] text-[#2E6125] leading-relaxed">
+                    Get morning milk arrival alerts, fresh egg batch drops & exclusive member offers.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={WHATSAPP_COMMUNITY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black uppercase tracking-wider shadow-sm transition text-center shrink-0 cursor-pointer active:scale-95"
+              >
+                Join Community
+              </a>
+            </div>
 
             {/* Full page link */}
             <div className="text-center pt-2">

@@ -15,6 +15,7 @@ import {
   INITIAL_MENU_ITEMS,
   INITIAL_ORDERS,
   INITIAL_DELIVERY_AGENTS,
+  SYED_DELIVERY_AGENT,
   INITIAL_SOS_ALERTS,
   CAFE_METADATA,
 } from '@/data/cafeData';
@@ -104,7 +105,8 @@ export interface OrderContextType {
   // Delivery & Verification
   deliveryAgents: DeliveryAgent[];
   refreshDeliveryAgents: () => Promise<void>;
-  assignDeliveryAgent: (orderId: string, agentId: string) => Promise<boolean>;
+  assignDeliveryAgent: (orderId: string, agentId?: string) => Promise<boolean>;
+  dispatchOrder: (orderId: string) => Promise<boolean>;
   verifyDeliveryOtp: (orderIdOrToken: string, enteredOtp: string) => Promise<{ success: boolean; message: string; order?: Order }>;
 
   // Rider SOS Disaster Alerts
@@ -501,9 +503,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
               const model = formatDbOrderToModel(payload.new);
               orderEventQueueRef.current.push(model);
 
-              // Debounce flush every 250ms
+              // Instant flush within 50ms for immediate real-time screen reflection
               if (batchFlushTimeoutRef.current) clearTimeout(batchFlushTimeoutRef.current);
-              batchFlushTimeoutRef.current = setTimeout(flushOrderQueue, 250);
+              batchFlushTimeoutRef.current = setTimeout(flushOrderQueue, 50);
             }
           }
         )
@@ -772,8 +774,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const assignDeliveryAgent = async (orderId: string, agentId: string): Promise<boolean> => {
-    const agent = deliveryAgents.find((a) => a.id === agentId);
+  const assignDeliveryAgent = async (orderId: string, agentId?: string): Promise<boolean> => {
+    const agent =
+      (agentId ? deliveryAgents.find((a) => a.id === agentId) : null) ||
+      deliveryAgents.find((a) => a.id === 'AGT-SYED-01') ||
+      deliveryAgents[0] ||
+      SYED_DELIVERY_AGENT;
+
     if (!agent) return false;
 
     const result = await updateOrderStatus(orderId, 'delivering', {
@@ -783,6 +790,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     });
 
     return Boolean(result);
+  };
+
+  const dispatchOrder = async (orderId: string): Promise<boolean> => {
+    return assignDeliveryAgent(orderId, 'AGT-SYED-01');
   };
 
   const verifyDeliveryOtp = async (
@@ -975,6 +986,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         deliveryAgents,
         refreshDeliveryAgents,
         assignDeliveryAgent,
+        dispatchOrder,
         verifyDeliveryOtp,
         sosAlerts,
         latestActiveSos,

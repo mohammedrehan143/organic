@@ -1,8 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Order, MenuItem, SosAlert, DeliveryAgent } from '@/types/cafe';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const DEFAULT_SUPABASE_URL = 'https://ibxxewwujbuphxelrqvj.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlieHhld3d1amJ1cGh4ZWxycXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5OTYwMDEsImV4cCI6MjEwNTU3MjAwMX0.zqsvz3Ko76HihfZupQuyf2QGspSMD5aRwsERgY1q1Ko';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const isSupabaseConfigured = Boolean(
@@ -12,12 +15,17 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder')
 );
 
-// Graceful public client initialization
+// Graceful public client initialization with Realtime enabled
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         persistSession: typeof window !== 'undefined',
         autoRefreshToken: true,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
       },
     })
   : null;
@@ -124,8 +132,8 @@ export function formatModelToDbOrder(order: Order): any {
     customer_id: order.customerId || null,
     delivery_agent_id: order.deliveryAgentId || null,
     delivery_otp: String(order.deliveryOtp || '0000'),
-    status: order.status,
-    delivery_method: order.deliveryMethod,
+    status: order.status || 'new',
+    delivery_method: order.deliveryMethod || 'delivery',
     customer_name: order.customer.name,
     customer_phone: order.customer.phone,
     customer_email: order.customer.email || null,
@@ -141,9 +149,6 @@ export function formatModelToDbOrder(order: Order): any {
     estimated_time: order.estimatedTime || '',
     payment_method: order.paymentMethod || 'cod',
     payment_status: order.paymentStatus || 'pending',
-    payment_received_at: order.paymentReceivedAt || null,
-    payment_received_by: order.paymentReceivedBy || null,
-    payment_received_by_phone: order.paymentReceivedByPhone || null,
     rider_name: order.riderName || null,
     rider_phone: order.riderPhone || null,
     rating: typeof order.rating === 'number' ? order.rating : null,
@@ -151,7 +156,6 @@ export function formatModelToDbOrder(order: Order): any {
     feedback_note: order.feedbackNote || null,
     created_at: order.createdAt || new Date().toISOString(),
     delivered_at: order.deliveredAt || null,
-    bill_approved: order.billApproved || false,
   };
 }
 

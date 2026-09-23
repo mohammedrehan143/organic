@@ -22,10 +22,12 @@ import {
   CheckCircle,
   XCircle,
   FileText,
+  MessageSquare,
 } from 'lucide-react';
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
 import { BillModal } from '@/components/BillModal';
 import { OrderCompletionFeedback } from '@/components/OrderCompletionFeedback';
+import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 
 function OrderCard({
   order,
@@ -731,6 +733,31 @@ function TrackPageContent() {
             <RefreshCw className="w-4 h-4" />
           </button>
         </form>
+
+        {/* WhatsApp Community Quick Join Banner */}
+        <div className="max-w-lg mx-auto p-3.5 sm:p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-left shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#25D366] text-white flex items-center justify-center shrink-0">
+              <MessageSquare className="w-4 h-4 fill-white" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-[#0F240B]">
+                Zafiroo WhatsApp Community
+              </h4>
+              <p className="text-[11px] text-[#2E6125]">
+                Daily milk batch arrivals & delivery notices direct to members.
+              </p>
+            </div>
+          </div>
+          <a
+            href={WHATSAPP_COMMUNITY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-black uppercase tracking-wider transition text-center shrink-0 active:scale-95 cursor-pointer shadow-xs"
+          >
+            Join Community
+          </a>
+        </div>
       </div>
 
       {/* Loading state indicator */}

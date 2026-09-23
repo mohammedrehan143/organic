@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { CAFE_METADATA } from '@/data/cafeData';
+import { CAFE_METADATA, WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 import Link from 'next/link';
 import { MessageSquare, PhoneCall, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
 import { TermsModal } from './TermsModal';
@@ -19,30 +19,30 @@ export function ZafirooFooter() {
   return (
     <footer className="bg-[#0F240B] text-white pt-12 pb-8 sm:pt-16 sm:pb-12 border-t border-[#173612]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* 1. WhatsApp Channel Direct Join Banner (Email removed, Harvest news & events removed) */}
+        {/* 1. WhatsApp Community Direct Join Banner */}
         <div className="pb-8 sm:pb-12 mb-8 sm:mb-12 border-b border-white/15 flex flex-col lg:flex-row items-center justify-between gap-6">
           <div className="text-center lg:text-left space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/20 text-[#25D366] text-xs font-bold uppercase tracking-wider mb-1">
               <MessageSquare className="w-3.5 h-3.5 fill-[#25D366]" />
-              <span>Direct WhatsApp Channel</span>
+              <span>Zafiroo WhatsApp Community</span>
             </div>
             <h3 className="text-lg xs:text-xl sm:text-2xl font-black tracking-tight text-white font-serif">
-              Join Zafiroo Official WhatsApp Channel for instant farm updates & daily delivery slots!
+              Join Zafiroo Official WhatsApp Community for instant farm updates & fresh daily drops!
             </h3>
             <p className="text-xs text-white/70 max-w-xl">
-              Get real-time morning milk dispatch schedules, white eggs availability, and direct customer support.
+              Get real-time morning milk dispatch schedules, fresh white egg availability, and direct customer support in our community.
             </p>
           </div>
 
           <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-3">
             <a
-              href="https://whatsapp.com/channel/0029Vb8YjWtKWEKsvp0VSr3D"
+              href={WHATSAPP_COMMUNITY_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageSquare className="w-4 h-4 fill-white" />
-              <span>Join WhatsApp Channel Direct</span>
+              <span>Join WhatsApp Community</span>
             </a>
           </div>
         </div>

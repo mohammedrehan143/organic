@@ -1,5 +1,9 @@
 import { MenuItem, DeliveryAgent, Order, SosAlert } from '@/types/cafe';
 
+export const WHATSAPP_COMMUNITY_URL =
+  process.env.NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL ||
+  "https://chat.whatsapp.com/invite/zafiroo-community";
+
 export const CAFE_METADATA = {
   name: "Zafiroo",
   brand: "Zafiroo Organic Dairy Farm",
@@ -7,6 +11,7 @@ export const CAFE_METADATA = {
   subtitle: "Delivering wholesome organic products from our local farms to your table.",
   phone: "+91 7259635948, +91 9731301135",
   whatsapp: "+91 7259635948, +91 9731301135",
+  whatsappCommunity: WHATSAPP_COMMUNITY_URL,
   email: "care@zafiroo-organic.com",
   address: "Bylanarasapura, Hoskote Taluk, Bangalore - 562122",
   hours: "",
@@ -178,7 +183,16 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
   }
 ];
 
-export const INITIAL_DELIVERY_AGENTS: DeliveryAgent[] = [];
+export const SYED_DELIVERY_AGENT: DeliveryAgent = {
+  id: "AGT-SYED-01",
+  name: "Syed",
+  phone: process.env.NEXT_PUBLIC_SYED_PHONE || "7259635948",
+  status: "active",
+  vehicleType: "Electric Eco-Van",
+  ordersDeliveredCount: 0,
+};
+
+export const INITIAL_DELIVERY_AGENTS: DeliveryAgent[] = [SYED_DELIVERY_AGENT];
 
 export const INITIAL_SOS_ALERTS: SosAlert[] = [];
 

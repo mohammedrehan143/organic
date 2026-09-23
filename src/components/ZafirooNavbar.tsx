@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useOrder } from '@/context/OrderContext';
-import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2, Crown } from 'lucide-react';
+import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2, Crown, MessageSquare } from 'lucide-react';
+import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 
 export function ZafirooNavbar() {
   const pathname = usePathname();
@@ -103,6 +104,18 @@ export function ZafirooNavbar() {
           >
             <Crown className="w-5 h-5 text-[#261603] fill-[#261603] drop-shadow-xs" />
           </Link>
+
+          {/* WhatsApp Community Button */}
+          <a
+            href={WHATSAPP_COMMUNITY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Join Zafiroo WhatsApp Community"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-md transition transform hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
+            <span className="hidden sm:inline font-bold">Community</span>
+          </a>
 
           {/* Tracking Option Button */}
           <Link
