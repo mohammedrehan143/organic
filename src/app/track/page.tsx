@@ -542,11 +542,19 @@ function TrackPageContent() {
           if (ordData.success && Array.isArray(ordData.orders)) {
             const list: Order[] = ordData.orders;
             list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setCustomerOrders(list);
-          } else {
+            // Merge on silent polls (never wipe visible cards); replace on fresh search
+            setCustomerOrders((prev) => {
+              if (!silent) return list;
+              const map = new Map<string, Order>();
+              for (const o of prev) map.set(o.id, o);
+              for (const o of list) map.set(o.id, o);
+              return Array.from(map.values())
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
+          } else if (!silent) {
             setCustomerOrders([]);
           }
-        } else {
+        } else if (!silent) {
           setCustomerOrders([]);
         }
       } else {
@@ -555,11 +563,18 @@ function TrackPageContent() {
         if (ordRes.ok) {
           const ordData = await ordRes.json();
           if (ordData.success && Array.isArray(ordData.orders)) {
-            setCustomerOrders(ordData.orders);
-          } else {
+            setCustomerOrders((prev) => {
+              if (!silent) return ordData.orders;
+              const map = new Map<string, Order>();
+              for (const o of prev) map.set(o.id, o);
+              for (const o of ordData.orders) map.set(o.id, o);
+              return Array.from(map.values())
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
+          } else if (!silent) {
             setCustomerOrders([]);
           }
-        } else {
+        } else if (!silent) {
           setCustomerOrders([]);
         }
       }

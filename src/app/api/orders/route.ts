@@ -32,61 +32,54 @@ export async function GET(req: NextRequest) {
 
     let dbOrders: Order[] = [];
     let totalCount = 0;
+    let sourceFlags: string[] = [];
     const client = supabaseAdmin || supabase;
 
     if (isSupabaseConfigured && client) {
-      let sbQuery = client
-        .from('orders')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
+      try {
+        let sbQuery = client
+          .from('orders')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false });
 
-      // High-performance filter application
-      if (status === 'active') {
-        sbQuery = sbQuery.in('status', ['new', 'preparing', 'ready', 'delivering']);
-      } else if (status) {
-        sbQuery = sbQuery.eq('status', status);
-      }
+        // High-performance filter application
+        if (status === 'active') {
+          sbQuery = sbQuery.in('status', ['new', 'preparing', 'ready', 'delivering']);
+        } else if (status) {
+          sbQuery = sbQuery.eq('status', status);
+        }
 
-      if (cleanPhone && cleanPhone.length >= 4) {
-        const tenDigitPhone = cleanPhone.slice(-10);
-        sbQuery = sbQuery.or(`customer_phone.ilike.%${cleanPhone}%,customer_phone.ilike.%${tenDigitPhone}%`);
-      } else if (cleanToken) {
-        sbQuery = sbQuery.or(`token_id.ilike.%${cleanToken}%,id.ilike.%${cleanToken}%,tracking_code.ilike.%${cleanToken}%`);
-      } else if (cleanQuery) {
-        sbQuery = sbQuery.or(
-          `token_id.ilike.%${cleanQuery}%,id.ilike.%${cleanQuery}%,tracking_code.ilike.%${cleanQuery}%,customer_name.ilike.%${cleanQuery}%`
-        );
-      }
+        if (cleanPhone && cleanPhone.length >= 4) {
+          const tenDigitPhone = cleanPhone.slice(-10);
+          sbQuery = sbQuery.or(`customer_phone.ilike.%${cleanPhone}%,customer_phone.ilike.%${tenDigitPhone}%`);
+        } else if (cleanToken) {
+          sbQuery = sbQuery.or(`token_id.ilike.%${cleanToken}%,id.ilike.%${cleanToken}%,tracking_code.ilike.%${cleanToken}%`);
+        } else if (cleanQuery) {
+          sbQuery = sbQuery.or(
+            `token_id.ilike.%${cleanQuery}%,id.ilike.%${cleanQuery}%,tracking_code.ilike.%${cleanQuery}%,customer_name.ilike.%${cleanQuery}%`
+          );
+        }
 
-      // Safe range pagination: transfers only requested window over HTTP
-      sbQuery = sbQuery.range(offset, offset + limit - 1);
+        // Safe range pagination: transfers only requested window over HTTP
+        sbQuery = sbQuery.range(offset, offset + limit - 1);
 
-      const { data, error, count } = await sbQuery;
+        const { data, error, count } = await sbQuery;
 
-      if (!error && data && data.length > 0) {
-        dbOrders = data.map(formatDbOrderToModel);
-        totalCount = count || dbOrders.length;
-        console.log(`Supabase returned ${dbOrders.length} orders`);
-        return NextResponse.json({
-          success: true,
-          orders: dbOrders,
-          totalCount,
-          page,
-          limit,
-          count: dbOrders.length,
-          source: 'supabase',
-        });
-      }
-
-      // Supabase configured but returned no data or error — fall back to local store
-      if (error) {
-        console.warn('Supabase query error, falling back to local store:', error.message);
-      } else {
-        console.warn('Supabase returned empty result, falling back to local store');
+        if (!error && data && data.length > 0) {
+          dbOrders = data.map(formatDbOrderToModel);
+          totalCount = count || dbOrders.length;
+          sourceFlags.push('supabase');
+        } else if (error) {
+          console.warn('Supabase query error (will merge with local):', error.message);
+        } else {
+          console.warn('Supabase returned empty result (will merge with local)');
+        }
+      } catch (err: any) {
+        console.warn('Supabase query exception (will merge with local):', err.message);
       }
     }
 
-    // Local in-memory fallback
+    // Local in-memory fallback — ALWAYS merged with Supabase so the UI never flickers.
     const localFiltered = getLocalOrders({
       status: status || undefined,
       phone: cleanPhone || undefined,
@@ -95,15 +88,31 @@ export async function GET(req: NextRequest) {
       offset,
     });
 
-    console.log(`Local store returned ${localFiltered.length} orders`);
+    if (localFiltered.length > 0) {
+      sourceFlags.push('local');
+    }
+
+    // Merge by id with local taking precedence so freshly-placed orders (not yet replicated
+    // to Supabase) are always present, while Supabase rows enrich/correct the same ids.
+    const mergedMap = new Map<string, Order>();
+    for (const o of dbOrders) {
+      mergedMap.set(o.id, o);
+    }
+    for (const o of localFiltered) {
+      mergedMap.set(o.id, o);
+    }
+    const merged = Array.from(mergedMap.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+
     return NextResponse.json({
       success: true,
-      orders: localFiltered,
-      totalCount: localFiltered.length,
+      orders: merged,
+      totalCount: Math.max(totalCount, merged.length),
       page,
       limit,
-      count: localFiltered.length,
-      source: 'local',
+      count: merged.length,
+      source: sourceFlags.length ? sourceFlags.join('+') : 'none',
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -160,7 +169,6 @@ export async function POST(req: NextRequest) {
         
         if (!error && data) {
           supabaseSuccess = true;
-          console.log('Order persisted to Supabase:', data.id);
         } else {
           console.warn('Supabase insert error:', error?.message);
           // Retry without FKs if constraint error
@@ -173,7 +181,30 @@ export async function POST(req: NextRequest) {
               .single();
             if (!err2 && data2) {
               supabaseSuccess = true;
-              console.log('Order persisted to Supabase (FK fallback):', data2.id);
+            } else if (err2) {
+              console.warn('Supabase insert (FK fallback) error:', err2.message);
+            }
+          }
+          // Retry without payment_received_* columns if table not yet migrated
+          if (!supabaseSuccess && (error?.code === '42703' || /payment_received/.test(error?.message || ''))) {
+            const legacyRow = { ...dbRow };
+            delete legacyRow.payment_received_at;
+            delete legacyRow.payment_received_by;
+            delete legacyRow.payment_received_by_phone;
+            try {
+              const { error: err3, data: data3 } = await client
+                .from('orders')
+                .insert(legacyRow)
+                .select()
+                .single();
+              if (!err3 && data3) {
+                supabaseSuccess = true;
+                console.log('Order persisted to Supabase (legacy columns fallback)');
+              } else if (err3) {
+                console.warn('Supabase insert (legacy fallback) error:', err3.message);
+              }
+            } catch (e) {
+              console.warn('Supabase legacy insert exception:', e);
             }
           }
         }

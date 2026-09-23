@@ -120,6 +120,27 @@ export async function PATCH(
             // Ignore RPC failure if function not yet defined
           }
         }
+      } else if (error) {
+        // Retry without payment_received_* columns if table not yet migrated
+        if (error.code === '42703' || /payment_received/.test(error.message || '')) {
+          const safeUpdate = { ...updateData };
+          delete safeUpdate.payment_received_at;
+          delete safeUpdate.payment_received_by;
+          delete safeUpdate.payment_received_by_phone;
+          const { data: data2, error: err2 } = await client
+            .from('orders')
+            .update(safeUpdate)
+            .or(`id.eq.${id},token_id.eq.${id}`)
+            .select('*')
+            .maybeSingle();
+          if (!err2 && data2) {
+            dbUpdatedOrder = formatDbOrderToModel(data2);
+          } else if (err2) {
+            console.warn('Supabase update (legacy fallback) error:', err2.message);
+          }
+        } else {
+          console.warn('Supabase update error:', error.message);
+        }
       }
     }
 

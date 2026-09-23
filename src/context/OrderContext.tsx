@@ -534,13 +534,24 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [flushOrderQueue, playSosSiren]);
 
   // Administrative Orders Refresh function (used strictly by Admin & Rider Portal)
+  // MERGES fetched orders into existing state instead of replacing, so a transient
+  // empty/partial response never wipes already-visible orders (prevents flickering).
   const refreshOrders = useCallback(async () => {
     try {
       const res = await fetch('/api/orders?limit=100');
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
-        setOrders(data.orders);
+        setOrders((prev) => {
+          const map = new Map<string, Order>();
+          // Existing orders first (never drop what we already show)
+          for (const o of prev) map.set(o.id, o);
+          // Incoming orders override existing copies of the same id
+          for (const o of data.orders) map.set(o.id, o);
+          const combined = Array.from(map.values());
+          combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          return combined.slice(0, MAX_CLIENT_ORDERS);
+        });
       }
     } catch {
       // Network silent fallback
