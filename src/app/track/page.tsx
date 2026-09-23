@@ -181,8 +181,14 @@ function OrderCard({
           )}
         </div>
 
-        {/* Action Buttons: Cancel Order & Print Bill */}
+        {/* Action Buttons: Cancel Order & Bill */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+          <CustomerBillDownloadCard
+            order={order}
+            onOpenBill={() => onOpenBill(order)}
+            className="flex-1 sm:flex-initial min-w-[85px] !py-2.5 !px-4 !rounded-2xl"
+          />
+
           {/* Customer Cancel Button (Enabled strictly before Out for Delivery) */}
           {isCancellable && onCancelOrder && (
             <button
@@ -193,7 +199,6 @@ function OrderCard({
               <span>Cancel Order</span>
             </button>
           )}
-
         </div>
       </div>
 

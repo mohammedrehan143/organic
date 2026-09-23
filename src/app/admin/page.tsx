@@ -977,41 +977,72 @@ export default function AdminPage() {
                       </p>
                     </div>
 
-                    <span
-                      className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
-                        order.paymentStatus === 'refunded'
-                          ? 'bg-emerald-600 text-white font-black border border-emerald-700 shadow-sm flex items-center gap-1'
-                          : isCancelled
-                          ? 'bg-red-600 text-white font-black border border-red-700 shadow-sm flex items-center gap-1 animate-pulse'
-                          : order.status === 'new' || order.status === 'preparing'
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : order.status === 'delivering' || order.status === 'ready'
-                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                          : order.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                          : 'bg-rose-100 text-rose-700'
-                      }`}
-                    >
-                      {order.paymentStatus === 'refunded' ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Refunded</span>
-                        </>
-                      ) : isCancelled ? (
-                        <>
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>Cancelled</span>
-                        </>
-                      ) : order.status === 'new' || order.status === 'preparing' ? (
-                        'Order Placed'
-                      ) : order.status === 'delivering' || order.status === 'ready' ? (
-                        'Out for Delivery'
-                      ) : order.status === 'completed' ? (
-                        'Delivered'
-                      ) : (
-                        'Cancelled'
+                    <div className="flex items-center gap-2">
+                      {/* Prominent Header Bill Approve Toggle */}
+                      {!isCancelled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateOrderStatus(order.id, order.status as any, { billApproved: !order.billApproved } as any);
+                          }}
+                          className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider transition cursor-pointer active:scale-95 border shadow-xs flex items-center gap-1.5 ${
+                            order.billApproved
+                              ? "bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700"
+                              : "bg-amber-300 text-amber-950 border-amber-500 hover:bg-amber-400 font-black animate-pulse"
+                          }`}
+                          title={order.billApproved ? "Customer can download bill. Click to lock." : "Customer bill is locked. Click to approve & unlock."}
+                        >
+                          {order.billApproved ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-white" />
+                              <span>Bill Approved</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-3 h-3 text-amber-950" />
+                              <span>Approve Bill</span>
+                            </>
+                          )}
+                        </button>
                       )}
-                    </span>
+
+                      <span
+                        className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
+                          order.paymentStatus === 'refunded'
+                            ? 'bg-emerald-600 text-white font-black border border-emerald-700 shadow-sm flex items-center gap-1'
+                            : isCancelled
+                            ? 'bg-red-600 text-white font-black border border-red-700 shadow-sm flex items-center gap-1 animate-pulse'
+                            : order.status === 'new' || order.status === 'preparing'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : order.status === 'delivering' || order.status === 'ready'
+                            ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                            : order.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : 'bg-rose-100 text-rose-700'
+                        }`}
+                      >
+                        {order.paymentStatus === 'refunded' ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Refunded</span>
+                          </>
+                        ) : isCancelled ? (
+                          <>
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Cancelled</span>
+                          </>
+                        ) : order.status === 'new' || order.status === 'preparing' ? (
+                          'Order Placed'
+                        ) : order.status === 'delivering' || order.status === 'ready' ? (
+                          'Out for Delivery'
+                        ) : order.status === 'completed' ? (
+                          'Delivered'
+                        ) : (
+                          'Cancelled'
+                        )}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Alert Note If Cancelled or Refunded */}
@@ -1161,6 +1192,31 @@ export default function AdminPage() {
                         </div>
                       ) : (
                         <>
+                          {/* Dedicated Bill Approve Option for Customer */}
+                          <div className="pb-1">
+                            <button
+                              type="button"
+                              onClick={() => updateOrderStatus(order.id, order.status as any, { billApproved: !order.billApproved } as any)}
+                              className={`w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-xs border ${
+                                order.billApproved
+                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700"
+                                  : "bg-amber-400 hover:bg-amber-500 text-amber-950 border-amber-500 animate-pulse"
+                              }`}
+                            >
+                              {order.billApproved ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-white" />
+                                  <span>✓ Bill Approved for Customer (Click to Lock)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="w-4 h-4 text-amber-950" />
+                                  <span>Approve Bill for Customer</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
                           {(order.status === 'new' || order.status === 'preparing') && (
                             <div className="space-y-2">
                               <button
@@ -1472,6 +1528,29 @@ export default function AdminPage() {
                             <span>💵 Payment Received (₹{order.total})</span>
                           </button>
                         )}
+
+                        {/* Bill Approve Option for Rider/Admin */}
+                        <button
+                          type="button"
+                          onClick={() => updateOrderStatus(order.id, order.status as any, { billApproved: !order.billApproved } as any)}
+                          className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-xs border ${
+                            order.billApproved
+                              ? "bg-emerald-600 text-white border-emerald-700"
+                              : "bg-amber-100 text-amber-950 border-amber-300"
+                          }`}
+                        >
+                          {order.billApproved ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                              <span>✓ Bill Approved for Customer</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-3.5 h-3.5 text-amber-800" />
+                              <span>Approve Bill for Customer</span>
+                            </>
+                          )}
+                        </button>
 
                         <hr className="border-cream-200" />
 
