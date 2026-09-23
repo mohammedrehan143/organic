@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLocalOrders } from '@/lib/serverStore';
+import { getLocalOrders, upsertLocalOrder } from '@/lib/serverStore';
 import { isSupabaseConfigured, supabase, supabaseAdmin, formatDbOrderToModel } from '@/lib/supabase';
 import { Order } from '@/types/cafe';
 
@@ -55,10 +55,13 @@ export async function GET(req: NextRequest) {
       return true;
     });
 
-    // Merge local + DB so rider cards never flicker if one source is stale
+    // Merge local + DB: DB orders take precedence over local store fallback
     const map = new Map<string, Order>();
-    for (const o of filtered) map.set(o.id, o);
     for (const o of localFiltered) map.set(o.id, o);
+    for (const o of filtered) {
+      map.set(o.id, o);
+      upsertLocalOrder(o);
+    }
     filtered = Array.from(map.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

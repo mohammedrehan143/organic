@@ -59,6 +59,23 @@ function safeSetStorage(key: string, data: any) {
   }
 }
 
+/**
+ * Prevents race conditions during active background sync from demoting an order
+ * that has already advanced to a subsequent stage (e.g. delivered/completed or out for delivery).
+ */
+export function shouldPreserveExistingStatus(existingStatus: OrderStatus, incomingStatus: OrderStatus): boolean {
+  if (existingStatus === incomingStatus) return false;
+  // Terminal states (completed, cancelled) can never be reverted back to active by background sync
+  if ((existingStatus === 'completed' || existingStatus === 'cancelled') && incomingStatus !== existingStatus) {
+    return true;
+  }
+  // In-flight transit (delivering, ready) cannot be reverted back to placed (new, preparing) by background sync
+  if ((existingStatus === 'delivering' || existingStatus === 'ready') && (incomingStatus === 'new' || incomingStatus === 'preparing')) {
+    return true;
+  }
+  return false;
+}
+
 export interface OrderContextType {
   // Location Auto-Setter
   userLocation: UserLocation | null;
@@ -212,6 +229,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // High-concurrency realtime event buffer refs
   const orderEventQueueRef = useRef<Order[]>([]);
   const batchFlushTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Status lock guard against stale polling payloads overwriting recent user actions
+  const recentStatusChangesRef = useRef<Map<string, { status: OrderStatus; timestamp: number }>>(new Map());
 
   // Web Audio Context initializer
   const getAudioContext = useCallback(() => {
@@ -429,14 +448,32 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     setOrders((prev) => {
       const map = new Map<string, Order>();
-      // Put incoming first
-      for (const o of incoming) {
+      // 1. Put existing orders first
+      for (const o of prev) {
         map.set(o.id, o);
       }
-      // Add existing if not present
-      for (const o of prev) {
-        if (!map.has(o.id)) {
-          map.set(o.id, o);
+      // 2. Apply incoming updates with status regression guard
+      for (const inc of incoming) {
+        const ex = map.get(inc.id);
+        if (ex) {
+          const recent = recentStatusChangesRef.current.get(inc.id) || (inc.tokenId ? recentStatusChangesRef.current.get(inc.tokenId) : undefined);
+          const isRecentLock = recent && Date.now() - recent.timestamp < 15000;
+          const targetStatus = isRecentLock ? recent.status : inc.status;
+
+          if (shouldPreserveExistingStatus(ex.status, targetStatus)) {
+            map.set(inc.id, {
+              ...inc,
+              status: ex.status,
+              deliveredAt: ex.deliveredAt || inc.deliveredAt,
+              riderName: ex.riderName || inc.riderName,
+              riderPhone: ex.riderPhone || inc.riderPhone,
+              deliveryAgentId: ex.deliveryAgentId || inc.deliveryAgentId,
+            });
+          } else {
+            map.set(inc.id, inc);
+          }
+        } else {
+          map.set(inc.id, inc);
         }
       }
       const combined = Array.from(map.values());
@@ -449,7 +486,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     setActiveTrackingOrder((current) => {
       if (!current) return incoming[0] || null;
       const updated = incoming.find((o) => o.id === current.id || o.tokenId === current.tokenId);
-      return updated || current;
+      if (!updated) return current;
+      if (shouldPreserveExistingStatus(current.status, updated.status)) {
+        return {
+          ...updated,
+          status: current.status,
+          deliveredAt: current.deliveredAt || updated.deliveredAt,
+        };
+      }
+      return updated;
     });
 
     playOrderChime();
@@ -465,7 +510,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           const data = await res.json();
           if (data.success && data.order) {
             setActiveTrackingOrder(prev => {
-              if (prev && (prev.status !== data.order.status || prev.paymentStatus !== data.order.paymentStatus || prev.riderName !== data.order.riderName || prev.billApproved !== data.order.billApproved)) {
+              if (!prev) return data.order;
+              if (shouldPreserveExistingStatus(prev.status, data.order.status)) {
+                return {
+                  ...data.order,
+                  status: prev.status,
+                  deliveredAt: prev.deliveredAt || data.order.deliveredAt,
+                };
+              }
+              if (prev.status !== data.order.status || prev.paymentStatus !== data.order.paymentStatus || prev.riderName !== data.order.riderName || prev.billApproved !== data.order.billApproved) {
                 return data.order;
               }
               return prev;
@@ -473,9 +526,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             setOrders(prev => {
               let hasChange = false;
               const next = prev.map(o => {
-                if ((o.id === data.order.id || o.tokenId === data.order.tokenId) && (o.status !== data.order.status || o.paymentStatus !== data.order.paymentStatus || o.riderName !== data.order.riderName || o.billApproved !== data.order.billApproved)) {
-                  hasChange = true;
-                  return data.order;
+                if (o.id === data.order.id || o.tokenId === data.order.tokenId) {
+                  if (shouldPreserveExistingStatus(o.status, data.order.status)) {
+                    return o;
+                  }
+                  if (o.status !== data.order.status || o.paymentStatus !== data.order.paymentStatus || o.riderName !== data.order.riderName || o.billApproved !== data.order.billApproved) {
+                    hasChange = true;
+                    return data.order;
+                  }
                 }
                 return o;
               });
@@ -536,8 +594,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [flushOrderQueue, playSosSiren]);
 
   // Administrative Orders Refresh function (used strictly by Admin & Rider Portal)
-  // MERGES fetched orders into existing state instead of replacing, so a transient
-  // empty/partial response never wipes already-visible orders (prevents flickering).
+  // MERGES fetched orders into existing state with monotonicity guard so that
+  // orders already marked Delivered/Dispatched never get reverted to placed/dispatch.
   const refreshOrders = useCallback(async () => {
     try {
       const res = await fetch('/api/orders?limit=100');
@@ -546,10 +604,34 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (data.success && Array.isArray(data.orders)) {
         setOrders((prev) => {
           const map = new Map<string, Order>();
-          // Existing orders first (never drop what we already show)
+          // 1. Existing orders first (never drop what we already show)
           for (const o of prev) map.set(o.id, o);
-          // Incoming orders override existing copies of the same id
-          for (const o of data.orders) map.set(o.id, o);
+
+          // 2. Incoming orders override existing copies of the same id, but NEVER downgrade status
+          for (const inc of data.orders) {
+            const ex = map.get(inc.id);
+            if (ex) {
+              const recent = recentStatusChangesRef.current.get(inc.id) || (inc.tokenId ? recentStatusChangesRef.current.get(inc.tokenId) : undefined);
+              const isRecentLock = recent && Date.now() - recent.timestamp < 15000;
+              const targetStatus = isRecentLock ? recent.status : inc.status;
+
+              if (shouldPreserveExistingStatus(ex.status, targetStatus)) {
+                map.set(inc.id, {
+                  ...inc,
+                  status: ex.status,
+                  deliveredAt: ex.deliveredAt || inc.deliveredAt,
+                  riderName: ex.riderName || inc.riderName,
+                  riderPhone: ex.riderPhone || inc.riderPhone,
+                  deliveryAgentId: ex.deliveryAgentId || inc.deliveryAgentId,
+                });
+              } else {
+                map.set(inc.id, inc);
+              }
+            } else {
+              map.set(inc.id, inc);
+            }
+          }
+
           const combined = Array.from(map.values());
           combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           return combined.slice(0, MAX_CLIENT_ORDERS);
@@ -694,17 +776,23 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     status: OrderStatus,
     extra?: Partial<Order>
   ): Promise<Order | null> => {
+    const nowIso = new Date().toISOString();
+    // Register recent status change lock for 15 seconds to block any in-flight stale sync packets
+    recentStatusChangesRef.current.set(orderId, { status, timestamp: Date.now() });
+
     let updatedOrder: Order | null = null;
 
     // Optimistic local state update
     setOrders((prev) =>
       prev.map((o) => {
         if (o.id === orderId || o.tokenId === orderId) {
+          if (o.id) recentStatusChangesRef.current.set(o.id, { status, timestamp: Date.now() });
+          if (o.tokenId) recentStatusChangesRef.current.set(o.tokenId, { status, timestamp: Date.now() });
           updatedOrder = {
             ...o,
             status,
             ...extra,
-            deliveredAt: status === 'completed' ? (extra?.deliveredAt || new Date().toISOString()) : o.deliveredAt,
+            deliveredAt: status === 'completed' ? (extra?.deliveredAt || o.deliveredAt || nowIso) : o.deliveredAt,
           };
           return updatedOrder;
         }
@@ -727,10 +815,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.order) {
-          updatedOrder = data.order;
-          setOrders((prev) => prev.map((o) => (o.id === orderId || o.tokenId === orderId ? data.order : o)));
+          const serverOrder = data.order;
+          // Guard: if server order somehow came back with an older status, preserve the intended higher status
+          const finalStatus = shouldPreserveExistingStatus(status, serverOrder.status) ? status : serverOrder.status;
+          const mergedConfirmed: Order = {
+            ...serverOrder,
+            status: finalStatus,
+            deliveredAt: finalStatus === 'completed' ? (serverOrder.deliveredAt || nowIso) : serverOrder.deliveredAt,
+          };
+          updatedOrder = mergedConfirmed;
+          setOrders((prev) => prev.map((o) => (o.id === orderId || o.tokenId === orderId ? mergedConfirmed : o)));
           if (activeTrackingOrder && (activeTrackingOrder.id === orderId || activeTrackingOrder.tokenId === orderId)) {
-            setActiveTrackingOrder(data.order);
+            setActiveTrackingOrder(mergedConfirmed);
           }
         }
       }

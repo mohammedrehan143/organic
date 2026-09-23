@@ -153,33 +153,50 @@ export function findLocalOrder(identifier: string): Order | undefined {
 }
 
 export function addLocalOrder(order: Order): Order {
-  // Prepend new order
-  serverStore.orders.unshift(order);
+  return upsertLocalOrder(order);
+}
 
-  // Index in fast maps
-  if (order.id) serverStore.indexById.set(order.id.toLowerCase(), order);
-  if (order.tokenId) serverStore.indexByToken.set(order.tokenId.toLowerCase(), order);
-  if (order.trackingCode) serverStore.indexByToken.set(order.trackingCode.toLowerCase(), order);
+export function upsertLocalOrder(order: Order): Order {
+  if (!order || !order.id) return order;
+  const query = (order.id || '').trim().toLowerCase();
+  const tokenQuery = (order.tokenId || '').trim().toLowerCase();
+  const existing = serverStore.indexById.get(query) || (tokenQuery ? serverStore.indexByToken.get(tokenQuery) : undefined);
+  const targetId = existing ? existing.id : order.id;
 
-  const phone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
-  if (phone) {
-    const ten = phone.slice(-10);
-    const list = serverStore.indexByPhone.get(ten) || [];
-    list.unshift(order);
-    serverStore.indexByPhone.set(ten, list);
-  }
+  const index = serverStore.orders.findIndex(
+    (o) => o.id.toLowerCase() === query || (tokenQuery && o.tokenId?.toLowerCase() === tokenQuery) || o.id === targetId
+  );
 
-  // Prevent memory leaks: evict oldest orders if exceeding capacity
-  if (serverStore.orders.length > MAX_LOCAL_ORDERS) {
-    const evicted = serverStore.orders.pop();
-    if (evicted) {
-      if (evicted.id) serverStore.indexById.delete(evicted.id.toLowerCase());
-      if (evicted.tokenId) serverStore.indexByToken.delete(evicted.tokenId.toLowerCase());
-      if (evicted.trackingCode) serverStore.indexByToken.delete(evicted.trackingCode.toLowerCase());
+  let updated: Order;
+  if (index > -1) {
+    serverStore.orders[index] = { ...serverStore.orders[index], ...order };
+    updated = serverStore.orders[index];
+  } else {
+    serverStore.orders.unshift(order);
+    updated = order;
+    if (serverStore.orders.length > MAX_LOCAL_ORDERS) {
+      const evicted = serverStore.orders.pop();
+      if (evicted) {
+        if (evicted.id) serverStore.indexById.delete(evicted.id.toLowerCase());
+        if (evicted.tokenId) serverStore.indexByToken.delete(evicted.tokenId.toLowerCase());
+        if (evicted.trackingCode) serverStore.indexByToken.delete(evicted.trackingCode.toLowerCase());
+      }
     }
   }
 
-  return order;
+  if (updated.id) serverStore.indexById.set(updated.id.toLowerCase(), updated);
+  if (updated.tokenId) serverStore.indexByToken.set(updated.tokenId.toLowerCase(), updated);
+  if (updated.trackingCode) serverStore.indexByToken.set(updated.trackingCode.toLowerCase(), updated);
+
+  const phone = (updated.customer?.phone || '').replace(/[^0-9]/g, '');
+  if (phone) {
+    const ten = phone.slice(-10);
+    const list = (serverStore.indexByPhone.get(ten) || []).filter((o) => o.id !== updated.id);
+    list.unshift(updated);
+    serverStore.indexByPhone.set(ten, list);
+  }
+
+  return updated;
 }
 
 export function updateLocalOrderStatus(id: string, status: OrderStatus, extra?: Partial<Order>): Order | null {
@@ -187,8 +204,18 @@ export function updateLocalOrderStatus(id: string, status: OrderStatus, extra?: 
   const existing = serverStore.indexById.get(query) || serverStore.indexByToken.get(query);
   const targetId = existing ? existing.id : id;
 
-  const index = serverStore.orders.findIndex((o) => o.id === targetId || o.tokenId === id);
-  if (index === -1) return null;
+  const index = serverStore.orders.findIndex(
+    (o) => o.id.toLowerCase() === query || o.id === targetId || o.tokenId?.toLowerCase() === query || o.tokenId === id
+  );
+  if (index === -1) {
+    if (existing) {
+      existing.status = status;
+      if (extra) Object.assign(existing, extra);
+      if (status === 'completed') existing.deliveredAt = extra?.deliveredAt || new Date().toISOString();
+      return upsertLocalOrder(existing);
+    }
+    return null;
+  }
 
   const current = serverStore.orders[index];
   const updated: Order = {

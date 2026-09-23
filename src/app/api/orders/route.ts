@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLocalOrders, addLocalOrder } from '@/lib/serverStore';
+import { getLocalOrders, addLocalOrder, upsertLocalOrder } from '@/lib/serverStore';
 import {
   isSupabaseConfigured,
   supabase,
@@ -92,14 +92,17 @@ export async function GET(req: NextRequest) {
       sourceFlags.push('local');
     }
 
-    // Merge by id with local taking precedence so freshly-placed orders (not yet replicated
-    // to Supabase) are always present, while Supabase rows enrich/correct the same ids.
+    // Merge by id: Local in-memory orders first (fallback), then Supabase database orders
+    // overwrite matching IDs so authoritative database status (e.g. completed/delivering)
+    // is never clobbered by stale local store copies.
     const mergedMap = new Map<string, Order>();
-    for (const o of dbOrders) {
-      mergedMap.set(o.id, o);
-    }
     for (const o of localFiltered) {
       mergedMap.set(o.id, o);
+    }
+    for (const o of dbOrders) {
+      mergedMap.set(o.id, o);
+      // Synchronize authoritative DB state into local server store
+      upsertLocalOrder(o);
     }
     const merged = Array.from(mergedMap.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

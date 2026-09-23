@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findLocalOrder, updateLocalOrderStatus, serverStore } from '@/lib/serverStore';
+import { findLocalOrder, updateLocalOrderStatus, upsertLocalOrder, serverStore } from '@/lib/serverStore';
 import { isSupabaseConfigured, supabase, supabaseAdmin, formatDbOrderToModel } from '@/lib/supabase';
 
 export async function GET(
@@ -145,6 +145,10 @@ export async function PATCH(
     const updated = updateLocalOrderStatus(id, status, extra);
     if (!updated && !dbUpdatedOrder) {
       return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
+    }
+
+    if (dbUpdatedOrder) {
+      upsertLocalOrder(dbUpdatedOrder);
     }
 
     return NextResponse.json({ success: true, order: dbUpdatedOrder || updated });

@@ -197,6 +197,7 @@ export default function AdminPage() {
   const [refundModalOrder, setRefundModalOrder] = useState<Order | null>(null);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+  const [actionLoadingOrderId, setActionLoadingOrderId] = useState<string | null>(null);
 
   const handleMarkAsRefunded = async (orderId: string) => {
     setIsProcessingRefund(true);
@@ -349,7 +350,12 @@ export default function AdminPage() {
 
   // 1-Click Direct Delivery Completion (No OTP required)
   const handleMarkOrderDelivered = async (orderId: string) => {
-    await updateOrderStatus(orderId, 'completed');
+    setActionLoadingOrderId(orderId);
+    try {
+      await updateOrderStatus(orderId, 'completed');
+    } finally {
+      setActionLoadingOrderId(null);
+    }
   };
 
   // Rider confirms cash payment collected for COD orders
@@ -1220,15 +1226,38 @@ export default function AdminPage() {
 
                           {(order.status === 'new' || order.status === 'preparing') && (
                             <div className="space-y-2">
-                              <button
-                                onClick={async () => {
-                                  await dispatchOrder(order.id);
-                                }}
-                                className="w-full py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-[#2E6125]"
-                              >
-                                <Bike className="w-4 h-4 text-emerald-400" />
-                                <span>🚀 Dispatch Order (Syed)</span>
-                              </button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                  disabled={actionLoadingOrderId === order.id}
+                                  onClick={async () => {
+                                    setActionLoadingOrderId(order.id);
+                                    try {
+                                      await dispatchOrder(order.id);
+                                    } finally {
+                                      setActionLoadingOrderId(null);
+                                    }
+                                  }}
+                                  className="w-full py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-[#2E6125] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Bike className="w-4 h-4 text-emerald-400" />
+                                  <span>{actionLoadingOrderId === order.id ? 'Dispatching...' : '🚀 Dispatch Order'}</span>
+                                </button>
+                                <button
+                                  disabled={actionLoadingOrderId === order.id}
+                                  onClick={async () => {
+                                    setActionLoadingOrderId(order.id);
+                                    try {
+                                      await updateOrderStatus(order.id, 'completed');
+                                    } finally {
+                                      setActionLoadingOrderId(null);
+                                    }
+                                  }}
+                                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 text-white" />
+                                  <span>{actionLoadingOrderId === order.id ? 'Delivering...' : '✓ Mark Delivered'}</span>
+                                </button>
+                              </div>
                               <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 bg-cream-100 rounded-lg text-espresso-700 font-medium border border-cream-200">
                                 <span>🛵 Partner: <strong className="text-espresso-950 font-bold">Syed</strong> (Electric Eco-Van)</span>
                                 <span className="font-mono text-espresso-600 font-semibold">{order.riderPhone || '7259635948'}</span>
@@ -1271,11 +1300,19 @@ export default function AdminPage() {
 
                               {/* Primary Action Button: Mark Order Delivered */}
                               <button
-                                onClick={() => updateOrderStatus(order.id, 'completed')}
-                                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                                disabled={actionLoadingOrderId === order.id}
+                                onClick={async () => {
+                                  setActionLoadingOrderId(order.id);
+                                  try {
+                                    await updateOrderStatus(order.id, 'completed');
+                                  } finally {
+                                    setActionLoadingOrderId(null);
+                                  }
+                                }}
+                                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <CheckCircle2 className="w-4 h-4 text-white" />
-                                <span>✓ Mark Order Delivered</span>
+                                <span>{actionLoadingOrderId === order.id ? 'Marking Delivered...' : '✓ Mark Order Delivered'}</span>
                               </button>
                             </div>
                           )}
@@ -1558,11 +1595,12 @@ export default function AdminPage() {
                         {/* Direct 1-Click Order Delivery Completion */}
                         <button
                           type="button"
+                          disabled={actionLoadingOrderId === order.id}
                           onClick={() => handleMarkOrderDelivered(order.id)}
-                          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm transition active:scale-95 flex items-center justify-center gap-2"
+                          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Mark Order Delivered</span>
+                          <span>{actionLoadingOrderId === order.id ? 'Marking Delivered...' : 'Mark Order Delivered'}</span>
                         </button>
                       </div>
                     );
