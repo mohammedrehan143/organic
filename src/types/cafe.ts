@@ -185,4 +185,5 @@ export interface Membership {
   endDate: string;
   createdAt: string;
   updatedAt?: string;
+  billApproved?: boolean;
 }

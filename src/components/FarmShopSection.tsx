@@ -185,7 +185,7 @@ export function FarmShopSection() {
                           title="Subscribe to daily fresh milk"
                         >
                           <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span>Subscribe</span>
+                          <span> for Subscription only</span>
                         </Link>
                       ) : !item.isAvailable ? (
                         <button

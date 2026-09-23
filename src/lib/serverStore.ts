@@ -327,3 +327,19 @@ export function saveLocalMembership(membership: Membership): Membership {
   serverStore.memberships = currentList;
   return membership;
 }
+
+export function updateLocalMembershipBillApproved(idOrPhone: string, billApproved: boolean): Membership | null {
+  if (!serverStore.memberships) {
+    serverStore.memberships = [];
+  }
+  const clean = idOrPhone.replace(/[^0-9]/g, '').slice(-10);
+  const target = serverStore.memberships.find(
+    (m) => m.id === idOrPhone || (clean.length === 10 && m.phone.replace(/[^0-9]/g, '').slice(-10) === clean)
+  );
+  if (target) {
+    target.billApproved = billApproved;
+    target.updatedAt = new Date().toISOString();
+    return target;
+  }
+  return null;
+}

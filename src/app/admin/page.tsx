@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
+import { MembershipBillModal } from '@/components/MembershipBillModal';
 import { generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
 
@@ -116,6 +117,35 @@ export default function AdminPage() {
       console.error('Failed to load admin memberships:', err);
     } finally {
       setMembershipsLoading(false);
+    }
+  };
+
+  const [activeMembershipBill, setActiveMembershipBill] = useState<Membership | null>(null);
+  const [membershipApprovalLoading, setMembershipApprovalLoading] = useState<string | null>(null);
+
+  const handleToggleMembershipBillApproval = async (m: Membership) => {
+    setMembershipApprovalLoading(m.id);
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: m.id,
+          phone: m.phone,
+          action: 'toggle_bill_approval',
+          billApproved: !m.billApproved,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminMemberships((prev) =>
+          prev.map((item) => (item.id === m.id ? { ...item, billApproved: data.billApproved } : item))
+        );
+      }
+    } catch (err) {
+      console.error('Error toggling membership bill approval:', err);
+    } finally {
+      setMembershipApprovalLoading(null);
     }
   };
 
@@ -2053,6 +2083,34 @@ export default function AdminPage() {
                         <span className="text-xs font-mono font-bold text-espresso-500 bg-cream-100 px-2.5 py-1 rounded-xl">
                           ID: {m.id}
                         </span>
+
+                        {/* Membership Bill Approval Toggle */}
+                        <button
+                          type="button"
+                          disabled={membershipApprovalLoading === m.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleMembershipBillApproval(m);
+                          }}
+                          className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider transition cursor-pointer active:scale-95 border shadow-xs flex items-center gap-1.5 disabled:opacity-50 ${
+                            m.billApproved
+                              ? "bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700"
+                              : "bg-amber-300 text-amber-950 border-amber-500 hover:bg-amber-400 font-black animate-pulse"
+                          }`}
+                          title={m.billApproved ? "Customer can download membership bill. Click to lock." : "Membership bill is locked. Click to approve & unlock."}
+                        >
+                          {m.billApproved ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-white" />
+                              <span>Bill Approved</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-3 h-3 text-amber-950" />
+                              <span>Approve Bill</span>
+                            </>
+                          )}
+                        </button>
                       </div>
 
                       {/* Status Pill */}
@@ -2222,6 +2280,16 @@ export default function AdminPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>View Orders</span>
                         </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveMembershipBill(m)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+                          title="View & Download Official Membership Tax Invoice"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Membership Bill</span>
+                        </button>
                       </div>
 
                       {/* Right: Operational actions */}
@@ -2698,6 +2766,13 @@ export default function AdminPage() {
         order={activeBillOrder}
         isOpen={Boolean(activeBillOrder)}
         onClose={() => setActiveBillOrder(null)}
+      />
+
+      {/* 11. MEMBERSHIP BILL RECEIPT MODAL */}
+      <MembershipBillModal
+        membership={activeMembershipBill}
+        isOpen={Boolean(activeMembershipBill)}
+        onClose={() => setActiveMembershipBill(null)}
       />
     </div>
   );

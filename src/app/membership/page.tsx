@@ -29,9 +29,13 @@ import {
   X,
   MapPin,
   Mail,
+  Lock,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Membership, MembershipPlanType } from '@/types/cafe';
+import { MembershipBillModal } from '@/components/MembershipBillModal';
 
 export default function MembershipPage() {
   const [activeTab, setActiveTab] = useState<'schemes' | 'check'>('schemes');
@@ -66,6 +70,7 @@ export default function MembershipPage() {
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState('');
   const [enrollSuccess, setEnrollSuccess] = useState<Membership | null>(null);
+  const [activeBillMembership, setActiveBillMembership] = useState<Membership | null>(null);
 
   // Handle Search Membership by Phone
   const handleSearch = async (e?: React.FormEvent, overridePhone?: string) => {
@@ -837,6 +842,30 @@ export default function MembershipPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Official Membership Tax Invoice & Bill (Permission controlled by store admin) */}
+                      <div className="pt-4 mt-2 border-t border-white/15">
+                        {m.billApproved ? (
+                          <button
+                            type="button"
+                            onClick={() => setActiveBillMembership(m)}
+                            className="btn-shining-gold w-full py-3.5 px-4 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            <FileText className="w-4 h-4 text-[#261603]" />
+                            <span>📄 Download Official Membership Bill (Tax Invoice)</span>
+                          </button>
+                        ) : (
+                          <div className="p-3.5 rounded-2xl bg-white/10 border border-white/15 text-center space-y-1">
+                            <div className="flex items-center justify-center gap-1.5 text-amber-300 text-xs font-black uppercase tracking-wider">
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Membership Bill Locked (Pending Admin Approval)</span>
+                            </div>
+                            <p className="text-[11px] text-gray-300 leading-snug">
+                              Your official membership tax invoice &amp; payment receipt will be unlocked for download once store administration approves access.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -1294,6 +1323,13 @@ export default function MembershipPage() {
           </div>
         </div>
       )}
+
+      {/* MEMBERSHIP BILL RECEIPT MODAL */}
+      <MembershipBillModal
+        membership={activeBillMembership}
+        isOpen={Boolean(activeBillMembership)}
+        onClose={() => setActiveBillMembership(null)}
+      />
     </div>
   );
 }

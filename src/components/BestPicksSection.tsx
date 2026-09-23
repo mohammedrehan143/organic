@@ -133,7 +133,7 @@ export function BestPicksSection() {
                         className="px-4 py-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 rounded-xl shadow-warm-sm text-xs font-bold transition active:scale-95 flex items-center gap-1"
                         title="Subscribe to daily fresh milk"
                       >
-                        Subscribe
+                        Subscription only
                       </Link>
                     ) : (
                       <button

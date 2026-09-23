@@ -1,10 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
-import { getLocalMemberships, saveLocalMembership } from '@/lib/serverStore';
+import { getLocalMemberships, saveLocalMembership, updateLocalMembershipBillApproved } from '@/lib/serverStore';
 import { Membership, MembershipPlanType, MembershipBillingType } from '@/types/cafe';
 
 // Cache whether the remote Supabase project has the memberships table created
 let supabaseTableAvailable = true;
+
+function formatDbRowToMembership(row: any): Membership {
+  const now = new Date();
+  const endDate = new Date(row.end_date);
+  const diffMs = endDate.getTime() - now.getTime();
+  const isExpired = diffMs <= 0;
+
+  const rawStatus = row.payment_status || '';
+  const billApproved = Boolean(row.bill_approved) || rawStatus.includes('__BILL_APPROVED__');
+  const cleanPaymentStatus = rawStatus.replace('__BILL_APPROVED__', '').trim() || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle');
+
+  return {
+    id: row.id,
+    phone: row.phone,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email || undefined,
+    address: row.address || undefined,
+    planType: row.plan_type,
+    planName: row.plan_name,
+    billingType: row.billing_type,
+    price: Number(row.price) || 0,
+    status: isExpired ? 'expired' : row.status || 'active',
+    paymentStatus: cleanPaymentStatus,
+    billApproved,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,29 +58,7 @@ export async function GET(req: NextRequest) {
               supabaseTableAvailable = false;
             }
           } else if (data) {
-            allMemberships = data.map((row: any) => {
-              const now = new Date();
-              const endDate = new Date(row.end_date);
-              const diffMs = endDate.getTime() - now.getTime();
-              const isExpired = diffMs <= 0;
-              return {
-                id: row.id,
-                phone: row.phone,
-                customerName: row.customer_name,
-                customerEmail: row.customer_email || undefined,
-                address: row.address || undefined,
-                planType: row.plan_type,
-                planName: row.plan_name,
-                billingType: row.billing_type,
-                price: Number(row.price) || 0,
-                status: isExpired ? 'expired' : row.status || 'active',
-                paymentStatus: row.payment_status || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle'),
-                startDate: row.start_date,
-                endDate: row.end_date,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
-              };
-            });
+            allMemberships = data.map(formatDbRowToMembership);
           }
         } catch (dbErr) {
           console.warn('[Membership API] Error fetching all from db:', dbErr);
@@ -102,28 +110,7 @@ export async function GET(req: NextRequest) {
           }
         } else if (data && data.length > 0) {
           const now = new Date();
-          const allMemberships: Membership[] = data.map((row: any) => {
-            const endDate = new Date(row.end_date);
-            const diffMs = endDate.getTime() - now.getTime();
-            const isExpired = diffMs <= 0;
-            return {
-              id: row.id,
-              phone: row.phone,
-              customerName: row.customer_name,
-              customerEmail: row.customer_email || undefined,
-              address: row.address || undefined,
-              planType: row.plan_type,
-              planName: row.plan_name,
-              billingType: row.billing_type,
-              price: Number(row.price) || 0,
-              status: isExpired ? 'expired' : row.status || 'active',
-              paymentStatus: row.payment_status || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle'),
-              startDate: row.start_date,
-              endDate: row.end_date,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at,
-            };
-          });
+          const allMemberships: Membership[] = data.map(formatDbRowToMembership);
 
           // Primary: most recently created active/valid membership
           const primary = allMemberships.find(m => m.status === 'active') || allMemberships[0];
@@ -298,6 +285,64 @@ export async function PATCH(req: NextRequest) {
 
     const client = supabaseAdmin || supabase;
     const cleanPhone = phone ? phone.replace(/[^0-9]/g, '').slice(-10) : '';
+
+    // Action: Approve or toggle official Membership Bill (Admin permission)
+    if (action === 'toggle_bill_approval' || body.billApproved !== undefined) {
+      let isApproved: boolean;
+      if (body.billApproved !== undefined) {
+        isApproved = Boolean(body.billApproved);
+      } else {
+        const local = getLocalMemberships(cleanPhone);
+        const currentApproved = local.length > 0 ? Boolean(local[0].billApproved) : false;
+        isApproved = !currentApproved;
+      }
+
+      const now = new Date().toISOString();
+
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
+        try {
+          const { data: existingRows } = await client
+            .from('memberships')
+            .select('*')
+            .or(`id.eq.${id || 'NONE'},phone.ilike.%${cleanPhone}%`)
+            .limit(1);
+
+          if (existingRows && existingRows.length > 0) {
+            const row = existingRows[0];
+            const baseStatus = (row.payment_status || '').replace('__BILL_APPROVED__', '').trim() || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle');
+            const newPaymentStatus = isApproved ? `${baseStatus}__BILL_APPROVED__` : baseStatus;
+            
+            await client
+              .from('memberships')
+              .update({
+                payment_status: newPaymentStatus,
+                updated_at: now,
+              })
+              .eq('id', row.id);
+          }
+        } catch (dbErr) {
+          console.warn('[Membership PATCH] bill approval error:', dbErr);
+        }
+      }
+
+      // Update in-memory local store
+      const updatedLocal = updateLocalMembershipBillApproved(id || cleanPhone, isApproved);
+      if (!updatedLocal) {
+        const local = getLocalMemberships(cleanPhone);
+        if (local.length > 0) {
+          local[0].billApproved = isApproved;
+          saveLocalMembership(local[0]);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        billApproved: isApproved,
+        message: isApproved
+          ? 'Membership Tax Invoice & Bill approved! Customer can now download receipt.'
+          : 'Membership bill locked. Customer permission revoked.',
+      });
+    }
 
     // Action 1: Skip to Month-End payment due (Simulate 30 days completed)
     if (action === 'skip_to_due') {
