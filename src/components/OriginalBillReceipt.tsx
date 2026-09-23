@@ -19,11 +19,11 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
       {/* Brand Header */}
       <div className="text-center space-y-1 mb-3">
         <h1 className="text-sm font-black tracking-widest uppercase">
-          *** ZAFIROO ORGANIC STORE ***
+          *** ZAFIROO ORGANIC DAIRY FARM ***
         </h1>
-        <p className="text-[10px] text-gray-700 font-bold">PURE A2 MILK & PASTURE FARM EGGS</p>
+        <p className="text-[10px] text-gray-700 font-bold">PURE ORGANIC MILK & PASTURE FARM EGGS</p>
         <p className="text-[9px] text-gray-600 px-2">Bylanarasapura, Hoskote Taluk, Bangalore - 562122</p>
-        <p className="text-[9px] text-gray-600 font-bold">Helpline: +91 7259635948</p>
+        <p className="text-[9px] text-gray-600 font-bold">Helpline: +91 7259635948, +91 9731301135</p>
         <p className="text-[9px] text-gray-500">FREE DELIVERY FOR ALL PRODUCTS</p>
       </div>
 
@@ -125,17 +125,16 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
       {/* Zafiroo Store Policy on Receipt */}
       <div className="my-2 p-2 border border-gray-400 bg-gray-50 text-[8.5px] leading-tight space-y-1">
         <p className="font-bold text-center uppercase">*** ZAFIROO POLICIES ***</p>
-        <p>• When glass bottle breaks customer pays ₹200/bottle.</p>
         <p>• Check all items on the spot. No exchange/return after receipt.</p>
         <p>• Check eggs for cracks on the spot to get instant exchange.</p>
-        <p>• If milk is broken, contact agent immediately: +91 7259635948.</p>
+        <p>• If milk is damaged, contact agent immediately: +91 7259635948, +91 9731301135.</p>
       </div>
 
       {/* Footer message */}
       <div className="text-center text-[9px] text-gray-700 mt-2 space-y-0.5">
-        <p>*** THANK YOU FOR CHOOSING ORGANIC ***</p>
+        <p>*** THANK YOU FOR CHOOSING ZAFIROO ORGANIC ***</p>
         <p>From local farms to your family table</p>
-        <p>WhatsApp Support: +91 7259635948</p>
+        <p>WhatsApp Support: +91 7259635948, +91 9731301135</p>
       </div>
     </div>
   );

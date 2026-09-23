@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import { X, Plus, Minus, Clock, Flame, Sparkles, Check, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export function MenuDetailModal() {
   const { selectedMenuDetail, setSelectedMenuDetail, addToCart, menuItems, cart } = useOrder();
@@ -61,7 +62,7 @@ export function MenuDetailModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn text-[#173612]">
       <div 
-        className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-[#EAF3E4]"
+        className="relative flex flex-col w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] bg-white rounded-3xl shadow-2xl border border-[#EAF3E4] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Back & Close Buttons */}
@@ -84,8 +85,9 @@ export function MenuDetailModal() {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Hero Image */}
-        <div className="relative w-full h-52 sm:h-72 bg-gray-100 overflow-hidden">
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
+          {/* Hero Image */}
+          <div className="relative w-full h-52 sm:h-72 bg-gray-100 overflow-hidden shrink-0">
           <Image
             src={activeItem.image}
             alt={activeItem.name}
@@ -238,8 +240,8 @@ export function MenuDetailModal() {
             </div>
           )}
 
-          {/* Current In-Cart Banner */}
-          {currentCartQty > 0 && (
+{/* Current In-Cart Banner */}
+          {currentCartQty > 0 && activeItem.category !== 'Organic Milk' && (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] text-xs font-bold text-[#173612]">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#173612]" />
@@ -250,10 +252,11 @@ export function MenuDetailModal() {
               </span>
             </div>
           )}
+        </div>
 
-          {/* Bottom Bar: Back, Quantity and Add to Cart with balanced button layout */}
-          <div className="pt-4 flex items-center justify-between gap-2.5 sm:gap-4 border-t border-gray-100">
-            {/* Back Button */}
+        {/* Bottom Bar: Back, Quantity and Add to Cart with balanced button layout */}
+        <div className="p-4 sm:px-8 sm:pb-8 flex items-center justify-between gap-2.5 sm:gap-4 border-t border-gray-100 shrink-0 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+          {/* Back Button */}
             <button
               type="button"
               onClick={() => setSelectedMenuDetail(null)}
@@ -264,7 +267,7 @@ export function MenuDetailModal() {
               <span className="hidden xs:inline">Back</span>
             </button>
 
-            {/* Quantity Selector */}
+{/* Quantity Selector */}
             <div className="flex items-center gap-2 sm:gap-3 bg-[#F5FAF0] px-2.5 sm:px-3.5 py-2.5 rounded-2xl border border-[#CBE0A3] shadow-sm">
               <button
                 type="button"
@@ -287,8 +290,20 @@ export function MenuDetailModal() {
               </button>
             </div>
 
-            {/* Add to Cart Button or Out of Stock */}
-            {!activeItem.isAvailable ? (
+            {/* Milk → Subscribe; Everything else → Add to Cart or Out of Stock */}
+            {activeItem.category === 'Organic Milk' ? (
+              <Link
+                href="/membership"
+                onClick={() => setSelectedMenuDetail(null)}
+                className="flex-1 h-12 flex items-center justify-between px-4 sm:px-6 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl shadow-md hover:shadow-xl transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>Subscribe to Daily Milk</span>
+                </span>
+                <span>{activeItem.price}</span>
+              </Link>
+            ) : !activeItem.isAvailable ? (
               <button
                 type="button"
                 disabled
@@ -324,3 +339,4 @@ export function MenuDetailModal() {
     </div>
   );
 }
+

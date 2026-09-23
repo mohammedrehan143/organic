@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
           amount: amountInPaise,
           currency,
           receipt: receipt || `rcpt_${Date.now()}`,
-          notes: notes || { store: 'Zafiroo Organic Store' },
+          notes: notes || { store: 'Zafiroo Organic Dairy Farm' },
         }),
       });
 

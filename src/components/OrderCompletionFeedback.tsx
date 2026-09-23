@@ -62,13 +62,9 @@ export function OrderCompletionFeedback({
           <h3 className="font-bold text-[#0F240B] text-sm sm:text-base">Rate Your Organic Farm Experience</h3>
         </div>
         {onOpenBill && (
-          <button
-            onClick={onOpenBill}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 hover:bg-[#F5FAF0] text-[#173612] text-xs font-semibold transition"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Thermal Bill</span>
-          </button>
+          <span className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 text-[#173612] text-xs font-semibold">
+            Thank You for Choosing Zafirooorganic
+          </span>
         )}
       </div>
 

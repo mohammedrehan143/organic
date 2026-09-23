@@ -134,6 +134,11 @@ export default function InTheKitchenPage() {
 
   const handleAddIngredients = (recipe: FullRecipe) => {
     const itemToAdd = menuItems.find((m) => m.id === recipe.storeProductId) || menuItems[0];
+    if (!itemToAdd) return;
+    if (itemToAdd.category === 'Organic Milk') {
+      window.location.href = '/membership';
+      return;
+    }
     addToCart(itemToAdd, 1);
     setAddedMsg(true);
     setTimeout(() => setAddedMsg(false), 2000);

@@ -11,12 +11,12 @@ import { LocationModal } from '@/components/LocationModal';
 import { FloatingCartBar } from '@/components/FloatingCartBar';
 
 export const metadata: Metadata = {
-  title: 'Zafiroo Organic Store | Farm-Fresh Pure A2 Milk, Artisan Dairy & Wholesome Goods',
+  title: 'Zafiroo Organic Dairy Farm | Farm-Fresh Pure Organic Milk, Artisan Dairy & Wholesome Goods',
   description:
-    'Delivering wholesome organic dairy products, pasture-fed A2 milk, cultured butter, Vedic ghee, and farm-fresh produce from our dedicated local farms directly to your doorstep.',
+    'Delivering wholesome organic dairy products, pasture-fed milk, cultured butter, Vedic ghee, and farm-fresh produce from our dedicated local farms directly to your doorstep.',
   keywords: [
-    'Zafiroo Organic Store',
-    'Pure A2 Milk',
+    'Zafiroo Organic Dairy Farm',
+    'Pure Milk',
     'Organic Dairy',
     'Farm Fresh Milk',
     'Bilona Cow Ghee',

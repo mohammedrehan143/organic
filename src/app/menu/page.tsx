@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useOrder } from '@/context/OrderContext';
 import { MenuItem } from '@/types/cafe';
 import {
@@ -249,7 +250,7 @@ export default function MenuPage() {
                       <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow animate-pulse">
                         Out of Stock
                       </div>
-                    ) : isInCart ? (
+                    ) : isInCart && item.category !== 'Organic Milk' ? (
                       <div className="absolute top-3 right-3 bg-[#173612] text-[#ECF5DE] border border-[#CBE0A3] text-[10px] font-black px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
                         <Check className="w-3 h-3 text-[#CBE0A3]" />
                         <span>{itemQty} in basket</span>
@@ -319,7 +320,17 @@ export default function MenuPage() {
                           Details
                         </button>
 
-                        {!item.isAvailable ? (
+                        {item.category === 'Organic Milk' ? (
+                          <Link
+                            href="/membership"
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-10 px-4 bg-[#173612] hover:bg-[#0F240B] text-white rounded-xl shadow-sm hover:shadow transition transform active:scale-95 flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer"
+                            title="Subscribe to daily fresh milk"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Subscribe</span>
+                          </Link>
+                        ) : !item.isAvailable ? (
                           <button
                             type="button"
                             disabled

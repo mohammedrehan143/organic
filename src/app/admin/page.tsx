@@ -250,29 +250,15 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts]);
 
-  // Monitor latestActiveSos for 5-Second Red Alert Takeover — only shows ONCE per unique SOS ID
+  // Monitor latestActiveSos for Full-Screen Red Alert Takeover
   useEffect(() => {
-    if (latestActiveSos && latestActiveSos.status === 'active' && !shownSosIds.has(latestActiveSos.id)) {
+    if (authRole !== 'rider' && latestActiveSos && latestActiveSos.status === 'active' && !shownSosIds.has(latestActiveSos.id)) {
       // Only trigger if this SOS ID has not been shown yet (prevents looping to all riders)
       setShownSosIds((prev) => new Set([...prev, latestActiveSos.id]));
       setFullScreenSosAlert(latestActiveSos);
-      setSosCountdown(5);
       playSosSiren();
-
-      const timer = setInterval(() => {
-        setSosCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setFullScreenSosAlert(null); // Auto-minimize to top banner after 5s
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
     }
-  }, [latestActiveSos, playSosSiren, shownSosIds]);
+  }, [authRole, latestActiveSos, playSosSiren, shownSosIds]);
 
   // Auth Handler - Server & Database Verified
   const handlePinSubmit = async (e: React.FormEvent) => {
@@ -363,6 +349,17 @@ export default function AdminPage() {
   // 1-Click Direct Delivery Completion (No OTP required)
   const handleMarkOrderDelivered = async (orderId: string) => {
     await updateOrderStatus(orderId, 'completed');
+  };
+
+  // Rider confirms cash payment collected for COD orders
+  const handlePaymentReceived = async (orderId: string, currentStatus: string) => {
+    if (!currentRider) return;
+    await updateOrderStatus(orderId, currentStatus as any, {
+      paymentStatus: 'paid',
+      paymentReceivedAt: new Date().toISOString(),
+      paymentReceivedBy: currentRider.name,
+      paymentReceivedByPhone: currentRider.phone,
+    } as any);
   };
 
   // Rider Trigger Emergency SOS
@@ -652,14 +649,13 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* Auto-minimize Countdown */}
-            <div className="pt-2 flex items-center justify-between text-xs text-red-200 border-t border-white/20">
-              <span>Auto-minimizing to top banner in <strong>{sosCountdown}s</strong>...</span>
+            {/* Manual Minimize */}
+            <div className="pt-2 flex items-center justify-center text-xs text-red-200 border-t border-white/20">
               <button
                 onClick={() => setFullScreenSosAlert(null)}
-                className="text-white hover:underline font-bold"
+                className="text-white hover:underline font-bold px-4 py-2"
               >
-                Minimize Now &rarr;
+                Minimize to Top Banner &rarr;
               </button>
             </div>
           </div>
@@ -842,6 +838,55 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+
+          {/* 💵 Payment Received → Awaiting Bill Send */}
+          {orders.filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled').length > 0 && (
+            <div className="p-4 sm:p-5 rounded-3xl border-2 border-emerald-400 bg-emerald-50 shadow-warm-sm space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-emerald-900">
+                  <span className="text-lg">💵</span>
+                  <h3 className="text-sm font-black uppercase tracking-wider">
+                    Payment Received — Bill Pending Send
+                  </h3>
+                </div>
+                <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
+                  {orders.filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled').length} order(s)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {orders
+                  .filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled')
+                  .map((pb) => (
+                    <div key={pb.id} className="bg-white rounded-2xl border border-emerald-200 p-3.5 text-xs space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-black text-espresso-950">#{pb.tokenId}</span>
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {pb.status}
+                        </span>
+                      </div>
+                      <div className="text-espresso-800 space-y-0.5">
+                        <p className="font-bold text-espresso-950">👤 {pb.customer.name}</p>
+                        <p>📞 {pb.customer.phone}</p>
+                        <p className="leading-relaxed truncate">📍 {pb.customer.address}</p>
+                        <p className="font-bold text-espresso-950">💳 {pb.paymentMethod}</p>
+                        {pb.paymentReceivedBy && (
+                          <p>🛵 Collected by {pb.paymentReceivedBy}{pb.paymentReceivedAt ? ` • ${new Date(pb.paymentReceivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-cream-200">
+                        <span className="font-black text-banhmi-red font-mono">₹{pb.total}</span>
+                        <button
+                          onClick={() => updateOrderStatus(pb.id, pb.status as any, { billApproved: true } as any)}
+                          className="px-3.5 py-2 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-xl text-[11px] uppercase tracking-wider transition active:scale-95"
+                        >
+                          Send Payment Bill →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* KDS Active Order Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1047,14 +1092,25 @@ export default function AdminPage() {
                   {/* Order Footer & Actions */}
                   <div className="p-5 border-t border-cream-200 bg-cream-50/40 space-y-3">
                     <div className="flex items-center justify-between text-xs font-bold text-espresso-950">
-                      <span>Total: ₹{order.total.toFixed(2)} ({order.paymentMethod})</span>
+                       <div className="flex items-center gap-2">
+                         <button
+                           onClick={() => updateOrderStatus(order.id, order.status as any, { billApproved: !order.billApproved } as any)}
+                           className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition ${order.billApproved ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : order.paymentStatus === 'paid' ? "bg-emerald-600 text-white border border-emerald-600" : "bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100"}`}
+                         >
+                           {order.billApproved
+                             ? "✓ Bill Sent to Customer"
+                             : order.paymentStatus === 'paid'
+                             ? "💵 Send Payment Bill"
+                             : "✓ Approve Bill"}
+                         </button>
                       <button
                         onClick={() => setActiveBillOrder(order)}
                         className="text-banhmi-red hover:underline flex items-center gap-1 text-[11px]"
                       >
                         <Printer className="w-3 h-3" />
-                        <span>Thermal Bill</span>
+                        <span>Print Bill</span>
                       </button>
+                       </div>
                     </div>
 
                     {/* Action Area: Blocked if Cancelled vs Normal Progression */}
@@ -1094,21 +1150,7 @@ export default function AdminPage() {
                       ) : (
                         <>
                           {(order.status === 'new' || order.status === 'preparing') && (
-                            <div className="space-y-2">
-                              <button
-                                onClick={() => updateOrderStatus(order.id, 'delivering')}
-                                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
-                              >
-                                <Bike className="w-3.5 h-3.5" />
-                                <span>Dispatch / Out for Delivery</span>
-                              </button>
-
-                              {isDelivery && deliveryAgents.length > 0 && (
-                                <div className="pt-1">
-                                  <label className="block text-[10px] font-bold uppercase text-espresso-600 mb-1">
-                                    Or Assign Courier Directly:
-                                  </label>
-                                  <div className="grid grid-cols-1 gap-1.5">
+                            <div className="space-y-2">{isDelivery && deliveryAgents.length > 0 && (<div className="pt-1"><label className="block text-[10px] font-bold uppercase text-espresso-600 mb-1">Assign Courier:</label><div className="grid grid-cols-1 gap-1.5">
                                     {deliveryAgents.slice(0, 1).map((agent) => (
                                       <button
                                         key={agent.id}
@@ -1374,6 +1416,17 @@ export default function AdminPage() {
                           </a>
                         </div>
 
+                        {/* Payment Received Button (COD before delivering) */}
+                        {order.paymentStatus !== 'paid' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePaymentReceived(order.id, order.status)}
+                            className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-sm transition active:scale-95 flex items-center justify-center gap-2"
+                          >
+                            <span>💵 Payment Received (₹{order.total})</span>
+                          </button>
+                        )}
+
                         <hr className="border-cream-200" />
 
                         {/* Direct 1-Click Order Delivery Completion */}
@@ -1405,12 +1458,27 @@ export default function AdminPage() {
                   </div>
                   <div className="divide-y divide-emerald-100">
                     {riderCompletedOrders.slice(0, 10).map((co) => (
-                      <div key={co.id} className="py-2.5 flex items-center justify-between text-xs">
+                      <div key={co.id} className="py-2.5 flex items-center justify-between gap-2 text-xs">
                         <div>
                           <span className="font-mono font-bold text-emerald-950">#{co.tokenId}</span>
                           <span className="text-emerald-700 ml-2">to {co.customer.name}</span>
                         </div>
-                        <span className="font-bold text-emerald-900">₹{co.total} • Delivered</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-emerald-900">₹{co.total} • Delivered</span>
+                          {co.paymentStatus !== 'paid' ? (
+                            <button
+                              type="button"
+                              onClick={() => handlePaymentReceived(co.id, co.status)}
+                              className="px-2 py-1 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-lg text-[10px] uppercase tracking-wider transition active:scale-95"
+                            >
+                              Payment Received
+                            </button>
+                          ) : (
+                            <span className="px-2 py-1 bg-emerald-600 text-white font-bold rounded-lg text-[10px] uppercase tracking-wider">
+                              Paid
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2411,3 +2479,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+

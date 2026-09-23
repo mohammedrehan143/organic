@@ -195,6 +195,9 @@
 
 /* 80mm Thermal Receipt Print Styling */
 @media print {
+  @page {
+    margin: 0;
+  }
   body * {
     visibility: hidden;
   }
@@ -214,7 +217,6 @@
     box-shadow: none;
     page-break-inside: avoid;
     break-inside: avoid;
-    height: max-content;
   }
 }
 

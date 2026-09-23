@@ -154,6 +154,10 @@ export interface Order {
   feedbackNote?: string;
   createdAt: string;
   deliveredAt?: string;
+  billApproved?: boolean; // Admin must approve before customer can see the bill
+  paymentReceivedAt?: string; // When payment was actually received (rider marks COD, gateway marks online)
+  paymentReceivedBy?: string; // Rider who collected the payment
+  paymentReceivedByPhone?: string;
 }
 
 export interface AdminCredentials {

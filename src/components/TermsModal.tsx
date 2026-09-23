@@ -26,7 +26,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-[#0F240B] font-bebas tracking-wide">
-                Zafiroo Organic Store Policies & Terms
+                Zafiroo Organic Dairy Farm Policies & Terms
               </h2>
               <p className="text-xs text-[#2E6125] font-semibold">
                 Bylanarasapura, Hoskote Taluk, Bangalore - 562122
@@ -45,21 +45,18 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
         {/* Content */}
         <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-xs sm:text-sm text-[#173612] leading-relaxed">
           <p className="font-semibold text-gray-700">
-            Welcome to Zafiroo Organic Store. Please read our official delivery, inspection, exchange, and glass bottle handling policies carefully:
+            Welcome to Zafiroo Organic Dairy Farm. Please read our official delivery, inspection, exchange, and glass bottle handling policies carefully:
           </p>
 
-          {/* Policy 1: Glass Bottle Replacement */}
+          {/* Policy 1: Glass Bottle Policy */}
           <div className="p-4 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] flex items-start gap-3.5">
             <AlertTriangle className="w-5 h-5 text-[#173612] shrink-0 mt-0.5" />
             <div>
               <h3 className="font-bold text-[#0F240B] text-sm">
-                1. Glass Bottle Policy (₹200 Breakage Fee)
+                1. Reusable Glass Bottle Policy
               </h3>
               <p className="text-[#173612] mt-1 font-medium">
-                When glass bottle breaks the customer has to pay rupees 200 per bottle.
-              </p>
-              <p className="text-[11px] text-[#173612]/80 mt-0.5">
-                Our farm milk is served in eco-friendly reusable sterilized glass bottles. Customers are requested to return empty clean bottles during subsequent deliveries or pay ₹200 in the event of breakage or loss.
+                Our farm milk is served in eco-friendly reusable sterilized glass bottles. Customers are requested to return empty clean bottles during subsequent deliveries.
               </p>
             </div>
           </div>
@@ -101,7 +98,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
                 If the milk it broken you can contact directly to the Zafiroo agents so you can exchange and get fresh milk contact as soon as possible.
               </p>
               <p className="text-xs text-[#2E6125] font-bold mt-1">
-                Zafiroo Agent Hotline: +91 7259635948
+                Zafiroo Agent Hotline: +91 7259635948, +91 9731301135
               </p>
             </div>
           </div>
@@ -109,8 +106,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
           {/* Store Address & Contact */}
           <div className="pt-2 border-t border-gray-100 text-xs text-gray-500 space-y-1">
             <p><strong>Farm & Dispatch Hub:</strong> Bylanarasapura, Hoskote Taluk, Bangalore - 562122</p>
-            <p><strong>Delivery Line & Agent Support:</strong> +91 7259635948</p>
-            <p><strong>Operating Hours:</strong> Daily 6:00 AM – 9:30 PM</p>
+            <p><strong>Delivery Line & Agent Support:</strong> +91 7259635948, +91 9731301135</p>
           </div>
         </div>
 

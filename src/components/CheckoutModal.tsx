@@ -70,6 +70,7 @@ export function CheckoutModal() {
   const [line2, setLine2] = useState('');
   const [instructions, setInstructions] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay' | 'cashfree'>('cod');
+  const [tip, setTip] = useState(0);
   const [coordinates, setCoordinates] = useState<{ lat?: number; lng?: number }>({});
 
   const [geocoding, setGeocoding] = useState(false);
@@ -125,7 +126,7 @@ export function CheckoutModal() {
   const isFreeDelivery = cartSubtotal >= threshold || deliveryMethod === 'pickup';
   const deliveryFee = isFreeDelivery ? 0 : CAFE_METADATA.deliveryFee;
   const tax = Math.round(cartSubtotal * CAFE_METADATA.taxRate * 100) / 100;
-  const grandTotal = cartSubtotal + deliveryFee + tax;
+  const grandTotal = cartSubtotal + deliveryFee + tax + tip;
 
   // Trigger GPS Geolocation
   const handleUseCurrentLocation = async () => {
@@ -220,18 +221,17 @@ export function CheckoutModal() {
       subtotal: cartSubtotal,
       deliveryFee,
       tax,
-      tip: 0,
+      tip: tip,
       total: grandTotal,
-      estimatedTime: deliveryMethod === 'delivery' ? '25-35 min' : '12-18 min',
+      estimatedTime: '',
       paymentMethod:
         paymentMethod === 'cod'
           ? deliveryMethod === 'delivery'
             ? 'Cash on Delivery'
             : 'Pay at Counter'
-          : paymentMethod === 'razorpay'
-          ? 'Razorpay UPI/Cards'
-          : 'Cashfree PG',
+          : 'Razorpay UPI/Cards',
       paymentStatus,
+      paymentReceivedAt: paymentStatus === 'paid' ? new Date().toISOString() : undefined,
     });
 
     try {
@@ -332,7 +332,7 @@ export function CheckoutModal() {
           key: rzpData.key,
           amount: rzpData.amount,
           currency: rzpData.currency,
-          name: 'Zafiroo Organic Store',
+          name: 'Zafiroo Organic Dairy Farm',
           description: `Order Payment (${cart.length} Farm Items)`,
           image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=200&auto=format&fit=crop',
           order_id: rzpData.id,
@@ -925,9 +925,6 @@ export function CheckoutModal() {
               <p className="leading-relaxed">
                 <strong>Address:</strong> {CAFE_METADATA.address}
               </p>
-              <p className="text-[#385A2A]">
-                Operating Hours: {CAFE_METADATA.hours}. Your order will be ready at the farm counter in ~15 minutes.
-              </p>
             </div>
           )}
 
@@ -981,26 +978,6 @@ export function CheckoutModal() {
                 <span className="text-xs font-bold">Razorpay UPI / Cards</span>
               </label>
 
-              <label
-                className={`p-3.5 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1.5 transition ${
-                  paymentMethod === 'cashfree'
-                    ? 'border-[#173612] bg-[#ECF5DE] text-[#0F240B] font-black shadow-xs'
-                    : 'border-gray-200 bg-white hover:bg-gray-50 text-[#173612]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <ShieldCheck className="w-4 h-4 text-[#173612]" />
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cashfree"
-                    checked={paymentMethod === 'cashfree'}
-                    onChange={() => setPaymentMethod('cashfree')}
-                    className="accent-[#173612]"
-                  />
-                </div>
-                <span className="text-xs font-bold">Cashfree PG</span>
-              </label>
             </div>
           </div>
 
@@ -1012,7 +989,7 @@ export function CheckoutModal() {
             </div>
             <ul className="space-y-1.5 text-[11px] text-[#173612]/90 leading-relaxed list-disc pl-4 font-medium">
               <li>
-                <strong>Glass Bottle Breakage:</strong> When glass bottle breaks the customer has to pay rupees 200 per bottle.
+                <strong>Glass Bottle Breakage:</strong> In case of glass bottle breakage or loss, please contact our team immediately for assistance.
               </li>
               <li>
                 <strong>Spot Verification:</strong> When your order is arrived please check the product carefully are all items available because ones you receive no exchange and return available so please check on the spot.
@@ -1037,6 +1014,37 @@ export function CheckoutModal() {
             </div>
           </div>
 
+          {/* Delivery Tip Section */}
+          {deliveryMethod === 'delivery' && (
+            <div className="p-4 bg-white rounded-2xl border border-[#CBE0A3] space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0F240B]">Add a Tip for Your Delivery Partner</span>
+                <span className="text-[10px] text-[#385A2A] font-medium bg-[#ECF5DE] px-2 py-0.5 rounded-full">Optional</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[0, 10, 20, 30].map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => setTip(amount)}
+                    className={`py-2 rounded-xl text-xs font-bold border-2 transition active:scale-95 ${
+                      tip === amount
+                        ? 'border-[#173612] bg-[#173612] text-white'
+                        : 'border-[#CBE0A3] bg-[#F5FAF0] text-[#173612] hover:border-[#173612]'
+                    }`}
+                  >
+                    {amount === 0 ? 'No Tip' : `₹${amount}`}
+                  </button>
+                ))}
+              </div>
+              {tip > 0 && (
+                <p className="text-[11px] text-[#385A2A] font-medium text-center">
+                  🙏 Thank you! ₹{tip} tip will be given to your delivery partner.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Bill Summary */}
           <div className="p-4 bg-[#F5FAF0] rounded-2xl border border-[#CBE0A3] space-y-2 text-xs text-[#173612]">
             <div className="flex justify-between">
@@ -1049,6 +1057,12 @@ export function CheckoutModal() {
                 {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
               </span>
             </div>
+            {tip > 0 && (
+              <div className="flex justify-between">
+                <span>Delivery Tip</span>
+                <span className="font-bold text-[#385A2A]">₹{tip}</span>
+              </div>
+            )}
             <div className="flex justify-between font-black text-sm text-[#0F240B] pt-2 border-t border-gray-200 font-bebas text-base">
               <span>Grand Total</span>
               <span className="text-[#0F240B] text-xl">₹{grandTotal.toFixed(2)}</span>

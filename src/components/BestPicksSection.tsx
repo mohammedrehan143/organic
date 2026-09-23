@@ -5,6 +5,7 @@ import { useOrder } from '@/context/OrderContext';
 import { MenuItem } from '@/types/cafe';
 import { Sparkles, Plus, Clock, Star } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export function BestPicksSection() {
   const { menuItems, setSelectedMenuDetail, addToCart } = useOrder();
@@ -125,13 +126,24 @@ export function BestPicksSection() {
                     >
                       Customize
                     </button>
-                    <button
-                      onClick={() => addToCart(item, 1)}
-                      className="p-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 rounded-xl shadow-warm-sm transition active:scale-95"
-                      title="Quick Add"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    {item.category === 'Organic Milk' ? (
+                      <Link
+                        href="/membership"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-4 py-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 rounded-xl shadow-warm-sm text-xs font-bold transition active:scale-95 flex items-center gap-1"
+                        title="Subscribe to daily fresh milk"
+                      >
+                        Subscribe
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => addToCart(item, 1)}
+                        className="p-2.5 bg-banhmi-red hover:bg-banhmi-redDark text-cream-50 rounded-xl shadow-warm-sm transition active:scale-95"
+                        title="Quick Add"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

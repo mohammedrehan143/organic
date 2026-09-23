@@ -2,20 +2,19 @@ import { MenuItem, DeliveryAgent, Order, SosAlert } from '@/types/cafe';
 
 export const CAFE_METADATA = {
   name: "Zafiroo",
-  brand: "Zafiroo Organic Store",
+  brand: "Zafiroo Organic Dairy Farm",
   tagline: "Wholesome Dairy & Farm-Fresh Organic Goods",
   subtitle: "Delivering wholesome organic products from our local farms to your table.",
-  phone: "+91 7259635948",
-  whatsapp: "+917259635948",
+  phone: "+91 7259635948, +91 9731301135",
+  whatsapp: "+91 7259635948, +91 9731301135",
   email: "care@zafiroo-organic.com",
   address: "Bylanarasapura, Hoskote Taluk, Bangalore - 562122",
-  hours: "Daily Morning & Evening Delivery: 6:00 AM – 9:30 PM",
+  hours: "",
   freeDeliveryThreshold: 0, // FREE DELIVERY FOR ALL PRODUCTS
   deliveryFee: 0,
   taxRate: 0, // GST removed
-  bottleBreakageFee: 200,
+  bottleBreakageFee: 0,
   termsAndPolicies: [
-    "When glass bottle breaks the customer has to pay rupees 200 per bottle.",
     "When your order is arrived please check the product carefully are all items available because ones you receive no exchange and return available so please check on the spot.",
     "When your eggs order has arrived please check weather the eggs are in good condition it should not be cracked or broken please check on the spot so you can get exchange.",
     "If the milk it broken you can contact directly to the Zafiroo agents so you can exchange and get fresh milk contact as soon as possible."
@@ -23,13 +22,13 @@ export const CAFE_METADATA = {
 };
 
 export const INITIAL_MENU_ITEMS: MenuItem[] = [
-  // --- ORGANIC MILK CATEGORY (Glass Bottle with Zafiroo Organic Milk label & Milk Splash) ---
+  // --- ORGANIC MILK CATEGORY ---
   {
     id: "org-milk-1l",
-    name: "Organic Milk in Glass Bottle (1 Litre)",
+    name: "Fresh milk (1L)",
     category: "Organic Milk",
     description: "Pure single-source certified organic milk in sterilized glass bottles labeled Zafiroo Organic Milk.",
-    detailedDescription: "Unadulterated single-source certified organic whole milk bottled in sterilized glass bottles with Zafiroo Organic Milk label. Non-homogenized with natural cream top and pure farm freshness. (Note: Reusable glass bottle policy applies — ₹200 fee in case of bottle breakage).",
+    detailedDescription: "Unadulterated single-source certified organic whole milk bottled in sterilized glass bottles with Zafiroo Organic Milk label. Non-homogenized with natural cream top and pure farm freshness.",
     price: "₹72",
     priceNumber: 72,
     image: "/images/zafiroo-organic-milk.png",
@@ -42,15 +41,15 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: true,
     displayOrder: 1,
     customizationOptions: {
-      portion: ["1 Litre Glass Bottle (₹72)", "Half Litre - 500ml Glass Bottle (₹38)"]
+      portion: ["1L Glass Bottle (₹72)", "Half Litre Glass Bottle (₹38)"]
     }
   },
   {
     id: "org-milk-half",
-    name: "Organic Milk in Glass Bottle (500ml)",
+    name: "Fresh milk (Half)",
     category: "Organic Milk",
-    description: "Pure certified organic milk in convenient half-litre (500ml) glass bottle with Zafiroo Organic Milk label.",
-    detailedDescription: "Fresh daily organic milk in a 500ml sterilized glass bottle with Zafiroo Organic Milk label, perfect for daily tea and coffee rituals. (Note: ₹200 glass bottle replacement fee applies if broken).",
+    description: "Pure certified organic milk in convenient half-litre glass bottle with Zafiroo Organic Milk label.",
+    detailedDescription: "Fresh daily organic milk in a half-litre sterilized glass bottle with Zafiroo Organic Milk label, perfect for daily tea and coffee rituals.",
     price: "₹38",
     priceNumber: 38,
     image: "/images/zafiroo-organic-milk.png",
@@ -63,7 +62,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: true,
     displayOrder: 2,
     customizationOptions: {
-      portion: ["Half Litre - 500ml Glass Bottle (₹38)", "1 Litre Glass Bottle (₹72)"]
+      portion: ["Half Litre Glass Bottle (₹38)", "1L Glass Bottle (₹72)"]
     }
   },
 

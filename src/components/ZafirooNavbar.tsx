@@ -84,7 +84,7 @@ export function ZafirooNavbar() {
             <div className="flex items-center gap-1 sm:gap-1.5">
               <span className="font-serif italic text-xs sm:text-sm text-[#43670F] font-bold">Zafiroo</span>
               <span className="text-base sm:text-xl font-black uppercase text-[#0F240B] font-bebas tracking-wide">
-                ORGANIC STORE
+                ORGANIC DAIRY FARM
               </span>
             </div>
             <span className="hidden xs:block text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-[#2E6125] -mt-1">

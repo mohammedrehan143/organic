@@ -42,7 +42,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, riderName, riderPhone, deliveryAgentId, rating, feedbackTags, feedbackNote, paymentStatus } = body;
+    const { status, riderName, riderPhone, deliveryAgentId, rating, feedbackTags, feedbackNote, paymentStatus, billApproved, paymentReceivedAt, paymentReceivedBy, paymentReceivedByPhone } = body;
 
     const extra: any = {};
     if (riderName !== undefined) extra.riderName = riderName;
@@ -52,6 +52,10 @@ export async function PATCH(
     if (feedbackTags !== undefined) extra.feedbackTags = feedbackTags;
     if (feedbackNote !== undefined) extra.feedbackNote = feedbackNote;
     if (paymentStatus !== undefined) extra.paymentStatus = paymentStatus;
+    if (billApproved !== undefined) extra.billApproved = billApproved;
+    if (paymentReceivedAt !== undefined) extra.paymentReceivedAt = paymentReceivedAt;
+    if (paymentReceivedBy !== undefined) extra.paymentReceivedBy = paymentReceivedBy;
+    if (paymentReceivedByPhone !== undefined) extra.paymentReceivedByPhone = paymentReceivedByPhone;
 
     const client = supabaseAdmin || supabase;
     let dbUpdatedOrder: any = null;
@@ -65,18 +69,18 @@ export async function PATCH(
           .or(`id.eq.${id},token_id.eq.${id}`)
           .maybeSingle();
 
-        if (existingDb && (existingDb.status === 'delivering' || existingDb.status === 'completed')) {
+        if (existingDb && existingDb.status === 'completed') {
           return NextResponse.json(
-            { success: false, message: 'Cannot cancel order once it is out for delivery or completed.' },
+            { success: false, message: 'Cannot cancel order once it is completed.' },
             { status: 400 }
           );
         }
       }
 
       const existingLocal = findLocalOrder(id);
-      if (existingLocal && (existingLocal.status === 'delivering' || existingLocal.status === 'completed')) {
+      if (existingLocal && existingLocal.status === 'completed') {
         return NextResponse.json(
-          { success: false, message: 'Cannot cancel order once it is out for delivery or completed.' },
+          { success: false, message: 'Cannot cancel order once it is completed.' },
           { status: 400 }
         );
       }
@@ -92,6 +96,10 @@ export async function PATCH(
       if (feedbackTags !== undefined) updateData.feedback_tags = feedbackTags;
       if (feedbackNote !== undefined) updateData.feedback_note = feedbackNote;
       if (paymentStatus !== undefined) updateData.payment_status = paymentStatus;
+      if (billApproved !== undefined) updateData.bill_approved = billApproved;
+      if (paymentReceivedAt !== undefined) updateData.payment_received_at = paymentReceivedAt;
+      if (paymentReceivedBy !== undefined) updateData.payment_received_by = paymentReceivedBy;
+      if (paymentReceivedByPhone !== undefined) updateData.payment_received_by_phone = paymentReceivedByPhone;
       if (status === 'completed') updateData.delivered_at = new Date().toISOString();
 
       const { data, error } = await client

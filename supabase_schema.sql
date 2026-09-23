@@ -82,6 +82,9 @@ CREATE TABLE IF NOT EXISTS orders (
     estimated_time VARCHAR(64) DEFAULT '25-35 min',
     payment_method VARCHAR(64) DEFAULT 'cod',
     payment_status VARCHAR(32) DEFAULT 'pending',
+    payment_received_at TIMESTAMPTZ,
+    payment_received_by VARCHAR(255),
+    payment_received_by_phone VARCHAR(20),
     rider_name VARCHAR(255),
     rider_phone VARCHAR(20),
     rating INT,
@@ -318,7 +321,8 @@ END $$;
 -- =========================================================
 INSERT INTO delivery_agents (id, name, phone, status, vehicle_type, orders_delivered_count)
 VALUES
-    ('AGT-9876-01', 'Aarav Sharma', '9876543201', 'active', 'Electric Eco-Van', 142),
+    ('AGT-SYED-01', 'SYED', '7259635948', 'active', 'Electric Eco-Van', 0),
+    ('AGT-9876-01', 'Aarav', '9876543201', 'active', 'Electric Eco-Van', 142),
     ('AGT-9876-02', 'Priya Nair', '9876543202', 'active', 'Insulated Farm Cargo Bike', 98),
     ('AGT-9876-03', 'Rahul Verma', '9876543203', 'active', 'Motorcycle', 215),
     ('AGT-9876-04', 'Vikram Singh', '9876543204', 'active', 'Refrigerated Scooter', 73)

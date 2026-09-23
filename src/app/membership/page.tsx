@@ -447,7 +447,7 @@ export default function MembershipPage() {
                   {/* Price Block */}
                   <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 space-y-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-amber-300">₹12,600</span>
+                      <span className="text-3xl sm:text-4xl font-black text-amber-300">₹12,960</span>
                     </div>
                     <div className="text-[11px] font-bold text-emerald-200">
                       1L/day at ₹70/L for 180 days
@@ -482,7 +482,7 @@ export default function MembershipPage() {
                     }}
                     className="btn-shining-gold w-full py-3.5 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Enroll in 6-Months Prepaid (₹12,600)</span>
+                    <span>Enroll in 6-Months Prepaid (₹12,960)</span>
                     <ArrowRight className="w-4 h-4 text-[#261603]" />
                   </button>
                   <p className="text-[11px] text-emerald-200 text-center mt-2">
@@ -1071,7 +1071,7 @@ export default function MembershipPage() {
                   <p className="text-xs text-gray-500">
                     {selectedPlanForEnroll === '1_month'
                       ? '₹2,160/mo • Postpaid Billing (₹0 due today, 1L/day × ₹72 × 30 days, settle at month-end)'
-                      : '₹12,600 for 180 Days • Prepaid VIP Scheme (1L/day × ₹70, Save ₹360)'}
+                      : '₹12,960 for 180 Days • Prepaid VIP Scheme (1L/day × ₹70, Save ₹360)'}
                   </p>
                 </div>
 
@@ -1163,7 +1163,7 @@ export default function MembershipPage() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 text-amber-300" />
-                        <span>Proceed to Prepaid VIP Checkout (₹12,600) →</span>
+                        <span>Proceed to Prepaid VIP Checkout (₹12,960) →</span>
                       </>
                     )}
                   </button>
@@ -1202,11 +1202,7 @@ export default function MembershipPage() {
                 <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
                   <div className="flex justify-between text-gray-700">
                     <span>6-Month VIP Club Scheme:</span>
-                    <span className="line-through text-gray-400">₹12,960.00</span>
-                  </div>
-                  <div className="flex justify-between text-emerald-800 font-bold">
-                    <span>VIP Plan Discount:</span>
-                    <span>-₹360.00</span>
+                    <span>₹12,960.00</span>
                   </div>
                   <div className="flex justify-between text-emerald-800">
                     <span>180 Days Daily Delivery Charges:</span>
@@ -1214,7 +1210,7 @@ export default function MembershipPage() {
                   </div>
                   <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
                     <span>Total Prepaid Amount:</span>
-                    <span className="text-2xl text-emerald-900 font-black">₹12,600.00</span>
+                    <span className="text-2xl text-emerald-900 font-black">₹12,960.00</span>
                   </div>
                 </div>
 
@@ -1281,7 +1277,7 @@ export default function MembershipPage() {
                     ) : (
                       <>
                         <Crown className="w-4 h-4 text-[#261603] fill-[#261603]" />
-                        <span>⚡ Pay ₹12,600 & Activate VIP Pass</span>
+                        <span>⚡ Pay ₹12,960 & Activate VIP Pass</span>
                       </>
                     )}
                   </button>

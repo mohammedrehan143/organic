@@ -89,7 +89,7 @@ export function FarmShopSection() {
             return (
               <div
                 key={item.id}
-                className={`bg-white rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 ${
+                className={`bg-white rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 min-w-0 ${
                   isInCart
                     ? 'border-[#173612] shadow-md ring-1 ring-[#173612]/30'
                     : 'border-[#EAF3E4] shadow-sm hover:shadow-xl'
@@ -116,7 +116,7 @@ export function FarmShopSection() {
                     <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow animate-pulse">
                       Out of Stock
                     </div>
-                  ) : isInCart ? (
+                  ) : isInCart && item.category !== 'Organic Milk' ? (
                     <div className="absolute top-3 right-3 bg-[#173612] text-[#ECF5DE] border border-[#CBE0A3] text-[10px] font-black px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
                       <Check className="w-3 h-3 text-[#CBE0A3]" />
                       <span>{itemQty} in basket</span>
@@ -158,8 +158,8 @@ export function FarmShopSection() {
                   </div>
 
                   {/* Price and Cart Buttons */}
-                  <div className="pt-3 sm:pt-4 border-t border-gray-100 flex items-center justify-between gap-2 sm:gap-3">
-                    <div>
+                  <div className="pt-3 sm:pt-4 border-t border-gray-100 flex items-center justify-between gap-2 sm:gap-3 w-full min-w-0">
+                    <div className="shrink-0">
                       <span className="text-[9px] sm:text-[10px] text-[#385A2A] uppercase font-bold block">
                         Direct Farm Price
                       </span>
@@ -168,7 +168,7 @@ export function FarmShopSection() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => setSelectedMenuDetail(item)}
@@ -177,7 +177,17 @@ export function FarmShopSection() {
                         Details
                       </button>
 
-                      {!item.isAvailable ? (
+                      {item.category === 'Organic Milk' ? (
+                        <Link
+                          href="/membership"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-[#173612] hover:bg-[#0F240B] text-white shadow-sm hover:shadow transition active:scale-95 flex items-center justify-center gap-1.5 font-bold text-[11px] sm:text-xs cursor-pointer"
+                          title="Subscribe to daily fresh milk"
+                        >
+                          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <span>Subscribe</span>
+                        </Link>
+                      ) : !item.isAvailable ? (
                         <button
                           type="button"
                           disabled

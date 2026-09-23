@@ -46,13 +46,13 @@ export default function TermsPage() {
           <div className="p-5 rounded-2xl bg-[#ECF5DE] border border-[#CBE0A3] space-y-2">
             <div className="flex items-center gap-2 font-bold text-[#0F240B] text-sm sm:text-base">
               <AlertTriangle className="w-5 h-5 text-[#173612] shrink-0" />
-              <span>1. Glass Bottle Breakage Policy (₹200 / Bottle)</span>
+              <span>1. Reusable Glass Bottle Policy</span>
             </div>
             <p className="text-xs sm:text-sm text-[#173612] font-semibold leading-relaxed pl-7">
-              When glass bottle breaks the customer has to pay rupees 200 per bottle.
+              All Zafiroo milk is supplied in sterilized, reusable glass bottles.
             </p>
             <p className="text-[11px] sm:text-xs text-[#173612]/80 leading-relaxed pl-7">
-              To support sustainable zero-waste dairying, all Zafiroo milk is supplied in sterilized, reusable glass bottles. Please return the empty bottles to our delivery agent upon the next order. In the case of bottle damage, cracks, or breakage, a replacement fee of ₹200 per bottle will be charged.
+              To support sustainable zero-waste dairying, please return empty bottles to our delivery partner during subsequent deliveries.
             </p>
           </div>
 

@@ -110,7 +110,7 @@ export function ZafirooHero() {
             Zafiroo
           </span>
           <h1 className="text-4xl xs:text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-wider font-bebas text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] leading-[0.9]">
-            ORGANIC STORE
+            ORGANIC DAIRY FARM
           </h1>
           <p className="text-sm xs:text-base sm:text-xl font-medium text-white/95 max-w-2xl mx-auto drop-shadow-md leading-relaxed px-2">
             Pure organic milk in glass bottles & farm-fresh white eggs delivered fresh from our local pastures in Bylanarasapura, Hoskote to your table.

@@ -29,7 +29,7 @@ const SCHOOL_PROGRAMS = [
   {
     title: 'Farm-To-School Fresh Milk Cartons',
     icon: Smile,
-    desc: 'Delivering cold, unflavored whole organic milk and chocolate dairy cartons to regional schools within 6 hours of morning pasteurization.',
+    desc: 'Delivering fresh, unflavored whole organic milk and chocolate dairy cartons to regional schools within 6 hours of morning pasteurization.',
   },
   {
     title: 'Mooga & Athletic Performance',

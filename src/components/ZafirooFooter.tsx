@@ -36,7 +36,7 @@ export function ZafirooFooter() {
 
           <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-3">
             <a
-              href={`https://wa.me/${CAFE_METADATA.whatsapp.replace(/[^0-9]/g, '')}?text=Hi%20Zafiroo,%20I%20would%20like%20to%20join%20the%20Official%20Zafiroo%20WhatsApp%20Channel%20for%20farm%20updates.`}
+              href="https://whatsapp.com/channel/0029Vb8YjWtKWEKsvp0VSr3D"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
@@ -148,9 +148,6 @@ export function ZafirooFooter() {
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/70">
-                Operating Hours: {CAFE_METADATA.hours}
-              </div>
             </div>
           </div>
         </div>
@@ -165,7 +162,7 @@ export function ZafirooFooter() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <span>© {new Date().getFullYear()} Zafiroo Organic Store. All Rights Reserved.</span>
+            <span>© {new Date().getFullYear()} Zafiroo Organic Dairy Farm. All Rights Reserved.</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6">

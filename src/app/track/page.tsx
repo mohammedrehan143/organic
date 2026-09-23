@@ -21,6 +21,7 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
+  FileText,
 } from 'lucide-react';
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
 import { BillModal } from '@/components/BillModal';
@@ -100,7 +101,7 @@ function OrderCard({
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-white animate-pulse shrink-0" />
             <span className="uppercase tracking-wider">
-              ORDER CANCELLED BEFORE OUT FOR DELIVERY
+              ORDER CANCELLED
             </span>
           </div>
           <span className="text-[10px] bg-white text-red-700 font-bold px-2 py-0.5 rounded uppercase">
@@ -352,7 +353,7 @@ function OrderCard({
             On-the-Spot Inspection Policy & Glass Bottle Care
           </p>
           <p className="text-[11px] leading-relaxed text-[#173612]/90">
-            When your order has arrived, please check the product carefully to confirm all items are intact. Once received and verified with our courier partner, no exchange or return is available. In case of glass bottle breakage or loss, a ₹200 replacement fee per bottle applies.
+            When your order has arrived, please check the product carefully to confirm all items are intact. Once received and verified with our courier partner, no exchange or return is available. In case of glass bottle breakage or loss, please contact our helpline immediately for assistance.
           </p>
         </div>
       </div>
@@ -472,6 +473,17 @@ function OrderCard({
         </div>
       </div>
 
+      {/* Payment Bill available once payment received + admin sent it */}
+      {order.paymentStatus === 'paid' && order.billApproved && (
+        <button
+          onClick={() => onOpenBill(order)}
+          className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md transition flex items-center justify-center gap-2"
+        >
+          <FileText className="w-4 h-4" />
+          <span>View / Print Payment Bill</span>
+        </button>
+      )}
+
       {/* If completed, show feedback component */}
       {order.status === 'completed' && (
         <OrderCompletionFeedback
@@ -479,7 +491,7 @@ function OrderCard({
           initialRating={order.rating}
           initialTags={order.feedbackTags}
           initialNote={order.feedbackNote}
-          onOpenBill={() => onOpenBill(order)}
+          onOpenBill={order.paymentStatus === 'paid' && order.billApproved ? () => onOpenBill(order) : undefined}
         />
       )}
     </div>
@@ -773,7 +785,7 @@ function TrackPageContent() {
                   <span>Cancelled Orders ({cancelledOrders.length})</span>
                 </h4>
                 <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
-                  Cancelled Prior To Dispatch
+                  Cancelled
                 </span>
               </div>
 

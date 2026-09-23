@@ -96,9 +96,12 @@ export function formatDbOrderToModel(row: any): Order {
     tax: Number(row.tax) || 0,
     tip: Number(row.tip) || 0,
     total: Number(row.total) || 0,
-    estimatedTime: row.estimated_time || '25-35 min',
+    estimatedTime: row.estimated_time || '',
     paymentMethod: row.payment_method || 'cod',
     paymentStatus: row.payment_status || 'pending',
+    paymentReceivedAt: row.payment_received_at || undefined,
+    paymentReceivedBy: row.payment_received_by || undefined,
+    paymentReceivedByPhone: row.payment_received_by_phone || undefined,
     riderName: row.rider_name || undefined,
     riderPhone: row.rider_phone || undefined,
     rating: typeof row.rating === 'number' ? row.rating : undefined,
@@ -106,6 +109,7 @@ export function formatDbOrderToModel(row: any): Order {
     feedbackNote: row.feedback_note || undefined,
     createdAt: row.created_at || new Date().toISOString(),
     deliveredAt: row.delivered_at || undefined,
+    billApproved: row.bill_approved || false,
   };
 }
 
@@ -134,9 +138,12 @@ export function formatModelToDbOrder(order: Order): any {
     tax: Number(order.tax) || 0,
     tip: Number(order.tip) || 0,
     total: Number(order.total) || 0,
-    estimated_time: order.estimatedTime || '25-35 min',
+    estimated_time: order.estimatedTime || '',
     payment_method: order.paymentMethod || 'cod',
     payment_status: order.paymentStatus || 'pending',
+    payment_received_at: order.paymentReceivedAt || null,
+    payment_received_by: order.paymentReceivedBy || null,
+    payment_received_by_phone: order.paymentReceivedByPhone || null,
     rider_name: order.riderName || null,
     rider_phone: order.riderPhone || null,
     rating: typeof order.rating === 'number' ? order.rating : null,
@@ -144,6 +151,7 @@ export function formatModelToDbOrder(order: Order): any {
     feedback_note: order.feedbackNote || null,
     created_at: order.createdAt || new Date().toISOString(),
     delivered_at: order.deliveredAt || null,
+    bill_approved: order.billApproved || false,
   };
 }
 

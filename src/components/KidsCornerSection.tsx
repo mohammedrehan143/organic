@@ -56,7 +56,7 @@ export function KidsCornerSection() {
               </h2>
 
               <p className="text-xs sm:text-base text-[#173612] leading-relaxed font-sans max-w-md mx-auto">
-                Throughout the year, Zafiroo Organic Store gives families the chance to win prizes, artisanal farm gift hampers, and delicious organic dairy subscriptions through seasonal farm challenges. Check out our latest giveaways and take part in the wholesome fun!
+                Throughout the year, Zafiroo Organic Dairy Farm gives families the chance to win prizes, artisanal farm gift hampers, and delicious organic dairy subscriptions through seasonal farm challenges. Check out our latest giveaways and take part in the wholesome fun!
               </p>
             </div>
 

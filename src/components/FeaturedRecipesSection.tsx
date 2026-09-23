@@ -51,6 +51,11 @@ export function FeaturedRecipesSection() {
 
   const handleAddIngredients = () => {
     const matchedItem = menuItems.find((m) => m.id === 'org-des1') || menuItems[0];
+    if (!matchedItem) return;
+    if (matchedItem.category === 'Organic Milk') {
+      window.location.href = '/membership';
+      return;
+    }
     if (matchedItem) {
       addToCart(matchedItem, 1);
       setAddedNotice(true);

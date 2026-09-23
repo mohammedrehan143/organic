@@ -44,12 +44,12 @@ function reindexAll(orders: Order[], store: typeof global.__zafiroo_server_store
 
 const DEFAULT_SERVER_AGENTS: DeliveryAgent[] = [
   {
-    id: "AGT-9876-01",
-    name: "Aarav Sharma",
-    phone: "9876543201",
+    id: "AGT-SYED-01",
+    name: "SYED",
+    phone: "+91 7259635948",
     status: "active",
     vehicleType: "Electric Eco-Van",
-    ordersDeliveredCount: 142,
+    ordersDeliveredCount: 0,
   }
 ];
 
