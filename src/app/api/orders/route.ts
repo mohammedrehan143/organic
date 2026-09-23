@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
       const { data, error, count } = await sbQuery;
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         dbOrders = data.map(formatDbOrderToModel);
         totalCount = count || dbOrders.length;
         return NextResponse.json({
@@ -75,6 +75,9 @@ export async function GET(req: NextRequest) {
           count: dbOrders.length,
         });
       }
+
+      // Supabase configured but returned no data — fall back to local store
+      console.warn('Supabase returned no orders, falling back to local store');
     }
 
     // Local in-memory fallback
