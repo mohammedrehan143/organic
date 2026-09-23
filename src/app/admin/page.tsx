@@ -878,9 +878,10 @@ export default function AdminPage() {
                         <span className="font-black text-banhmi-red font-mono">₹{pb.total}</span>
                         <button
                           onClick={() => updateOrderStatus(pb.id, pb.status as any, { billApproved: true } as any)}
-                          className="px-3.5 py-2 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-xl text-[11px] uppercase tracking-wider transition active:scale-95"
+                          className="px-3.5 py-2 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-xl text-[11px] uppercase tracking-wider transition active:scale-95 flex items-center gap-1.5"
                         >
-                          Send Payment Bill →
+                          <Lock className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Approve &amp; Unlock Bill →</span>
                         </button>
                       </div>
                     </div>
