@@ -98,6 +98,27 @@ export async function PATCH(
       if (paymentStatus !== undefined) updateData.payment_status = paymentStatus;
       if (status === 'completed') updateData.delivered_at = new Date().toISOString();
 
+      if (billApproved !== undefined) {
+        let currentTags = feedbackTags;
+        if (currentTags === undefined) {
+          const { data: existingRow } = await client
+            .from('orders')
+            .select('feedback_tags')
+            .or(`id.eq.${id},token_id.eq.${id}`)
+            .maybeSingle();
+          currentTags = Array.isArray(existingRow?.feedback_tags) ? [...existingRow.feedback_tags] : [];
+        } else {
+          currentTags = Array.isArray(currentTags) ? [...currentTags] : [];
+        }
+
+        if (billApproved) {
+          if (!currentTags.includes('__BILL_APPROVED__')) currentTags.push('__BILL_APPROVED__');
+        } else {
+          currentTags = currentTags.filter((t: string) => t !== '__BILL_APPROVED__');
+        }
+        updateData.feedback_tags = currentTags;
+      }
+
       const { data, error } = await client
         .from('orders')
         .update(updateData)

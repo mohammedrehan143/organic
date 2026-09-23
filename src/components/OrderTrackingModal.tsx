@@ -21,6 +21,7 @@ import {
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
 import { BillModal } from './BillModal';
 import { OrderCompletionFeedback } from './OrderCompletionFeedback';
+import { CustomerBillDownloadCard } from './CustomerBillDownloadCard';
 import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 import Link from 'next/link';
 
@@ -409,6 +410,9 @@ export function OrderTrackingModal() {
               </div>
             </div>
 
+            {/* Official Tax Invoice & Bill Download (Unlocked strictly by admin showbill approval) */}
+            <CustomerBillDownloadCard order={currentOrder} onOpenBill={() => setBillOpen(true)} />
+
             {/* If completed, show feedback component */}
             {currentOrder.status === 'completed' && (
               <OrderCompletionFeedback
@@ -416,7 +420,7 @@ export function OrderTrackingModal() {
                 initialRating={currentOrder.rating}
                 initialTags={currentOrder.feedbackTags}
                 initialNote={currentOrder.feedbackNote}
-                onOpenBill={() => setBillOpen(true)}
+                onOpenBill={currentOrder.billApproved ? () => setBillOpen(true) : undefined}
               />
             )}
 

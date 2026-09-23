@@ -113,11 +113,16 @@ export function formatDbOrderToModel(row: any): Order {
     riderName: row.rider_name || undefined,
     riderPhone: row.rider_phone || undefined,
     rating: typeof row.rating === 'number' ? row.rating : undefined,
-    feedbackTags: Array.isArray(row.feedback_tags) ? row.feedback_tags : [],
+    feedbackTags: Array.isArray(row.feedback_tags)
+      ? row.feedback_tags.filter((t: string) => t !== '__BILL_APPROVED__')
+      : [],
     feedbackNote: row.feedback_note || undefined,
     createdAt: row.created_at || new Date().toISOString(),
     deliveredAt: row.delivered_at || undefined,
-    billApproved: row.bill_approved || false,
+    billApproved: Boolean(
+      row.bill_approved ||
+      (Array.isArray(row.feedback_tags) && row.feedback_tags.includes('__BILL_APPROVED__'))
+    ),
   };
 }
 
@@ -125,6 +130,13 @@ export function formatDbOrderToModel(row: any): Order {
  * Frontend Order model to DB Row converter
  */
 export function formatModelToDbOrder(order: Order): any {
+  let dbFeedbackTags = Array.isArray(order.feedbackTags) ? [...order.feedbackTags] : [];
+  if (order.billApproved && !dbFeedbackTags.includes('__BILL_APPROVED__')) {
+    dbFeedbackTags.push('__BILL_APPROVED__');
+  } else if (order.billApproved === false) {
+    dbFeedbackTags = dbFeedbackTags.filter((t) => t !== '__BILL_APPROVED__');
+  }
+
   return {
     id: order.id,
     token_id: order.tokenId,
@@ -152,7 +164,7 @@ export function formatModelToDbOrder(order: Order): any {
     rider_name: order.riderName || null,
     rider_phone: order.riderPhone || null,
     rating: typeof order.rating === 'number' ? order.rating : null,
-    feedback_tags: Array.isArray(order.feedbackTags) ? order.feedbackTags : [],
+    feedback_tags: dbFeedbackTags,
     feedback_note: order.feedbackNote || null,
     created_at: order.createdAt || new Date().toISOString(),
     delivered_at: order.deliveredAt || null,

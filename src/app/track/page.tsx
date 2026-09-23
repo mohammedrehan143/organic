@@ -27,6 +27,7 @@ import {
 import { generateWhatsAppLocationShareLink } from '@/lib/whatsapp';
 import { BillModal } from '@/components/BillModal';
 import { OrderCompletionFeedback } from '@/components/OrderCompletionFeedback';
+import { CustomerBillDownloadCard } from '@/components/CustomerBillDownloadCard';
 import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 
 function OrderCard({
@@ -35,12 +36,14 @@ function OrderCard({
   totalCount,
   onOpenBill,
   onCancelOrder,
+  onFeedbackSubmitted,
 }: {
   order: Order;
   index: number;
   totalCount: number;
   onOpenBill: (order: Order) => void;
   onCancelOrder?: (orderId: string) => Promise<void>;
+  onFeedbackSubmitted?: (orderId: string, rating: number, tags: string[], note?: string) => void;
 }) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -475,16 +478,8 @@ function OrderCard({
         </div>
       </div>
 
-      {/* Payment Bill available once payment received + admin sent it */}
-      {order.paymentStatus === 'paid' && order.billApproved && (
-        <button
-          onClick={() => onOpenBill(order)}
-          className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md transition flex items-center justify-center gap-2"
-        >
-          <FileText className="w-4 h-4" />
-          <span>View / Print Payment Bill</span>
-        </button>
-      )}
+      {/* Customer Download Bill Option (Unlocked strictly by admin showbill approval) */}
+      <CustomerBillDownloadCard order={order} onOpenBill={() => onOpenBill(order)} />
 
       {/* If completed, show feedback component */}
       {order.status === 'completed' && (
@@ -493,7 +488,8 @@ function OrderCard({
           initialRating={order.rating}
           initialTags={order.feedbackTags}
           initialNote={order.feedbackNote}
-          onOpenBill={order.paymentStatus === 'paid' && order.billApproved ? () => onOpenBill(order) : undefined}
+          onOpenBill={order.billApproved ? () => onOpenBill(order) : undefined}
+          onFeedbackSubmitted={onFeedbackSubmitted}
         />
       )}
     </div>
@@ -678,6 +674,16 @@ function TrackPageContent() {
     }
   };
 
+  const handleFeedbackSubmitted = (orderId: string, rating: number, tags: string[], note?: string) => {
+    setCustomerOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId || o.tokenId === orderId
+          ? { ...o, rating, feedbackTags: tags, feedbackNote: note }
+          : o
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8 text-[#173612]">
       {/* Title & Lookup Header */}
@@ -785,25 +791,8 @@ function TrackPageContent() {
             )}
           </div>
 
-          {activeOrders.length === 0 && cancelledOrders.length === 0 ? (
-            <div className="p-8 sm:p-12 bg-white rounded-3xl border border-[#EAF3E4] text-center space-y-3 shadow-sm">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-              <h4 className="font-bold text-[#0F240B] text-base">
-                No active orders in transit
-              </h4>
-              <p className="text-xs text-[#173612]/70 max-w-md mx-auto">
-                {completedOrders.length > 0
-                  ? 'All previous orders have been completed and delivered! You can inspect your past orders below.'
-                  : `No orders are currently placed for ${searchedPhone ? `+91 ${searchedPhone}` : searchQuery}. Place an order from our farm store to track it live here.`}
-              </p>
-              <Link
-                href="/menu"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-bold text-xs rounded-full shadow-md transition"
-              >
-                <span>Shop Fresh Milk &amp; Eggs</span>
-              </Link>
-            </div>
-          ) : activeOrders.length > 0 ? (
+          {/* 1. Active Orders in Transit */}
+          {activeOrders.length > 0 && (
             <div className="space-y-6">
               {activeOrders.map((order, idx) => (
                 <OrderCard
@@ -813,12 +802,41 @@ function TrackPageContent() {
                   totalCount={activeOrders.length}
                   onOpenBill={handleOpenBill}
                   onCancelOrder={handleCancelOrder}
+                  onFeedbackSubmitted={handleFeedbackSubmitted}
                 />
               ))}
             </div>
-          ) : null}
+          )}
 
-          {/* Dedicated Cancelled Orders Section */}
+          {/* 2. Delivered Orders with Direct Feedback Form */}
+          {completedOrders.length > 0 && (
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center justify-between pb-1 border-b border-emerald-100">
+                <h4 className="text-sm font-black uppercase tracking-wider text-[#0F240B] flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Delivered Orders ({completedOrders.length})</span>
+                </h4>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                  Delivered Fresh
+                </span>
+              </div>
+
+              <div className="space-y-6">
+                {completedOrders.map((order, idx) => (
+                  <OrderCard
+                    key={order.id || order.tokenId}
+                    order={order}
+                    index={idx}
+                    totalCount={completedOrders.length}
+                    onOpenBill={handleOpenBill}
+                    onFeedbackSubmitted={handleFeedbackSubmitted}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Dedicated Cancelled Orders Section */}
           {cancelledOrders.length > 0 && (
             <div className="space-y-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between pb-1">
@@ -845,45 +863,22 @@ function TrackPageContent() {
             </div>
           )}
 
-          {/* 3. PAST DELIVERED ORDERS SECTION */}
-          {completedOrders.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-black uppercase tracking-wider text-[#0F240B] flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <span>Past Delivered Deliveries ({completedOrders.length})</span>
+          {/* 4. Empty State (Only when zero orders exist) */}
+          {customerOrders.length === 0 && (
+            <div className="p-8 sm:p-12 bg-white rounded-3xl border border-[#EAF3E4] text-center space-y-3 shadow-sm">
+              <CheckCircle2 className="w-10 h-10 text-[#173612] mx-auto" />
+              <h4 className="font-bold text-[#0F240B] text-base">
+                No orders found
               </h4>
-
-              <div className="space-y-3">
-                {completedOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="p-4 sm:p-5 bg-white rounded-2xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-sm"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-[#0F240B]">#{order.tokenId}</span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          Delivered & Enjoyed
-                        </span>
-                        <span className="text-[11px] text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-gray-700 mt-1">
-                        {order.items.map((i) => `${i.quantity}x ${i.menuItem.name}`).join(', ')}
-                      </p>
-                      <p className="font-bold text-[#0F240B] mt-0.5">
-                        Total Paid: ₹{typeof order.total === 'number' ? order.total.toFixed(2) : order.total} ({order.paymentMethod})
-                      </p>
-                    </div>
-
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-[#173612]/70 max-w-md mx-auto">
+                No orders were found for {searchedPhone ? `+91 ${searchedPhone}` : searchQuery}. Place an order from our farm store to track it live here.
+              </p>
+              <Link
+                href="/menu"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#173612] hover:bg-[#0F240B] text-white font-bold text-xs rounded-full shadow-md transition"
+              >
+                <span>Shop Fresh Milk &amp; Eggs</span>
+              </Link>
             </div>
           )}
         </div>

@@ -465,7 +465,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           const data = await res.json();
           if (data.success && data.order) {
             setActiveTrackingOrder(prev => {
-              if (prev && (prev.status !== data.order.status || prev.paymentStatus !== data.order.paymentStatus || prev.riderName !== data.order.riderName)) {
+              if (prev && (prev.status !== data.order.status || prev.paymentStatus !== data.order.paymentStatus || prev.riderName !== data.order.riderName || prev.billApproved !== data.order.billApproved)) {
                 return data.order;
               }
               return prev;
@@ -473,7 +473,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             setOrders(prev => {
               let hasChange = false;
               const next = prev.map(o => {
-                if ((o.id === data.order.id || o.tokenId === data.order.tokenId) && (o.status !== data.order.status || o.paymentStatus !== data.order.paymentStatus || o.riderName !== data.order.riderName)) {
+                if ((o.id === data.order.id || o.tokenId === data.order.tokenId) && (o.status !== data.order.status || o.paymentStatus !== data.order.paymentStatus || o.riderName !== data.order.riderName || o.billApproved !== data.order.billApproved)) {
                   hasChange = true;
                   return data.order;
                 }

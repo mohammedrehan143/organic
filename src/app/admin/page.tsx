@@ -1093,24 +1093,35 @@ export default function AdminPage() {
                   {/* Order Footer & Actions */}
                   <div className="p-5 border-t border-cream-200 bg-cream-50/40 space-y-3">
                     <div className="flex items-center justify-between text-xs font-bold text-espresso-950">
-                       <div className="flex items-center gap-2">
+                       <div className="flex flex-wrap items-center gap-2">
                          <button
                            onClick={() => updateOrderStatus(order.id, order.status as any, { billApproved: !order.billApproved } as any)}
-                           className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition ${order.billApproved ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : order.paymentStatus === 'paid' ? "bg-emerald-600 text-white border border-emerald-600" : "bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100"}`}
+                           className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition cursor-pointer active:scale-95 shadow-xs ${
+                             order.billApproved
+                               ? "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700"
+                               : "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                           }`}
+                           title={order.billApproved ? "Customer can download bill. Click to revoke access." : "Customer cannot download bill. Click to grant access."}
                          >
-                           {order.billApproved
-                             ? "✓ Bill Sent to Customer"
-                             : order.paymentStatus === 'paid'
-                             ? "💵 Send Payment Bill"
-                             : "✓ Approve Bill"}
+                           {order.billApproved ? (
+                             <>
+                               <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                               <span>✓ Bill Download UNLOCKED</span>
+                             </>
+                           ) : (
+                             <>
+                               <Lock className="w-3.5 h-3.5 text-amber-800" />
+                               <span>🔓 Show Bill (Unlock Customer Download)</span>
+                             </>
+                           )}
                          </button>
-                      <button
-                        onClick={() => setActiveBillOrder(order)}
-                        className="text-banhmi-red hover:underline flex items-center gap-1 text-[11px]"
-                      >
-                        <Printer className="w-3 h-3" />
-                        <span>Print Bill</span>
-                      </button>
+                         <button
+                           onClick={() => setActiveBillOrder(order)}
+                           className="px-3 py-1.5 bg-white hover:bg-cream-100 border border-cream-300 rounded-xl text-espresso-800 hover:text-espresso-950 flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
+                         >
+                           <Printer className="w-3.5 h-3.5 text-[#173612]" />
+                           <span>Preview / Print</span>
+                         </button>
                        </div>
                     </div>
 

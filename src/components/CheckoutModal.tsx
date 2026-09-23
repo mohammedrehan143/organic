@@ -32,6 +32,8 @@ import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import { Order } from '@/types/cafe';
 import { BillModal } from './BillModal';
+import { OrderCompletionFeedback } from './OrderCompletionFeedback';
+import { CustomerBillDownloadCard } from './CustomerBillDownloadCard';
 import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 
 // Helper to load official Razorpay Checkout SDK
@@ -588,6 +590,20 @@ export function CheckoutModal() {
                   <span className="text-base text-emerald-800">₹{liveOrder.total.toFixed(2)}</span>
                 </div>
               </div>
+
+              {/* Official Tax Invoice & Bill Download (Unlocked strictly by admin showbill approval) */}
+              <CustomerBillDownloadCard order={liveOrder} onOpenBill={() => setBillModalOpen(true)} />
+
+              {/* If order is delivered, show feedback option right on screen */}
+              {liveOrder.status === 'completed' && (
+                <OrderCompletionFeedback
+                  orderId={liveOrder.id}
+                  initialRating={liveOrder.rating}
+                  initialTags={liveOrder.feedbackTags}
+                  initialNote={liveOrder.feedbackNote}
+                  onOpenBill={liveOrder.billApproved ? () => setBillModalOpen(true) : undefined}
+                />
+              )}
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
