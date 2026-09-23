@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
       if (!error && data && data.length > 0) {
         dbOrders = data.map(formatDbOrderToModel);
         totalCount = count || dbOrders.length;
+        console.log(`Supabase returned ${dbOrders.length} orders`);
         return NextResponse.json({
           success: true,
           orders: dbOrders,
@@ -73,11 +74,16 @@ export async function GET(req: NextRequest) {
           page,
           limit,
           count: dbOrders.length,
+          source: 'supabase',
         });
       }
 
-      // Supabase configured but returned no data — fall back to local store
-      console.warn('Supabase returned no orders, falling back to local store');
+      // Supabase configured but returned no data or error — fall back to local store
+      if (error) {
+        console.warn('Supabase query error, falling back to local store:', error.message);
+      } else {
+        console.warn('Supabase returned empty result, falling back to local store');
+      }
     }
 
     // Local in-memory fallback
@@ -89,6 +95,7 @@ export async function GET(req: NextRequest) {
       offset,
     });
 
+    console.log(`Local store returned ${localFiltered.length} orders`);
     return NextResponse.json({
       success: true,
       orders: localFiltered,
@@ -140,25 +147,50 @@ export async function POST(req: NextRequest) {
       createdAt: body.createdAt || new Date().toISOString(),
     };
 
-    // 3. Persist to Supabase
+    // 3. Persist to Supabase (with verification)
+    let supabaseSuccess = false;
     if (isSupabaseConfigured && client) {
       const dbRow = formatModelToDbOrder(newOrder);
-      const { error } = await client.from('orders').insert(dbRow);
-
-      if (error) {
-        console.warn('Supabase insert warning, trying fallback with unlinked FKs:', error.message);
-        // If FK constraint caused failure, retry without customer_id or delivery_agent_id
-        if (error.code === '23503') {
-          const safeRow = { ...dbRow, customer_id: null, delivery_agent_id: null };
-          await client.from('orders').insert(safeRow);
+      try {
+        const { error, data } = await client
+          .from('orders')
+          .insert(dbRow)
+          .select()
+          .single();
+        
+        if (!error && data) {
+          supabaseSuccess = true;
+          console.log('Order persisted to Supabase:', data.id);
+        } else {
+          console.warn('Supabase insert error:', error?.message);
+          // Retry without FKs if constraint error
+          if (error?.code === '23503') {
+            const safeRow = { ...dbRow, customer_id: null, delivery_agent_id: null };
+            const { error: err2, data: data2 } = await client
+              .from('orders')
+              .insert(safeRow)
+              .select()
+              .single();
+            if (!err2 && data2) {
+              supabaseSuccess = true;
+              console.log('Order persisted to Supabase (FK fallback):', data2.id);
+            }
+          }
         }
+      } catch (e) {
+        console.warn('Supabase insert exception:', e);
       }
     }
 
-    // 4. Persist to local server store
+    // 4. Always persist to local server store (fallback for dev / when Supabase unavailable)
     addLocalOrder(newOrder);
 
-    return NextResponse.json({ success: true, order: newOrder }, { status: 201 });
+    return NextResponse.json({ 
+      success: true, 
+      order: newOrder,
+      persistedToSupabase: supabaseSuccess,
+      source: supabaseSuccess ? 'supabase' : 'local'
+    }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
