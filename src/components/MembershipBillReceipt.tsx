@@ -118,6 +118,9 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
             Daily Sunrise Route: 6:00 AM - 7:30 AM
           </p>
           <p className="flex items-center gap-1 text-[11px] text-gray-800">
+            <span>Daily Packaging: <strong className="text-[#173612]">{membership.bottlePreference === '2 * 500ml' ? '2 * 500ml Glass Bottles' : '1L Single Glass Bottle'}</strong></span>
+          </p>
+          <p className="flex items-center gap-1 text-[11px] text-gray-800">
             <CreditCard className="w-3.5 h-3.5 text-gray-600" />
             <span>Billing Model: <strong className="uppercase">{membership.billingType}</strong></span>
           </p>
@@ -153,6 +156,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
                   <strong className="text-gray-900 text-xs">{membership.planName}</strong>
                 </div>
                 <div className="text-[10px] text-gray-600 space-y-0.5 mt-1 leading-snug">
+                  <p>• Daily Milk Packaging: <strong>{membership.bottlePreference === '2 * 500ml' ? 'Two 500ml sterilized glass bottles' : 'One 1L sterilized glass bottle'}</strong></p>
                   <p>• 100% Free Doorstep Delivery every single morning (Zero delivery charges)</p>
                   <p>• Zero minimum order threshold on Farm-Fresh Milk &amp; Nati Eggs</p>
                   <p>• Priority sunrise morning delivery dispatch straight from Bylanarasapura pasture farm</p>

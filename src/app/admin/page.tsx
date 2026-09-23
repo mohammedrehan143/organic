@@ -2042,8 +2042,8 @@ export default function AdminPage() {
 
                 const waMessage = encodeURIComponent(
                   isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹2,160 for 30 days of free daily deliveries is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
-                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹2,160 for 30 days of free daily deliveries (${m.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Bottle'} Daily) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${m.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Bottle'} Daily) with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
                 );
 
                 return (
@@ -2082,6 +2082,11 @@ export default function AdminPage() {
 
                         <span className="text-xs font-mono font-bold text-espresso-500 bg-cream-100 px-2.5 py-1 rounded-xl">
                           ID: {m.id}
+                        </span>
+
+                        {/* Daily Packaging Option Badge */}
+                        <span className="text-[11px] font-bold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                          🥛 <span>{m.bottlePreference === '2 * 500ml' ? '2 * 500ml Daily' : '1L Daily'}</span>
                         </span>
 
                         {/* Membership Bill Approval Toggle */}
@@ -2162,6 +2167,12 @@ export default function AdminPage() {
                               <span className="truncate">{m.customerEmail}</span>
                             </div>
                           )}
+                          <div className="pt-1 flex items-center gap-1 text-[11px] text-emerald-800 font-bold">
+                            <span>Packaging:</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
+                              {m.bottlePreference === '2 * 500ml' ? '2 × 500ml Glass Bottles' : '1L Single Glass Bottle'}
+                            </span>
+                          </div>
                         </div>
                       </div>
 

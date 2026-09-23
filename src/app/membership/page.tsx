@@ -66,6 +66,7 @@ export default function MembershipPage() {
   const [enrollPhone, setEnrollPhone] = useState('');
   const [enrollAddress, setEnrollAddress] = useState('');
   const [enrollEmail, setEnrollEmail] = useState('');
+  const [enrollBottlePreference, setEnrollBottlePreference] = useState<'1L' | '2 * 500ml'>('1L');
   const [prepaidPaymentMethod, setPrepaidPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [enrollError, setEnrollError] = useState('');
@@ -218,6 +219,7 @@ export default function MembershipPage() {
           customerEmail: enrollEmail.trim() || undefined,
           address: enrollAddress.trim() || undefined,
           planType: '1_month',
+          bottlePreference: enrollBottlePreference,
         }),
       });
 
@@ -255,6 +257,7 @@ export default function MembershipPage() {
           customerEmail: enrollEmail.trim() || undefined,
           address: enrollAddress.trim() || undefined,
           planType: '6_months',
+          bottlePreference: enrollBottlePreference,
           paymentMethod: prepaidPaymentMethod,
           paymentStatus: 'paid',
         }),
@@ -413,6 +416,7 @@ export default function MembershipPage() {
                   <button
                     onClick={() => {
                       setSelectedPlanForEnroll('1_month');
+                      setEnrollBottlePreference('1L');
                       setEnrollStep('details');
                       setEnrollSuccess(null);
                       setEnrollError('');
@@ -423,7 +427,7 @@ export default function MembershipPage() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <p className="text-[11px] text-gray-500 text-center mt-2">
-                    1L milk/day at ₹72/L. Pay ₹2,160 at month-end.
+                    1L/day (or 2 × 500ml) at ₹72/L. Pay ₹2,160 at month-end.
                   </p>
                 </div>
               </div>
@@ -481,6 +485,7 @@ export default function MembershipPage() {
                   <button
                     onClick={() => {
                       setSelectedPlanForEnroll('6_months');
+                      setEnrollBottlePreference('1L');
                       setEnrollStep('details');
                       setEnrollSuccess(null);
                       setEnrollError('');
@@ -491,7 +496,7 @@ export default function MembershipPage() {
                     <ArrowRight className="w-4 h-4 text-[#261603]" />
                   </button>
                   <p className="text-[11px] text-emerald-200 text-center mt-2">
-                    1L milk/day at ₹70/L. Prepaid upfront for 180 days.
+                    1L/day (or 2 × 500ml) at ₹70/L. Prepaid upfront for 180 days.
                   </p>
                 </div>
               </div>
@@ -758,7 +763,7 @@ export default function MembershipPage() {
 
                       {/* Scheme & Billing Badge */}
                       <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-3 mb-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <span className="text-amber-300 text-[10px] font-black uppercase tracking-widest block">
                               Current Scheme
@@ -767,15 +772,20 @@ export default function MembershipPage() {
                               {m.planName}
                             </span>
                           </div>
-                          <span
-                            className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg ${
-                              m.billingType === 'postpaid'
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
-                                : 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
-                            }`}
-                          >
-                            {m.billingType === 'postpaid' ? 'Postpaid' : 'Prepaid'}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">
+                              🥛 {m.bottlePreference === '2 * 500ml' ? '2 * 500ml' : '1L'} Daily
+                            </span>
+                            <span
+                              className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg ${
+                                m.billingType === 'postpaid'
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
+                                  : 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                              }`}
+                            >
+                              {m.billingType === 'postpaid' ? 'Postpaid' : 'Prepaid'}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Progress to Expiry */}
@@ -826,19 +836,15 @@ export default function MembershipPage() {
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Priority Morning Delivery</span>
+                            <span>Packaging: {m.bottlePreference === '2 * 500ml' ? '2 × 500ml Glass Bottles' : '1L Glass Bottle'}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Priority Sunrise Morning Delivery</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
                             <span>Zero Bottle Breakage Deposit</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
-                            <span>
-                              {m.billingType === 'postpaid'
-                                ? 'Month-End Postpaid Settlement'
-                                : 'VIP Prepaid — 6 Months Active'}
-                            </span>
                           </div>
                         </div>
                       </div>
@@ -1048,6 +1054,12 @@ export default function MembershipPage() {
                     <strong className="uppercase">{enrollSuccess.planName}</strong>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Daily Milk Packaging:</span>
+                    <strong className="text-emerald-800 font-black">
+                      {enrollSuccess.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Single Bottle'}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Billing Mode:</span>
                     <strong className="uppercase text-emerald-800 font-black">{enrollSuccess.billingType}</strong>
                   </div>
@@ -1145,6 +1157,29 @@ export default function MembershipPage() {
                     </div>
                   </div>
 
+                  {/* DAILY MILK PACKAGING DROPDOWN */}
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+                      <span>Daily Milk Bottle Packaging *</span>
+                      <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Sterilized Glass Bottles
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={enrollBottlePreference}
+                        onChange={(e) => setEnrollBottlePreference(e.target.value as '1L' | '2 * 500ml')}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
+                      >
+                        <option value="1L">1L (Single 1 Litre Bottle / Day)</option>
+                        <option value="2 * 500ml">2 * 500ml (Two 500ml Bottles / Day)</option>
+                      </select>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Choose between a single 1L glass bottle or two 500ml bottles delivered fresh every morning.
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block font-bold text-gray-700 mb-1">
                       Delivery Address
@@ -1232,6 +1267,12 @@ export default function MembershipPage() {
                   <div className="flex justify-between text-gray-700">
                     <span>6-Month VIP Club Scheme:</span>
                     <span>₹12,960.00</span>
+                  </div>
+                  <div className="flex justify-between text-gray-700">
+                    <span>Daily Packaging Option:</span>
+                    <strong className="text-emerald-900 font-bold">
+                      {enrollBottlePreference === '2 * 500ml' ? '2 * 500ml Glass Bottles' : '1L Single Glass Bottle'}
+                    </strong>
                   </div>
                   <div className="flex justify-between text-emerald-800">
                     <span>180 Days Daily Delivery Charges:</span>

@@ -168,6 +168,7 @@ export interface AdminCredentials {
 export type MembershipPlanType = '1_month' | '6_months';
 export type MembershipBillingType = 'postpaid' | 'prepaid';
 export type MembershipStatus = 'active' | 'expired' | 'cancelled';
+export type MilkBottlePreference = '1L' | '2 * 500ml';
 
 export interface Membership {
   id: string;
@@ -175,6 +176,7 @@ export interface Membership {
   customerName: string;
   customerEmail?: string;
   address?: string;
+  bottlePreference?: MilkBottlePreference | string;
   planType: MembershipPlanType;
   planName: string;
   billingType: MembershipBillingType;

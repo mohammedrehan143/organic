@@ -16,12 +16,16 @@ function formatDbRowToMembership(row: any): Membership {
   const billApproved = Boolean(row.bill_approved) || rawStatus.includes('__BILL_APPROVED__');
   const cleanPaymentStatus = rawStatus.replace('__BILL_APPROVED__', '').trim() || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle');
 
+  const bottlePreference = row.bottle_preference ||
+    (row.plan_name && (row.plan_name.includes('2 * 500ml') || row.plan_name.includes('2*500ml') || row.plan_name.includes('500ml')) ? '2 * 500ml' : '1L');
+
   return {
     id: row.id,
     phone: row.phone,
     customerName: row.customer_name,
     customerEmail: row.customer_email || undefined,
     address: row.address || undefined,
+    bottlePreference,
     planType: row.plan_type,
     planName: row.plan_name,
     billingType: row.billing_type,
@@ -167,7 +171,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { phone, customerName, customerEmail, address, planType } = body;
+    const { phone, customerName, customerEmail, address, planType, bottlePreference } = body;
 
     if (!phone) {
       return NextResponse.json({ success: false, message: 'Phone number is required.' }, { status: 400 });
@@ -188,10 +192,12 @@ export async function POST(req: NextRequest) {
     const cleanName = customerName.trim();
     const selectedPlan: MembershipPlanType = planType === '6_months' ? '6_months' : '1_month';
     const isSixMonths = selectedPlan === '6_months';
+    const selectedBottlePref = bottlePreference === '2 * 500ml' ? '2 * 500ml' : '1L';
 
-    const planName = isSixMonths
+    const basePlanName = isSixMonths
       ? '6 Months VIP Club (Prepaid)'
       : '1 Month Organic Pass (Postpaid)';
+    const planName = `${basePlanName} • ${selectedBottlePref}`;
     const billingType: MembershipBillingType = isSixMonths ? 'prepaid' : 'postpaid';
     const price = isSixMonths ? 12600 : 2160;
     const durationDays = isSixMonths ? 180 : 30;
@@ -206,6 +212,7 @@ export async function POST(req: NextRequest) {
       customerName: cleanName,
       customerEmail: customerEmail ? customerEmail.trim() : undefined,
       address: address ? address.trim() : undefined,
+      bottlePreference: selectedBottlePref,
       planType: selectedPlan,
       planName,
       billingType,
