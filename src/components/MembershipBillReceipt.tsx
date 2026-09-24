@@ -40,14 +40,17 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
     const duration = isSixMonths ? 180 : 30;
     if (membership.price > 0) {
       const perDay = membership.price / duration;
-      dailyQty = Math.round(perDay) === 38 ? 0.5 : Math.max(1, Math.round(perDay / 72));
+      const halfRate = isSixMonths ? 36 : 38;
+      const fullRate = isSixMonths ? 70 : 72;
+      dailyQty = Math.round(perDay) === halfRate ? 0.5 : Math.max(1, Math.round(perDay / fullRate));
     } else {
       dailyQty = 1;
     }
   }
 
   const isHalfLiter = dailyQty === 0.5;
-  const dailyRate = isHalfLiter ? 38 : dailyQty * 72;
+  const unitRate = isSixMonths ? (isHalfLiter ? 36 : 70) : (isHalfLiter ? 38 : 72);
+  const dailyRate = isHalfLiter ? (isSixMonths ? 36 : 38) : dailyQty * (isSixMonths ? 70 : 72);
   const dailyQuantityLabel = isHalfLiter ? '0.5 L (Half Liter) / Day' : `${dailyQty} ${dailyQty === 1 ? 'Litre' : 'Litres'} / Day`;
   
   const packagingLabel = isHalfLiter
@@ -189,7 +192,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
                 </div>
                 <div className="text-[10px] text-gray-600 space-y-0.5 mt-1 leading-snug">
                   <p className="text-[#173612] font-black">
-                    • Daily Milk Allocation: <strong>{dailyQuantityLabel}</strong> ({isHalfLiter ? '₹38 / half liter' : `₹72 / Litre × ${dailyQty}L = ₹${dailyRate}/day`})
+                    • Daily Milk Allocation: <strong>{dailyQuantityLabel}</strong> ({isHalfLiter ? `₹${unitRate} / half liter` : `₹${unitRate} / Litre × ${dailyQty}L = ₹${dailyRate}/day`})
                   </p>
                   <p>• Daily Milk Packaging: <strong>{packagingLabel}</strong></p>
                   <p>• 100% Free Doorstep Delivery every single morning (Zero delivery charges)</p>

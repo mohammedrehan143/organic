@@ -149,7 +149,7 @@ export function MembershipSection() {
                 </p>
               </div>
               <div className="text-3xl font-black text-amber-300">
-                ₹12,960 <span className="text-xs text-emerald-200 font-normal">/ 180 Days (1L/day @ ₹72, or Half Liter @ ₹38)</span>
+                ₹12,600 <span className="text-xs text-emerald-200 font-normal">/ 180 Days (VIP • 1L/day @ ₹70, or Half Liter @ ₹36)</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-200">
                 <li className="flex items-center gap-2">

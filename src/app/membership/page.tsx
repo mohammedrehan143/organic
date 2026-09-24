@@ -425,10 +425,12 @@ export default function MembershipPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6">
         {/* TAB 1: SCHEMES COMPARISON */}
         {activeTab === 'schemes' && (() => {
-          const schemesDailyPrice = schemesDailyQuantity === 0.5 ? 38 : schemesDailyQuantity * 72;
-          const schemesMonthTotal = schemesDailyPrice * 30;
-          const schemesSixMonthTotal = schemesDailyPrice * 180;
-          const schemesQtyLabel = schemesDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${schemesDailyQuantity}L`;
+          const isHalf = schemesDailyQuantity === 0.5;
+          const monthDailyPrice = isHalf ? 38 : schemesDailyQuantity * 72;
+          const sixMonthDailyPrice = isHalf ? 36 : schemesDailyQuantity * 70;
+          const schemesMonthTotal = monthDailyPrice * 30;
+          const schemesSixMonthTotal = sixMonthDailyPrice * 180;
+          const schemesQtyLabel = isHalf ? 'Half Liter (0.5L)' : `${schemesDailyQuantity}L`;
 
           return (
             <div className="space-y-8">
@@ -443,24 +445,24 @@ export default function MembershipPage() {
                       Select Daily Milk Requirement (Doorstep Sunrise Delivery)
                     </h3>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-black px-3.5 py-1.5 bg-[#173612] text-amber-300 rounded-full self-start sm:self-auto shadow-sm">
-                    🥛 ₹{schemesDailyPrice} / Day
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 bg-[#173612] text-amber-300 rounded-full self-start sm:self-auto shadow-sm">
+                    🥛 1-Mo: ₹{monthDailyPrice}/d • 6-Mo VIP: ₹{sixMonthDailyPrice}/d
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
                   {[
-                    { value: 0.5, label: 'Half Liter', sub: '₹38 / day' },
-                    { value: 1, label: '1 Litre', sub: '₹72 / day' },
-                    { value: 2, label: '2 Litres', sub: '₹144 / day' },
-                    { value: 3, label: '3 Litres', sub: '₹216 / day' },
-                    { value: 4, label: '4 Litres', sub: '₹288 / day' },
-                    { value: 5, label: '5 Litres', sub: '₹360 / day' },
-                    { value: 6, label: '6 Litres', sub: '₹432 / day' },
-                    { value: 7, label: '7 Litres', sub: '₹504 / day' },
-                    { value: 8, label: '8 Litres', sub: '₹576 / day' },
-                    { value: 9, label: '9 Litres', sub: '₹648 / day' },
-                    { value: 10, label: '10 Litres', sub: '₹720 / day' },
+                    { value: 0.5, label: 'Half Liter', sub: '₹38 / ₹36 VIP' },
+                    { value: 1, label: '1 Litre', sub: '₹72 / ₹70 VIP' },
+                    { value: 2, label: '2 Litres', sub: '₹144 / ₹140 VIP' },
+                    { value: 3, label: '3 Litres', sub: '₹216 / ₹210 VIP' },
+                    { value: 4, label: '4 Litres', sub: '₹288 / ₹280 VIP' },
+                    { value: 5, label: '5 Litres', sub: '₹360 / ₹350 VIP' },
+                    { value: 6, label: '6 Litres', sub: '₹432 / ₹420 VIP' },
+                    { value: 7, label: '7 Litres', sub: '₹504 / ₹490 VIP' },
+                    { value: 8, label: '8 Litres', sub: '₹576 / ₹560 VIP' },
+                    { value: 9, label: '9 Litres', sub: '₹648 / ₹630 VIP' },
+                    { value: 10, label: '10 Litres', sub: '₹720 / ₹700 VIP' },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -480,9 +482,9 @@ export default function MembershipPage() {
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-500 font-medium pt-0.5">
-                  {schemesDailyQuantity === 0.5
-                    ? 'Pure organic cow milk bottled fresh every morning: 1 × 500ml sterilized glass bottle at ₹38/day.'
-                    : `Pure organic cow milk bottled fresh every morning: ${schemesDailyQuantity} Litre${schemesDailyQuantity > 1 ? 's' : ''}/day at ₹72/L (₹${schemesDailyPrice}/day).`}
+                  {isHalf
+                    ? 'Pure organic cow milk bottled fresh every morning: 1 × 500ml sterilized glass bottle at ₹38/day (1-Month) or ₹36/day (6-Months VIP).'
+                    : `Pure organic cow milk bottled fresh every morning: ${schemesDailyQuantity} Litre${schemesDailyQuantity > 1 ? 's' : ''}/day at ₹72/L (1-Month) or ₹70/L (6-Months VIP).`}
                 </p>
               </div>
 
@@ -515,7 +517,7 @@ export default function MembershipPage() {
                         <span className="text-xs text-gray-500 font-bold">/ 30 Days</span>
                       </div>
                       <div className="text-[11px] font-bold text-gray-600">
-                        {schemesQtyLabel}/day × ₹{schemesDailyPrice}/day × 30 days
+                        {schemesQtyLabel}/day × ₹{monthDailyPrice}/day × 30 days
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800">
                         <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
@@ -565,7 +567,7 @@ export default function MembershipPage() {
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <p className="text-[11px] text-gray-500 text-center mt-2">
-                      {schemesQtyLabel}/day at ₹{schemesDailyPrice}/day. Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end.
+                      {schemesQtyLabel}/day at ₹{monthDailyPrice}/day. Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end.
                     </p>
                   </div>
                 </div>
@@ -600,11 +602,11 @@ export default function MembershipPage() {
                         <span className="text-xs text-emerald-200 font-bold">/ 180 Days</span>
                       </div>
                       <div className="text-[11px] font-bold text-emerald-200">
-                        {schemesQtyLabel}/day × ₹{schemesDailyPrice}/day for 180 days
+                        {schemesQtyLabel}/day × ₹{sixMonthDailyPrice}/day for 180 days (VIP rate ₹{isHalf ? '36' : '70'}/{isHalf ? 'half L' : 'L'})
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200">
                         <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Prepaid Scheme: Single upfront payment for 180 continuous days</span>
+                        <span>VIP Discount: ₹{isHalf ? '36' : '70'}/{isHalf ? 'half L' : 'L'} • Save ₹{(monthDailyPrice - sixMonthDailyPrice) * 180} vs monthly rate</span>
                       </div>
                     </div>
 
@@ -646,7 +648,7 @@ export default function MembershipPage() {
                       <ArrowRight className="w-4 h-4 text-[#261603]" />
                     </button>
                     <p className="text-[11px] text-emerald-200 text-center mt-2">
-                      {schemesQtyLabel}/day at ₹{schemesDailyPrice}/day. Prepaid upfront for 180 days.
+                      {schemesQtyLabel}/day at ₹{sixMonthDailyPrice}/day (VIP ₹{isHalf ? '36' : '70'}/{isHalf ? 'half L' : 'L'}). Prepaid upfront for 180 days.
                     </p>
                   </div>
                 </div>
@@ -1267,10 +1269,14 @@ export default function MembershipPage() {
                 </div>
               </div>
             ) : enrollStep === 'details' ? (() => {
-              const enrollDailyPrice = selectedDailyQuantity === 0.5 ? 38 : selectedDailyQuantity * 72;
+              const isSixMonthPlan = selectedPlanForEnroll === '6_months';
+              const isHalf = selectedDailyQuantity === 0.5;
+              const enrollDailyPrice = isSixMonthPlan
+                ? (isHalf ? 36 : selectedDailyQuantity * 70)
+                : (isHalf ? 38 : selectedDailyQuantity * 72);
               const enrollMonthTotal = enrollDailyPrice * 30;
               const enrollSixMonthTotal = enrollDailyPrice * 180;
-              const enrollQtyLabel = selectedDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
+              const enrollQtyLabel = isHalf ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
 
               return (
                 <>
@@ -1337,7 +1343,7 @@ export default function MembershipPage() {
                       <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
                         <span>Daily Milk Quantity (1 Day Quota) *</span>
                         <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          ₹{enrollDailyPrice} / Day
+                          ₹{enrollDailyPrice} / Day{isSixMonthPlan ? ' (VIP)' : ''}
                         </span>
                       </label>
                       <div className="relative">
@@ -1349,23 +1355,23 @@ export default function MembershipPage() {
                           }}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
                         >
-                          <option value={0.5}>Half Liter (0.5 L / day) — ₹38 / day</option>
-                          <option value={1}>1 Litre / day — ₹72 / day</option>
-                          <option value={2}>2 Litres / day — ₹144 / day</option>
-                          <option value={3}>3 Litres / day — ₹216 / day</option>
-                          <option value={4}>4 Litres / day — ₹288 / day</option>
-                          <option value={5}>5 Litres / day — ₹360 / day</option>
-                          <option value={6}>6 Litres / day — ₹432 / day</option>
-                          <option value={7}>7 Litres / day — ₹504 / day</option>
-                          <option value={8}>8 Litres / day — ₹576 / day</option>
-                          <option value={9}>9 Litres / day — ₹648 / day</option>
-                          <option value={10}>10 Litres / day — ₹720 / day</option>
+                          {[0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qty) => {
+                            const dayPrice = qty === 0.5
+                              ? (isSixMonthPlan ? 36 : 38)
+                              : qty * (isSixMonthPlan ? 70 : 72);
+                            const label = qty === 0.5 ? 'Half Liter (0.5 L / day)' : `${qty} Litre${qty > 1 ? 's' : ''} / day`;
+                            return (
+                              <option key={qty} value={qty}>
+                                {label} — ₹{dayPrice} / day{isSixMonthPlan ? ' (VIP)' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-1">
-                        {selectedDailyQuantity === 0.5
-                          ? 'Half liter milk delivered fresh every morning at ₹38/day.'
-                          : `${selectedDailyQuantity} Litre${selectedDailyQuantity > 1 ? 's' : ''} milk delivered fresh every morning at ₹72/L (₹${enrollDailyPrice}/day).`}
+                        {isHalf
+                          ? `Half liter milk delivered fresh every morning at ₹${enrollDailyPrice}/day${isSixMonthPlan ? ' (6-Month VIP rate)' : ''}.`
+                          : `${selectedDailyQuantity} Litre${selectedDailyQuantity > 1 ? 's' : ''} milk delivered fresh every morning at ₹${isSixMonthPlan ? '70' : '72'}/L (₹${enrollDailyPrice}/day).`}
                       </p>
                     </div>
 
@@ -1542,9 +1548,10 @@ export default function MembershipPage() {
                 </>
               );
             })() : (() => {
-              const vipDailyPrice = selectedDailyQuantity === 0.5 ? 38 : selectedDailyQuantity * 72;
+              const isHalf = selectedDailyQuantity === 0.5;
+              const vipDailyPrice = isHalf ? 36 : selectedDailyQuantity * 70;
               const vipTotal = vipDailyPrice * 180;
-              const vipQtyLabel = selectedDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
+              const vipQtyLabel = isHalf ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
 
               return (
                 <>

@@ -29,13 +29,16 @@ function formatDbRowToMembership(row: any): Membership {
   }
   if (!dailyQuantity) {
     const p = Number(row.price);
-    const duration = row.plan_type === '6_months' ? 180 : 30;
+    const isSixMonths = row.plan_type === '6_months';
+    const duration = isSixMonths ? 180 : 30;
     if (p > 0 && duration > 0) {
       const perDay = p / duration;
-      if (Math.round(perDay) === 38) {
+      const halfRate = isSixMonths ? 36 : 38;
+      const fullRate = isSixMonths ? 70 : 72;
+      if (Math.round(perDay) === halfRate) {
         dailyQuantity = 0.5;
       } else {
-        dailyQuantity = Math.max(1, Math.round(perDay / 72));
+        dailyQuantity = Math.max(1, Math.round(perDay / fullRate));
       }
     } else {
       dailyQuantity = 1;
@@ -227,8 +230,12 @@ export async function POST(req: NextRequest) {
     const validQty = (parsedQty === 0.5 || (Number.isInteger(parsedQty) && parsedQty >= 1)) ? parsedQty : 1;
     const isHalfLiter = validQty === 0.5;
     
-    // Pricing: Milk is 38 for half liter and 72rs per liter
-    const dailyPrice = isHalfLiter ? 38 : validQty * 72;
+    // Pricing:
+    // 1-month plan: half liter is 38rs, 1 liter is 72rs (N * 72)
+    // 6-months plan: half liter is 36rs, 1 liter is 70rs (N * 70)
+    const dailyPrice = isSixMonths
+      ? (isHalfLiter ? 36 : validQty * 70)
+      : (isHalfLiter ? 38 : validQty * 72);
     const durationDays = isSixMonths ? 180 : 30;
     const price = dailyPrice * durationDays;
 
