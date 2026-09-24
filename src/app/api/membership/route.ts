@@ -16,8 +16,36 @@ function formatDbRowToMembership(row: any): Membership {
   const billApproved = Boolean(row.bill_approved) || rawStatus.includes('__BILL_APPROVED__');
   const cleanPaymentStatus = rawStatus.replace('__BILL_APPROVED__', '').trim() || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle');
 
+  let dailyQuantity = row.daily_quantity ? Number(row.daily_quantity) : undefined;
+  if (!dailyQuantity && row.plan_name) {
+    if (row.plan_name.includes('0.5L') || row.plan_name.toLowerCase().includes('half liter') || row.plan_name.includes('500ml')) {
+      dailyQuantity = 0.5;
+    } else {
+      const match = row.plan_name.match(/(\d+(\.\d+)?)\s*L/i);
+      if (match) {
+        dailyQuantity = Number(match[1]);
+      }
+    }
+  }
+  if (!dailyQuantity) {
+    const p = Number(row.price);
+    const duration = row.plan_type === '6_months' ? 180 : 30;
+    if (p > 0 && duration > 0) {
+      const perDay = p / duration;
+      if (Math.round(perDay) === 38) {
+        dailyQuantity = 0.5;
+      } else {
+        dailyQuantity = Math.max(1, Math.round(perDay / 72));
+      }
+    } else {
+      dailyQuantity = 1;
+    }
+  }
+
   const bottlePreference = row.bottle_preference ||
-    (row.plan_name && (row.plan_name.includes('2 * 500ml') || row.plan_name.includes('2*500ml') || row.plan_name.includes('500ml')) ? '2 * 500ml' : '1L');
+    (dailyQuantity === 0.5 ? '1 * 500ml' :
+     row.plan_name && (row.plan_name.includes('2 * 500ml') || row.plan_name.includes('2*500ml')) ? '2 * 500ml' :
+     dailyQuantity && dailyQuantity > 1 ? `${dailyQuantity} × 1L` : '1L');
 
   return {
     id: row.id,
@@ -26,6 +54,7 @@ function formatDbRowToMembership(row: any): Membership {
     customerEmail: row.customer_email || undefined,
     address: row.address || undefined,
     bottlePreference,
+    dailyQuantity,
     planType: row.plan_type,
     planName: row.plan_name,
     billingType: row.billing_type,
@@ -171,7 +200,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { phone, customerName, customerEmail, address, planType, bottlePreference } = body;
+    const { phone, customerName, customerEmail, address, planType, bottlePreference, dailyQuantity, paymentStatus } = body;
 
     if (!phone) {
       return NextResponse.json({ success: false, message: 'Phone number is required.' }, { status: 400 });
@@ -192,15 +221,32 @@ export async function POST(req: NextRequest) {
     const cleanName = customerName.trim();
     const selectedPlan: MembershipPlanType = planType === '6_months' ? '6_months' : '1_month';
     const isSixMonths = selectedPlan === '6_months';
-    const selectedBottlePref = bottlePreference === '2 * 500ml' ? '2 * 500ml' : '1L';
+    
+    // Parse and validate daily milk quantity: 0.5 or integer >= 1 (no 1.5L or 2.5L)
+    const parsedQty = Number(dailyQuantity);
+    const validQty = (parsedQty === 0.5 || (Number.isInteger(parsedQty) && parsedQty >= 1)) ? parsedQty : 1;
+    const isHalfLiter = validQty === 0.5;
+    
+    // Pricing: Milk is 38 for half liter and 72rs per liter
+    const dailyPrice = isHalfLiter ? 38 : validQty * 72;
+    const durationDays = isSixMonths ? 180 : 30;
+    const price = dailyPrice * durationDays;
 
+    const qtyLabel = isHalfLiter ? 'Half Liter (0.5L)/Day' : `${validQty}L/Day`;
     const basePlanName = isSixMonths
       ? '6 Months VIP Club (Prepaid)'
       : '1 Month Organic Pass (Postpaid)';
-    const planName = `${basePlanName} • ${selectedBottlePref}`;
+    const planName = `${basePlanName} • ${qtyLabel}`;
     const billingType: MembershipBillingType = isSixMonths ? 'prepaid' : 'postpaid';
-    const price = isSixMonths ? 12600 : 2160;
-    const durationDays = isSixMonths ? 180 : 30;
+
+    let selectedBottlePref = bottlePreference;
+    if (isHalfLiter) {
+      selectedBottlePref = '1 * 500ml';
+    } else if (validQty === 1) {
+      selectedBottlePref = bottlePreference === '2 * 500ml' ? '2 * 500ml' : '1L';
+    } else {
+      selectedBottlePref = `${validQty} × 1L`;
+    }
 
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
@@ -213,12 +259,13 @@ export async function POST(req: NextRequest) {
       customerEmail: customerEmail ? customerEmail.trim() : undefined,
       address: address ? address.trim() : undefined,
       bottlePreference: selectedBottlePref,
+      dailyQuantity: validQty,
       planType: selectedPlan,
       planName,
       billingType,
       price,
       status: 'active',
-      paymentStatus: isSixMonths ? 'paid' : 'postpaid_cycle',
+      paymentStatus: isSixMonths ? (paymentStatus || 'paid') : 'postpaid_cycle',
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       createdAt: startDate.toISOString(),
@@ -383,9 +430,10 @@ export async function PATCH(req: NextRequest) {
         saveLocalMembership(local[0]);
       }
 
+      const dueAmountStr = local.length > 0 && local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
       return NextResponse.json({
         success: true,
-        message: 'Fast-forwarded 30 days. Month-end bill of ₹2,160 is now due for settlement.',
+        message: `Fast-forwarded 30 days. Month-end bill${dueAmountStr} is now due for settlement.`,
       });
     }
 
@@ -413,7 +461,9 @@ export async function PATCH(req: NextRequest) {
       }
 
       const local = getLocalMemberships(cleanPhone);
+      let settledAmountStr = '';
       if (local.length > 0) {
+        settledAmountStr = local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
         local[0].status = 'active';
         local[0].paymentStatus = 'paid';
         local[0].startDate = now.toISOString();
@@ -423,7 +473,7 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Month-end bill of ₹2,160 paid successfully! Membership renewed for next 30 days.',
+        message: `Month-end bill${settledAmountStr} paid successfully! Membership renewed for next 30 days.`,
       });
     }
 

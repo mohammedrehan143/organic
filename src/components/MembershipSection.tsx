@@ -100,12 +100,16 @@ export function MembershipSection() {
                 </p>
               </div>
               <div className="text-3xl font-black text-white">
-                ₹2,160 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid, 1L/day × ₹72)</span>
+                ₹2,160 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid • 1L/day @ ₹72, or Half Liter @ ₹38)</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-300">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>Free doorstep deliveries every morning</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Choose Half Liter (0.5L) or 1L, 2L, 3L, 4L, 5L+ daily</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -141,19 +145,25 @@ export function MembershipSection() {
               <div>
                 <h3 className="text-2xl font-black text-white font-serif">6 Months VIP Club</h3>
                 <p className="text-xs text-emerald-100/80 mt-1">
-                  Prepaid upfront activation with ₹360 instant savings.
+                  Prepaid upfront activation for 180 continuous days of sunrise doorstep deliveries.
                 </p>
               </div>
               <div className="text-3xl font-black text-amber-300">
-                ₹12,600 <span className="text-xs text-gray-400 line-through">₹12,960</span>
+                ₹12,960 <span className="text-xs text-emerald-200 font-normal">/ 180 Days (1L/day @ ₹72, or Half Liter @ ₹38)</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-200">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>180 days uninterrupted free daily deliveries</span>
                 </li>
-
-
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Choose Half Liter (0.5L) or 1L, 2L, 3L, 4L, 5L+ daily</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Zero monthly invoices — completely prepaid for 6 months</span>
+                </li>
               </ul>
             </div>
             <Link

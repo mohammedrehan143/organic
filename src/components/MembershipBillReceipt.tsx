@@ -28,6 +28,34 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
   const isPaid = membership.paymentStatus === 'paid' || isSixMonths;
   const isDue = membership.paymentStatus === 'due';
 
+  // Resolve daily quantity: 0.5, 1, 2, 3, etc.
+  const rawDailyQty = membership.dailyQuantity || (
+    membership.planName?.includes('0.5L') || membership.planName?.toLowerCase().includes('half liter') || membership.planName?.includes('500ml')
+      ? 0.5
+      : Number(membership.planName?.match(/(\d+(\.\d+)?)\s*L/i)?.[1])
+  );
+  
+  let dailyQty = rawDailyQty;
+  if (!dailyQty) {
+    const duration = isSixMonths ? 180 : 30;
+    if (membership.price > 0) {
+      const perDay = membership.price / duration;
+      dailyQty = Math.round(perDay) === 38 ? 0.5 : Math.max(1, Math.round(perDay / 72));
+    } else {
+      dailyQty = 1;
+    }
+  }
+
+  const isHalfLiter = dailyQty === 0.5;
+  const dailyRate = isHalfLiter ? 38 : dailyQty * 72;
+  const dailyQuantityLabel = isHalfLiter ? '0.5 L (Half Liter) / Day' : `${dailyQty} ${dailyQty === 1 ? 'Litre' : 'Litres'} / Day`;
+  
+  const packagingLabel = isHalfLiter
+    ? '1 × 500ml Sterilized Glass Bottle'
+    : membership.bottlePreference === '2 * 500ml'
+    ? '2 × 500ml Sterilized Glass Bottles'
+    : `${dailyQty} × 1L Sterilized Glass Bottle${dailyQty > 1 ? 's' : ''}`;
+
   return (
     <div
       id="printable-receipt"
@@ -118,7 +146,10 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
             Daily Sunrise Route: 6:00 AM - 7:30 AM
           </p>
           <p className="flex items-center gap-1 text-[11px] text-gray-800">
-            <span>Daily Packaging: <strong className="text-[#173612]">{membership.bottlePreference === '2 * 500ml' ? '2 * 500ml Glass Bottles' : '1L Single Glass Bottle'}</strong></span>
+            <span>Daily Quantity: <strong className="text-[#173612] font-black">{dailyQuantityLabel}</strong></span>
+          </p>
+          <p className="flex items-center gap-1 text-[11px] text-gray-800">
+            <span>Daily Packaging: <strong className="text-[#173612]">{packagingLabel}</strong></span>
           </p>
           <p className="flex items-center gap-1 text-[11px] text-gray-800">
             <CreditCard className="w-3.5 h-3.5 text-gray-600" />
@@ -136,11 +167,12 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#173612] text-white text-[10px] uppercase font-black tracking-wider">
-              <th className="py-1.5 px-2.5 rounded-l-lg w-10 text-center">#</th>
+              <th className="py-1.5 px-2.5 rounded-l-lg w-8 text-center">#</th>
               <th className="py-1.5 px-2.5">Subscription Plan &amp; Entitlements</th>
+              <th className="py-1.5 px-2.5 text-center w-28">Daily Quantity</th>
               <th className="py-1.5 px-2.5 text-center w-24">Validity</th>
-              <th className="py-1.5 px-2.5 text-right w-24">Billing Mode</th>
-              <th className="py-1.5 px-2.5 rounded-r-lg text-right w-28">Amount (₹)</th>
+              <th className="py-1.5 px-2.5 text-right w-20">Billing Mode</th>
+              <th className="py-1.5 px-2.5 rounded-r-lg text-right w-24">Amount (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 text-[11px]">
@@ -156,11 +188,22 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
                   <strong className="text-gray-900 text-xs">{membership.planName}</strong>
                 </div>
                 <div className="text-[10px] text-gray-600 space-y-0.5 mt-1 leading-snug">
-                  <p>• Daily Milk Packaging: <strong>{membership.bottlePreference === '2 * 500ml' ? 'Two 500ml sterilized glass bottles' : 'One 1L sterilized glass bottle'}</strong></p>
+                  <p className="text-[#173612] font-black">
+                    • Daily Milk Allocation: <strong>{dailyQuantityLabel}</strong> ({isHalfLiter ? '₹38 / half liter' : `₹72 / Litre × ${dailyQty}L = ₹${dailyRate}/day`})
+                  </p>
+                  <p>• Daily Milk Packaging: <strong>{packagingLabel}</strong></p>
                   <p>• 100% Free Doorstep Delivery every single morning (Zero delivery charges)</p>
                   <p>• Zero minimum order threshold on Farm-Fresh Milk &amp; Nati Eggs</p>
                   <p>• Priority sunrise morning delivery dispatch straight from Bylanarasapura pasture farm</p>
                 </div>
+              </td>
+              <td className="py-2.5 px-2.5 text-center font-mono">
+                <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-950 font-black rounded text-[11px]">
+                  {isHalfLiter ? '0.5 L / Day' : `${dailyQty} L / Day`}
+                </span>
+                <span className="block text-[9px] text-gray-600 font-semibold mt-0.5">
+                  ₹{dailyRate}/day
+                </span>
               </td>
               <td className="py-2.5 px-2.5 text-center font-mono text-gray-800">
                 <span className="font-bold">{isSixMonths ? '180 Days' : '30 Days'}</span>
@@ -173,6 +216,9 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
               </td>
               <td className="py-2.5 px-2.5 text-right font-bold font-mono text-[#0F240B] text-xs">
                 ₹{membership.price.toFixed(2)}
+                <span className="block text-[9px] text-gray-500 font-normal">
+                  ({isSixMonths ? '180' : '30'}d × ₹{dailyRate})
+                </span>
               </td>
             </tr>
           </tbody>
@@ -195,9 +241,9 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
         </div>
 
         {/* Totals Table */}
-        <div className="w-full sm:w-64 space-y-1 text-[11px]">
+        <div className="w-full sm:w-72 space-y-1 text-[11px]">
           <div className="flex justify-between text-gray-700">
-            <span>Scheme Rate:</span>
+            <span>Scheme Rate ({dailyQuantityLabel} × {isSixMonths ? '180' : '30'}d):</span>
             <span className="font-mono font-semibold">₹{membership.price.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-emerald-800 font-bold">

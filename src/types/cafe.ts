@@ -177,6 +177,7 @@ export interface Membership {
   customerEmail?: string;
   address?: string;
   bottlePreference?: MilkBottlePreference | string;
+  dailyQuantity?: number;
   planType: MembershipPlanType;
   planName: string;
   billingType: MembershipBillingType;

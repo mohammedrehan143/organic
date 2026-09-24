@@ -1949,7 +1949,7 @@ export default function AdminPage() {
                 {adminMemberships.filter((m) => m.planType === '6_months').length}
               </p>
               <p className="text-[11px] text-amber-700 font-medium">
-                ₹12,600 paid upfront (180 days)
+                180 days VIP upfront
               </p>
             </div>
 
@@ -1961,7 +1961,7 @@ export default function AdminPage() {
                 {adminMemberships.filter((m) => m.planType === '1_month').length}
               </p>
               <p className="text-[11px] text-emerald-700 font-medium">
-                ₹2,160/mo postpaid cycle
+                30-day postpaid cycle
               </p>
             </div>
 
@@ -2039,11 +2039,13 @@ export default function AdminPage() {
                 const diffMs = endDate.getTime() - now.getTime();
                 const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
                 const cleanPhone = m.phone.replace(/[^0-9]/g, '');
+                const dailyQty = m.dailyQuantity || (m.planName.toLowerCase().includes('half') || m.planName.includes('0.5') ? 0.5 : 1);
+                const dailyQtyLabel = dailyQty === 0.5 ? 'Half Liter (0.5L)' : `${dailyQty}L`;
 
                 const waMessage = encodeURIComponent(
                   isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹2,160 for 30 days of free daily deliveries (${m.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Bottle'} Daily) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
-                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${m.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Bottle'} Daily) with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹${m.price.toLocaleString('en-IN')} for 30 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
                 );
 
                 return (
@@ -2086,7 +2088,7 @@ export default function AdminPage() {
 
                         {/* Daily Packaging Option Badge */}
                         <span className="text-[11px] font-bold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-xl flex items-center gap-1">
-                          🥛 <span>{m.bottlePreference === '2 * 500ml' ? '2 * 500ml Daily' : '1L Daily'}</span>
+                          🥛 <span>{dailyQtyLabel} Daily ({m.bottlePreference})</span>
                         </span>
 
                         {/* Membership Bill Approval Toggle */}
@@ -2129,7 +2131,7 @@ export default function AdminPage() {
                         {isDue ? (
                           <>
                             <AlertTriangle className="w-3 h-3" />
-                            <span>🚨 MONTH-END BILL DUE (₹2,160)</span>
+                            <span>🚨 MONTH-END BILL DUE (₹{m.price.toLocaleString('en-IN')})</span>
                           </>
                         ) : (
                           <>
@@ -2170,7 +2172,7 @@ export default function AdminPage() {
                           <div className="pt-1 flex items-center gap-1 text-[11px] text-emerald-800 font-bold">
                             <span>Packaging:</span>
                             <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
-                              {m.bottlePreference === '2 * 500ml' ? '2 × 500ml Glass Bottles' : '1L Single Glass Bottle'}
+                              {m.bottlePreference || `${dailyQtyLabel} Daily`}
                             </span>
                           </div>
                         </div>
@@ -2232,7 +2234,7 @@ export default function AdminPage() {
                           <div className="flex justify-between items-center">
                             <span className="text-espresso-600">Scheme Rate:</span>
                             <strong className="text-espresso-950 font-black">
-                              {m.planType === '6_months' ? '₹12,600.00' : '₹2,160.00 / mo'}
+                              ₹{m.price.toLocaleString('en-IN')}{m.planType === '6_months' ? ' (180d)' : ' / mo'}
                             </strong>
                           </div>
                           <div className="flex justify-between items-center">
@@ -2251,7 +2253,7 @@ export default function AdminPage() {
                               }`}
                             >
                               {isDue
-                                ? '₹2,160 DUE NOW'
+                                ? `₹${m.price.toLocaleString('en-IN')} DUE NOW`
                                 : m.billingType === 'prepaid'
                                 ? 'PAID UPFRONT'
                                 : 'POSTPAID ACTIVE'}
@@ -2312,7 +2314,7 @@ export default function AdminPage() {
                             className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Mark Month-End Bill Paid ({m.planType === '6_months' ? '₹12,600' : '₹2,160'})</span>
+                            <span>Mark Month-End Bill Paid (₹{m.price.toLocaleString('en-IN')})</span>
                           </button>
                         )}
 

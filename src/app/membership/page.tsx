@@ -32,10 +32,18 @@ import {
   Lock,
   FileText,
   Printer,
+  Loader2,
+  ChevronRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Membership, MembershipPlanType } from '@/types/cafe';
 import { MembershipBillModal } from '@/components/MembershipBillModal';
+import {
+  getCurrentLocationAddress,
+  formatFullOneLineAddress,
+  searchAddressQuery,
+  AddressSuggestion,
+} from '@/lib/location';
 
 export default function MembershipPage() {
   const [activeTab, setActiveTab] = useState<'schemes' | 'check'>('schemes');
@@ -59,12 +67,23 @@ export default function MembershipPage() {
   const [settlementMethod, setSettlementMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const [settlementSuccessMsg, setSettlementSuccessMsg] = useState('');
 
+  // Milk quantity options (0.5 for Half Liter, then integer 1, 2, 3, 4, 5, etc.)
+  const [schemesDailyQuantity, setSchemesDailyQuantity] = useState<number>(1);
+  const [selectedDailyQuantity, setSelectedDailyQuantity] = useState<number>(1);
+
   // Enrollment modal state
   const [selectedPlanForEnroll, setSelectedPlanForEnroll] = useState<MembershipPlanType | null>(null);
   const [enrollStep, setEnrollStep] = useState<'details' | 'prepaid_payment'>('details');
   const [enrollName, setEnrollName] = useState('');
   const [enrollPhone, setEnrollPhone] = useState('');
-  const [enrollAddress, setEnrollAddress] = useState('');
+  
+  // 2-section address state: GPS address and Landmark address (same like checkout modal)
+  const [enrollLine1, setEnrollLine1] = useState('');
+  const [enrollLine2, setEnrollLine2] = useState('');
+  const [enrollGeocoding, setEnrollGeocoding] = useState(false);
+  const [enrollGeocodeMessage, setEnrollGeocodeMessage] = useState('');
+  const [enrollAddressSuggestions, setEnrollAddressSuggestions] = useState<AddressSuggestion[]>([]);
+
   const [enrollEmail, setEnrollEmail] = useState('');
   const [enrollBottlePreference, setEnrollBottlePreference] = useState<'1L' | '2 * 500ml'>('1L');
   const [prepaidPaymentMethod, setPrepaidPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
@@ -72,6 +91,35 @@ export default function MembershipPage() {
   const [enrollError, setEnrollError] = useState('');
   const [enrollSuccess, setEnrollSuccess] = useState<Membership | null>(null);
   const [activeBillMembership, setActiveBillMembership] = useState<Membership | null>(null);
+
+  // Trigger GPS Geolocation for membership address
+  const handleEnrollUseCurrentLocation = async () => {
+    setEnrollGeocoding(true);
+    setEnrollGeocodeMessage('Detecting building-level GPS precision...');
+    try {
+      const loc = await getCurrentLocationAddress();
+      setEnrollLine1(loc.formattedAddress);
+      setEnrollGeocodeMessage('✓ GPS location locked! Please enter your House/Flat No. & Landmark below.');
+      setTimeout(() => setEnrollGeocodeMessage(''), 5000);
+    } catch (err: any) {
+      console.warn('Geolocation error:', err);
+      setEnrollGeocodeMessage('Could not retrieve GPS coordinates. Please type address manually.');
+      setTimeout(() => setEnrollGeocodeMessage(''), 4000);
+    } finally {
+      setEnrollGeocoding(false);
+    }
+  };
+
+  // Search address suggestions for GPS Line 1
+  const handleEnrollLine1Change = async (val: string) => {
+    setEnrollLine1(val);
+    if (val.length >= 3) {
+      const suggestions = await searchAddressQuery(val);
+      setEnrollAddressSuggestions(suggestions);
+    } else {
+      setEnrollAddressSuggestions([]);
+    }
+  };
 
   // Handle Search Membership by Phone
   const handleSearch = async (e?: React.FormEvent, overridePhone?: string) => {
@@ -130,7 +178,8 @@ export default function MembershipPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setSkipSuccessMsg('⏩ Fast-forwarded 30 days! Month-end bill of ₹2,160 is now due for settlement.');
+        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹2,160';
+        setSkipSuccessMsg(`⏩ Fast-forwarded 30 days! Month-end bill of ${billAmount} is now due for settlement.`);
         // Refresh membership profile
         await handleSearch(undefined, searchResult.membership.phone);
       } else {
@@ -143,7 +192,7 @@ export default function MembershipPage() {
     }
   };
 
-  // Pay Month-End Postpaid Settlement Bill (₹2,160)
+  // Pay Month-End Postpaid Settlement Bill
   const handlePaySettlementBill = async () => {
     if (!searchResult?.membership?.phone) return;
     setSettlementLoading(true);
@@ -171,8 +220,9 @@ export default function MembershipPage() {
           });
         } catch {}
 
+        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹2,160';
         setSettlementModalOpen(false);
-        setSettlementSuccessMsg('🎉 Month-end bill of ₹2,160 settled successfully! Membership renewed for the next 30 days.');
+        setSettlementSuccessMsg(`🎉 Month-end bill of ${billAmount} settled successfully! Membership renewed for the next 30 days.`);
         // Refresh membership profile
         await handleSearch(undefined, searchResult.membership.phone);
       } else {
@@ -201,6 +251,23 @@ export default function MembershipPage() {
       return;
     }
 
+    if (!enrollLine1.trim() && !enrollLine2.trim()) {
+      setEnrollError('Please provide your delivery address (GPS location and Landmark).');
+      return;
+    }
+
+    if (!enrollLine2.trim()) {
+      setEnrollError('Please enter your House/Flat No. & Landmark for accurate morning delivery.');
+      return;
+    }
+
+    const fullAddress = formatFullOneLineAddress(enrollLine1, enrollLine2);
+    const finalBottlePref = selectedDailyQuantity === 0.5
+      ? '1 * 500ml'
+      : selectedDailyQuantity === 1
+      ? enrollBottlePreference
+      : `${selectedDailyQuantity} × 1L`;
+
     // If 6 Months VIP: Go to Prepaid VIP Payment Step
     if (selectedPlanForEnroll === '6_months') {
       setEnrollStep('prepaid_payment');
@@ -217,9 +284,10 @@ export default function MembershipPage() {
           phone: clean,
           customerName: enrollName.trim(),
           customerEmail: enrollEmail.trim() || undefined,
-          address: enrollAddress.trim() || undefined,
+          address: fullAddress,
           planType: '1_month',
-          bottlePreference: enrollBottlePreference,
+          bottlePreference: finalBottlePref,
+          dailyQuantity: selectedDailyQuantity,
         }),
       });
 
@@ -246,6 +314,12 @@ export default function MembershipPage() {
     setEnrollLoading(true);
 
     const clean = enrollPhone.replace(/[^0-9]/g, '');
+    const fullAddress = formatFullOneLineAddress(enrollLine1, enrollLine2);
+    const finalBottlePref = selectedDailyQuantity === 0.5
+      ? '1 * 500ml'
+      : selectedDailyQuantity === 1
+      ? enrollBottlePreference
+      : `${selectedDailyQuantity} × 1L`;
 
     try {
       const res = await fetch('/api/membership', {
@@ -255,9 +329,10 @@ export default function MembershipPage() {
           phone: clean,
           customerName: enrollName.trim(),
           customerEmail: enrollEmail.trim() || undefined,
-          address: enrollAddress.trim() || undefined,
+          address: fullAddress,
           planType: '6_months',
-          bottlePreference: enrollBottlePreference,
+          bottlePreference: finalBottlePref,
+          dailyQuantity: selectedDailyQuantity,
           paymentMethod: prepaidPaymentMethod,
           paymentStatus: 'paid',
         }),
@@ -349,165 +424,240 @@ export default function MembershipPage() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6">
         {/* TAB 1: SCHEMES COMPARISON */}
-        {activeTab === 'schemes' && (
-          <div className="space-y-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-              {/* SCHEME 1: 1 MONTH (POSTPAID) */}
-              <div className="bg-white rounded-3xl border-2 border-[#D8ECCE] shadow-lg p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden hover:border-[#86B970] transition">
-                <div className="absolute top-0 right-0 bg-[#EAF3E4] text-[#173612] text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl border-l border-b border-[#D8ECCE]">
-                  POSTPAID FLEXIBILITY
+        {activeTab === 'schemes' && (() => {
+          const schemesDailyPrice = schemesDailyQuantity === 0.5 ? 38 : schemesDailyQuantity * 72;
+          const schemesMonthTotal = schemesDailyPrice * 30;
+          const schemesSixMonthTotal = schemesDailyPrice * 180;
+          const schemesQtyLabel = schemesDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${schemesDailyQuantity}L`;
+
+          return (
+            <div className="space-y-8">
+              {/* Daily Milk Quantity Selector Card */}
+              <div className="bg-white rounded-3xl border-2 border-[#D8ECCE] p-5 sm:p-6 shadow-md max-w-3xl mx-auto space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EAF3E4] pb-3">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#385A2A] block">
+                      Step 1: Daily Milk Quantity
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-[#0F240B]">
+                      Select Daily Milk Requirement (Doorstep Sunrise Delivery)
+                    </h3>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-black px-3.5 py-1.5 bg-[#173612] text-amber-300 rounded-full self-start sm:self-auto shadow-sm">
+                    🥛 ₹{schemesDailyPrice} / Day
+                  </span>
                 </div>
 
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-[#385A2A] uppercase tracking-widest">
-                      Flexible Scheme
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-black text-[#0F240B]">
-                      1 Month Organic Pass
-                    </h2>
-                    <p className="text-xs text-gray-600">
-                      Perfect for trying daily pure organic milk and free-range eggs with zero advance commitment.
+                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+                  {[
+                    { value: 0.5, label: 'Half Liter', sub: '₹38 / day' },
+                    { value: 1, label: '1 Litre', sub: '₹72 / day' },
+                    { value: 2, label: '2 Litres', sub: '₹144 / day' },
+                    { value: 3, label: '3 Litres', sub: '₹216 / day' },
+                    { value: 4, label: '4 Litres', sub: '₹288 / day' },
+                    { value: 5, label: '5 Litres', sub: '₹360 / day' },
+                    { value: 6, label: '6 Litres', sub: '₹432 / day' },
+                    { value: 7, label: '7 Litres', sub: '₹504 / day' },
+                    { value: 8, label: '8 Litres', sub: '₹576 / day' },
+                    { value: 9, label: '9 Litres', sub: '₹648 / day' },
+                    { value: 10, label: '10 Litres', sub: '₹720 / day' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSchemesDailyQuantity(opt.value)}
+                      className={`py-2 px-2.5 rounded-xl border text-center transition cursor-pointer ${
+                        schemesDailyQuantity === opt.value
+                          ? 'border-[#173612] bg-[#173612] text-white shadow-sm ring-2 ring-[#86B970]/50'
+                          : 'border-[#D8ECCE] bg-[#F5FAF0] text-[#173612] hover:bg-emerald-100/60'
+                      }`}
+                    >
+                      <div className="font-black text-xs">{opt.label}</div>
+                      <div className={`text-[10px] ${schemesDailyQuantity === opt.value ? 'text-amber-300 font-bold' : 'text-[#385A2A]'}`}>
+                        {opt.sub}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium pt-0.5">
+                  {schemesDailyQuantity === 0.5
+                    ? 'Pure organic cow milk bottled fresh every morning: 1 × 500ml sterilized glass bottle at ₹38/day.'
+                    : `Pure organic cow milk bottled fresh every morning: ${schemesDailyQuantity} Litre${schemesDailyQuantity > 1 ? 's' : ''}/day at ₹72/L (₹${schemesDailyPrice}/day).`}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                {/* SCHEME 1: 1 MONTH (POSTPAID) */}
+                <div className="bg-white rounded-3xl border-2 border-[#D8ECCE] shadow-lg p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden hover:border-[#86B970] transition">
+                  <div className="absolute top-0 right-0 bg-[#EAF3E4] text-[#173612] text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl border-l border-b border-[#D8ECCE]">
+                    POSTPAID FLEXIBILITY
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-[#385A2A] uppercase tracking-widest">
+                        Flexible Scheme
+                      </span>
+                      <h2 className="text-2xl sm:text-3xl font-black text-[#0F240B]">
+                        1 Month Organic Pass
+                      </h2>
+                      <p className="text-xs text-gray-600">
+                        Perfect for trying daily pure organic milk with zero advance commitment. Pay at month-end.
+                      </p>
+                    </div>
+
+                    {/* Price Block */}
+                    <div className="p-4 bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl sm:text-4xl font-black text-[#0F240B]">
+                          ₹{schemesMonthTotal.toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-xs text-gray-500 font-bold">/ 30 Days</span>
+                      </div>
+                      <div className="text-[11px] font-bold text-gray-600">
+                        {schemesQtyLabel}/day × ₹{schemesDailyPrice}/day × 30 days
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                        <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
+                        <span>Postpaid Billing: ₹0 Advance • Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} invoice at month-end</span>
+                      </div>
+                    </div>
+
+                    {/* Benefits Checklist */}
+                    <div className="space-y-3 pt-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#173612]">
+                        Scheme Privileges:
+                      </span>
+                      <ul className="space-y-2.5 text-xs text-gray-700">
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Daily Allocation:</strong> {schemesQtyLabel} fresh organic milk delivered every morning</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>100% Free Daily Doorstep Delivery</strong> across entire 30 days</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Postpaid Settlement:</strong> Pay ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Zero Deposit Required:</strong> Glass milk bottle security deposit waived</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setSelectedPlanForEnroll('1_month');
+                        setSelectedDailyQuantity(schemesDailyQuantity);
+                        setEnrollBottlePreference('1L');
+                        setEnrollStep('details');
+                        setEnrollSuccess(null);
+                        setEnrollError('');
+                      }}
+                      className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Enroll in 1-Month Postpaid (₹0 Advance)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <p className="text-[11px] text-gray-500 text-center mt-2">
+                      {schemesQtyLabel}/day at ₹{schemesDailyPrice}/day. Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end.
                     </p>
                   </div>
-
-                  {/* Price Block */}
-                  <div className="p-4 bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-[#0F240B]">₹2,160</span>
-                      <span className="text-xs text-gray-500 font-bold">/ 30 Days</span>
-                    </div>
-                    <div className="text-[11px] font-bold text-gray-600">
-                      1L/day × ₹72 × 30 days
-                    </div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-                      <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-                      <span>Postpaid Billing: ₹0 Advance • Settle ₹2,160 invoice at month-end</span>
-                    </div>
-                  </div>
-
-                  {/* Benefits Checklist */}
-                  <div className="space-y-3 pt-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#173612]">
-                      Scheme Privileges:
-                    </span>
-                    <ul className="space-y-2.5 text-xs text-gray-700">
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>100% Free Daily Doorstep Delivery</strong> across entire 30 days</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Postpaid Settlement:</strong> Enjoy 1L farm milk daily; pay ₹2,160 at month-end</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Zero Deposit Required:</strong> Glass milk bottle security deposit waived</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>Pause or cancel anytime with zero hidden cancellation charges</span>
-                      </li>
-                    </ul>
-                  </div>
                 </div>
 
-                <div className="pt-6 mt-6 border-t border-gray-100">
-                  <button
-                    onClick={() => {
-                      setSelectedPlanForEnroll('1_month');
-                      setEnrollBottlePreference('1L');
-                      setEnrollStep('details');
-                      setEnrollSuccess(null);
-                      setEnrollError('');
-                    }}
-                    className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <span>Enroll in 1-Month Postpaid (₹0 Advance)</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  <p className="text-[11px] text-gray-500 text-center mt-2">
-                    1L/day (or 2 × 500ml) at ₹72/L. Pay ₹2,160 at month-end.
-                  </p>
+                {/* SCHEME 2: 6 MONTHS (PREPAID - VIP) */}
+                <div className="bg-gradient-to-b from-[#173612] to-[#0D1F0A] text-white rounded-3xl border-2 border-amber-400/80 shadow-2xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
+                  {/* Gold Highlight Tag */}
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0F240B] text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl shadow-sm">
+                    ★ BEST VALUE - PREPAID
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                        <Crown className="w-4 h-4 fill-amber-300" />
+                        <span>VIP Privilege Scheme</span>
+                      </span>
+                      <h2 className="text-2xl sm:text-3xl font-black text-white">
+                        6 Months VIP Club
+                      </h2>
+                      <p className="text-xs text-emerald-100">
+                        Maximum peace of mind for families who insist on pure unadulterated organic nutrition daily.
+                      </p>
+                    </div>
+
+                    {/* Price Block */}
+                    <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl sm:text-4xl font-black text-amber-300">
+                          ₹{schemesSixMonthTotal.toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-xs text-emerald-200 font-bold">/ 180 Days</span>
+                      </div>
+                      <div className="text-[11px] font-bold text-emerald-200">
+                        {schemesQtyLabel}/day × ₹{schemesDailyPrice}/day for 180 days
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200">
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Prepaid Scheme: Single upfront payment for 180 continuous days</span>
+                      </div>
+                    </div>
+
+                    {/* Benefits Checklist */}
+                    <div className="space-y-3 pt-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                        VIP Membership Privileges:
+                      </span>
+                      <ul className="space-y-2.5 text-xs text-emerald-50">
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                          <span><strong>Daily Allocation:</strong> {schemesQtyLabel} fresh organic milk delivered every morning</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                          <span><strong>100% Free Doorstep Delivery</strong> across entire 180 days</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                          <span><strong>Zero Monthly Reminders:</strong> Completely prepaid and hassle-free for 6 months</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-white/15">
+                    <button
+                      onClick={() => {
+                        setSelectedPlanForEnroll('6_months');
+                        setSelectedDailyQuantity(schemesDailyQuantity);
+                        setEnrollBottlePreference('1L');
+                        setEnrollStep('details');
+                        setEnrollSuccess(null);
+                        setEnrollError('');
+                      }}
+                      className="btn-shining-gold w-full py-3.5 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Enroll in 6-Months Prepaid (₹{schemesSixMonthTotal.toLocaleString('en-IN')})</span>
+                      <ArrowRight className="w-4 h-4 text-[#261603]" />
+                    </button>
+                    <p className="text-[11px] text-emerald-200 text-center mt-2">
+                      {schemesQtyLabel}/day at ₹{schemesDailyPrice}/day. Prepaid upfront for 180 days.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* SCHEME 2: 6 MONTHS (PREPAID - VIP) */}
-              <div className="bg-gradient-to-b from-[#173612] to-[#0D1F0A] text-white rounded-3xl border-2 border-amber-400/80 shadow-2xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
-                {/* Gold Highlight Tag */}
-                <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0F240B] text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl shadow-sm">
-                  ★ BEST VALUE - PREPAID
-                </div>
-
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
-                      <Crown className="w-4 h-4 fill-amber-300" />
-                      <span>VIP Privilege Scheme</span>
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white">
-                      6 Months VIP Club
-                    </h2>
-                    <p className="text-xs text-emerald-100">
-                      Maximum savings and complete peace of mind for families who insist on pure unadulterated organic nutrition daily.
-                    </p>
-                  </div>
-
-                  {/* Price Block */}
-                  <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-amber-300">₹12,960</span>
-                    </div>
-                    <div className="text-[11px] font-bold text-emerald-200">
-                      1L/day at ₹70/L for 180 days
-                    </div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200">
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Prepaid Scheme: Single upfront payment for 180 continuous days</span>
-                    </div>
-                  </div>
-
-                  {/* Benefits Checklist */}
-                  <div className="space-y-3 pt-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      VIP Membership Privileges:
-                    </span>
-                    <ul className="space-y-2.5 text-xs text-emerald-50">
-                      <li className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-                        <span><strong>Zero Monthly Reminders:</strong> Completely prepaid and hassle-free for 6 months</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="pt-6 mt-6 border-t border-white/15">
-                  <button
-                    onClick={() => {
-                      setSelectedPlanForEnroll('6_months');
-                      setEnrollBottlePreference('1L');
-                      setEnrollStep('details');
-                      setEnrollSuccess(null);
-                      setEnrollError('');
-                    }}
-                    className="btn-shining-gold w-full py-3.5 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>Enroll in 6-Months Prepaid (₹12,960)</span>
-                    <ArrowRight className="w-4 h-4 text-[#261603]" />
-                  </button>
-                  <p className="text-[11px] text-emerald-200 text-center mt-2">
-                    1L/day (or 2 × 500ml) at ₹70/L. Prepaid upfront for 180 days.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Benefits Banner */}
-            <div className="bg-[#F5FAF0] rounded-3xl border border-[#D8ECCE] p-6 sm:p-8">
-              <h3 className="text-lg font-bold text-[#0F240B] text-center mb-6">
-                Why Join the Zafiroo Organic Family?
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+              {/* Quick Benefits Banner */}
+              <div className="bg-[#F5FAF0] rounded-3xl border border-[#D8ECCE] p-6 sm:p-8">
+                <h3 className="text-lg font-bold text-[#0F240B] text-center mb-6">
+                  Why Join the Zafiroo Organic Family?
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
                 <div className="p-4 bg-white rounded-2xl border border-[#D8ECCE] space-y-2">
                   <div className="w-10 h-10 rounded-xl bg-[#EAF3E4] text-[#173612] flex items-center justify-center mx-auto">
                     <Truck className="w-5 h-5" />
@@ -537,8 +687,9 @@ export default function MembershipPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* TAB 2: CHECK MEMBERSHIP PROFILE BY PHONE */}
         {activeTab === 'check' && (
@@ -673,7 +824,7 @@ export default function MembershipPage() {
                         </div>
                       </div>
                       <span className="text-sm font-black bg-amber-300 text-black px-3 py-1 rounded-xl shadow-xs">
-                        ₹2,160 DUE
+                        ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'} DUE
                       </span>
                     </div>
 
@@ -683,10 +834,10 @@ export default function MembershipPage() {
 
                     <button
                       onClick={() => setSettlementModalOpen(true)}
-                      className="w-full py-3.5 bg-white hover:bg-rose-50 text-rose-800 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-white hover:bg-rose-50 text-rose-800 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CreditCard className="w-4 h-4 text-rose-700" />
-                      <span>Pay Month-End Bill (₹2,160)</span>
+                      <span>Pay Month-End Bill (₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'})</span>
                       <ArrowRight className="w-4 h-4 text-rose-700" />
                     </button>
                   </div>
@@ -700,6 +851,8 @@ export default function MembershipPage() {
                   const mDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
                   const mExpired = diffMs <= 0;
                   const isDue = mExpired || m.paymentStatus === 'due';
+                  const mQty = m.dailyQuantity || (m.planName?.includes('0.5L') || m.planName?.toLowerCase().includes('half liter') ? 0.5 : 1);
+                  const mQtyLabel = mQty === 0.5 ? 'Half Liter (0.5L)' : `${mQty}L`;
 
                   return (
                     <div key={m.id} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#173612] via-[#0F240B] to-[#0A1807] text-white p-6 sm:p-8 shadow-2xl border-2 border-[#CBE0A3]">
@@ -774,7 +927,7 @@ export default function MembershipPage() {
                           </div>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">
-                              🥛 {m.bottlePreference === '2 * 500ml' ? '2 * 500ml' : '1L'} Daily
+                              🥛 {mQtyLabel} Daily
                             </span>
                             <span
                               className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg ${
@@ -836,7 +989,7 @@ export default function MembershipPage() {
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Packaging: {m.bottlePreference === '2 * 500ml' ? '2 × 500ml Glass Bottles' : '1L Glass Bottle'}</span>
+                            <span>Daily Quota: {mQtyLabel}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <CheckCheck className="w-3.5 h-3.5 text-amber-300" />
@@ -916,8 +1069,8 @@ export default function MembershipPage() {
             {/* Bill Summary */}
             <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
-                <span>1-Month Organic Pass (30 Days, 1L/day @ ₹72):</span>
-                <strong className="text-[#0F240B]">₹2,160.00</strong>
+                <span>1-Month Organic Pass (30 Days, {searchResult.membership.dailyQuantity === 0.5 ? 'Half Liter' : `${searchResult.membership.dailyQuantity || 1}L`}/day):</span>
+                <strong className="text-[#0F240B]">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '2,160.00'}</strong>
               </div>
               <div className="flex justify-between text-emerald-800">
                 <span>Free Daily Doorstep Deliveries:</span>
@@ -933,7 +1086,7 @@ export default function MembershipPage() {
               </div>
               <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
                 <span>Total Amount Due:</span>
-                <span className="text-xl text-emerald-800 font-black">₹2,160.00</span>
+                <span className="text-xl text-emerald-800 font-black">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '2,160.00'}</span>
               </div>
             </div>
 
@@ -990,7 +1143,7 @@ export default function MembershipPage() {
               <button
                 onClick={handlePaySettlementBill}
                 disabled={settlementLoading}
-                className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-2xl text-xs uppercase tracking-wider shadow-md transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-black rounded-2xl text-xs uppercase tracking-wider shadow-md transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {settlementLoading ? (
                   <>
@@ -1000,7 +1153,7 @@ export default function MembershipPage() {
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Pay ₹2,160 (Simulate Settlement)</span>
+                    <span>Pay ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'} (Simulate Settlement)</span>
                   </>
                 )}
               </button>
@@ -1054,14 +1207,30 @@ export default function MembershipPage() {
                     <strong className="uppercase">{enrollSuccess.planName}</strong>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Daily Milk Quantity:</span>
+                    <strong className="text-emerald-800 font-black">
+                      {enrollSuccess.dailyQuantity === 0.5 ? 'Half Liter (0.5 L) / Day' : `${enrollSuccess.dailyQuantity || 1} Litre${(enrollSuccess.dailyQuantity || 1) > 1 ? 's' : ''} / Day`}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Daily Milk Packaging:</span>
                     <strong className="text-emerald-800 font-black">
-                      {enrollSuccess.bottlePreference === '2 * 500ml' ? '2 * 500ml Bottles' : '1L Single Bottle'}
+                      {enrollSuccess.dailyQuantity === 0.5
+                        ? '1 × 500ml Bottle'
+                        : enrollSuccess.bottlePreference === '2 * 500ml'
+                        ? '2 × 500ml Bottles'
+                        : `${enrollSuccess.dailyQuantity || 1} × 1L Bottle`}
                     </strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Billing Mode:</span>
                     <strong className="uppercase text-emerald-800 font-black">{enrollSuccess.billingType}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Plan Rate:</span>
+                    <strong className="text-[#0F240B] font-mono font-bold">
+                      ₹{enrollSuccess.price.toLocaleString('en-IN')}
+                    </strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Validity:</span>
@@ -1085,282 +1254,431 @@ export default function MembershipPage() {
                       setSearchPhone(clean);
                       handleSearch(undefined, clean);
                     }}
-                    className="flex-1 py-3 bg-[#173612] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow hover:bg-[#0F240B]"
+                    className="flex-1 py-3 bg-[#173612] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow hover:bg-[#0F240B] cursor-pointer"
                   >
                     View My Membership Card
                   </button>
                   <Link
                     href="/"
-                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-[#173612] rounded-xl text-xs font-bold flex items-center justify-center"
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-[#173612] rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer"
                   >
                     Start Shopping
                   </Link>
                 </div>
               </div>
-            ) : enrollStep === 'details' ? (
-              <>
-                {/* STEP 1: CUSTOMER DETAILS */}
-                <div className="space-y-1">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#385A2A]">
-                    Step 1 of {selectedPlanForEnroll === '6_months' ? '2' : '1'} • Details
-                  </span>
-                  <h3 className="text-xl font-black text-[#0F240B]">
-                    {selectedPlanForEnroll === '1_month'
-                      ? 'Enroll in 1 Month Pass (Postpaid)'
-                      : 'Enroll in 6 Months VIP Club (Prepaid)'}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {selectedPlanForEnroll === '1_month'
-                      ? '₹2,160/mo • Postpaid Billing (₹0 due today, 1L/day × ₹72 × 30 days, settle at month-end)'
-                      : '₹12,960 for 180 Days • Prepaid VIP Scheme (1L/day × ₹70, Save ₹360)'}
-                  </p>
-                </div>
+            ) : enrollStep === 'details' ? (() => {
+              const enrollDailyPrice = selectedDailyQuantity === 0.5 ? 38 : selectedDailyQuantity * 72;
+              const enrollMonthTotal = enrollDailyPrice * 30;
+              const enrollSixMonthTotal = enrollDailyPrice * 180;
+              const enrollQtyLabel = selectedDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
 
-                {enrollError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
-                    {enrollError}
-                  </div>
-                )}
-
-                <form onSubmit={handleProceedFromDetails} className="space-y-3.5 text-xs">
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">
-                      Full Name *
-                    </label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Ramesh Kumar"
-                        value={enrollName}
-                        onChange={(e) => setEnrollName(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#173612]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">
-                      10-Digit Mobile Number * (Database Primary Key)
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="tel"
-                        required
-                        placeholder="e.g. 9876543210"
-                        value={enrollPhone}
-                        onChange={(e) => setEnrollPhone(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 font-mono focus:outline-none focus:border-[#173612]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* DAILY MILK PACKAGING DROPDOWN */}
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>Daily Milk Bottle Packaging *</span>
-                      <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        Sterilized Glass Bottles
-                      </span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={enrollBottlePreference}
-                        onChange={(e) => setEnrollBottlePreference(e.target.value as '1L' | '2 * 500ml')}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
-                      >
-                        <option value="1L">1L (Single 1 Litre Bottle / Day)</option>
-                        <option value="2 * 500ml">2 * 500ml (Two 500ml Bottles / Day)</option>
-                      </select>
-                    </div>
-                    <p className="text-[11px] text-gray-500 mt-1">
-                      Choose between a single 1L glass bottle or two 500ml bottles delivered fresh every morning.
+              return (
+                <>
+                  {/* STEP 1: CUSTOMER DETAILS */}
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#385A2A]">
+                      Step 1 of {selectedPlanForEnroll === '6_months' ? '2' : '1'} • Details
+                    </span>
+                    <h3 className="text-xl font-black text-[#0F240B]">
+                      {selectedPlanForEnroll === '1_month'
+                        ? 'Enroll in 1 Month Pass (Postpaid)'
+                        : 'Enroll in 6 Months VIP Club (Prepaid)'}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedPlanForEnroll === '1_month'
+                        ? `₹${enrollMonthTotal.toLocaleString('en-IN')}/mo • Postpaid Billing (₹0 due today, ${enrollQtyLabel}/day × ₹${enrollDailyPrice}/day × 30 days, settle at month-end)`
+                        : `₹${enrollSixMonthTotal.toLocaleString('en-IN')} for 180 Days • Prepaid VIP Scheme (${enrollQtyLabel}/day × ₹${enrollDailyPrice}/day × 180 days)`}
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">
-                      Delivery Address
-                    </label>
-                    <div className="relative">
-                      <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Apartment, Street, Area"
-                        value={enrollAddress}
-                        onChange={(e) => setEnrollAddress(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#173612]"
-                      />
+                  {enrollError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
+                      {enrollError}
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">
-                      Email Address (Optional)
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="email"
-                        placeholder="name@example.com"
-                        value={enrollEmail}
-                        onChange={(e) => setEnrollEmail(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#173612]"
-                      />
+                  <form onSubmit={handleProceedFromDetails} className="space-y-3.5 text-xs">
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Full Name *
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Ramesh Kumar"
+                          value={enrollName}
+                          onChange={(e) => setEnrollName(e.target.value)}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#173612]"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={enrollLoading}
-                    className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md transition active:scale-95 disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
-                  >
-                    {enrollLoading ? (
-                      <span>Saving to Database...</span>
-                    ) : selectedPlanForEnroll === '1_month' ? (
-                      <>
-                        <Zap className="w-4 h-4 text-amber-300" />
-                        <span>Confirm & Activate 1-Month Postpaid (₹0 Today)</span>
-                      </>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        10-Digit Mobile Number * (Database Primary Key)
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="tel"
+                          required
+                          placeholder="e.g. 9876543210"
+                          value={enrollPhone}
+                          onChange={(e) => setEnrollPhone(e.target.value)}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 font-mono focus:outline-none focus:border-[#173612]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* DAILY MILK QUANTITY SELECTOR (0.5 for Half Liter, then integer 1, 2, 3, 4, 5, etc.) */}
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+                        <span>Daily Milk Quantity (1 Day Quota) *</span>
+                        <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          ₹{enrollDailyPrice} / Day
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedDailyQuantity}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setSelectedDailyQuantity(val);
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
+                        >
+                          <option value={0.5}>Half Liter (0.5 L / day) — ₹38 / day</option>
+                          <option value={1}>1 Litre / day — ₹72 / day</option>
+                          <option value={2}>2 Litres / day — ₹144 / day</option>
+                          <option value={3}>3 Litres / day — ₹216 / day</option>
+                          <option value={4}>4 Litres / day — ₹288 / day</option>
+                          <option value={5}>5 Litres / day — ₹360 / day</option>
+                          <option value={6}>6 Litres / day — ₹432 / day</option>
+                          <option value={7}>7 Litres / day — ₹504 / day</option>
+                          <option value={8}>8 Litres / day — ₹576 / day</option>
+                          <option value={9}>9 Litres / day — ₹648 / day</option>
+                          <option value={10}>10 Litres / day — ₹720 / day</option>
+                        </select>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        {selectedDailyQuantity === 0.5
+                          ? 'Half liter milk delivered fresh every morning at ₹38/day.'
+                          : `${selectedDailyQuantity} Litre${selectedDailyQuantity > 1 ? 's' : ''} milk delivered fresh every morning at ₹72/L (₹${enrollDailyPrice}/day).`}
+                      </p>
+                    </div>
+
+                    {/* DAILY MILK PACKAGING PREFERENCE */}
+                    {selectedDailyQuantity === 1 ? (
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+                          <span>Daily Milk Bottle Packaging *</span>
+                          <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Sterilized Glass Bottles
+                          </span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={enrollBottlePreference}
+                            onChange={(e) => setEnrollBottlePreference(e.target.value as '1L' | '2 * 500ml')}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
+                          >
+                            <option value="1L">1L (Single 1 Litre Bottle / Day)</option>
+                            <option value="2 * 500ml">2 * 500ml (Two 500ml Bottles / Day)</option>
+                          </select>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          Choose between a single 1L glass bottle or two 500ml bottles delivered fresh every morning.
+                        </p>
+                      </div>
+                    ) : selectedDailyQuantity === 0.5 ? (
+                      <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#D8ECCE] text-[11px] text-[#173612] flex items-center gap-2">
+                        <span>🥛 Daily Packaging: <strong>1 × 500ml sterilized glass bottle / day</strong></span>
+                      </div>
                     ) : (
-                      <>
-                        <CreditCard className="w-4 h-4 text-amber-300" />
-                        <span>Proceed to Prepaid VIP Checkout (₹12,960) →</span>
-                      </>
+                      <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#D8ECCE] text-[11px] text-[#173612] flex items-center gap-2">
+                        <span>🥛 Daily Packaging: <strong>{selectedDailyQuantity} × 1L sterilized glass bottles / day</strong></span>
+                      </div>
                     )}
-                  </button>
-                </form>
-              </>
-            ) : (
-              <>
-                {/* STEP 2: PREPAID VIP PAYMENT PAGE FOR 6 MONTHS */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-amber-800">
-                      Step 2 of 2 • VIP Prepaid Checkout
-                    </span>
+
+                    {/* CHANGE 2: DELIVERY ADDRESS WITH 2 SECTIONS (GPS ADDRESS & LANDMARK ADDRESS) */}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-gray-700">
+                          Delivery Address <span className="text-rose-600">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleEnrollUseCurrentLocation}
+                          disabled={enrollGeocoding}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#173612] hover:bg-[#0F240B] text-white border border-[#173612]/30 rounded-xl text-[11px] font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                          {enrollGeocoding ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <MapPin className="w-3.5 h-3.5 fill-white text-white" />
+                          )}
+                          <span>{enrollGeocoding ? 'Detecting GPS...' : 'Auto-Detect GPS'}</span>
+                        </button>
+                      </div>
+
+                      {enrollGeocodeMessage && (
+                        <p className="text-[11px] font-bold text-[#173612] bg-[#ECF5DE] p-2.5 rounded-xl border border-[#CBE0A3]">
+                          {enrollGeocodeMessage}
+                        </p>
+                      )}
+
+                      {/* Section 1: GPS Address / Line 1 */}
+                      <div className="relative">
+                        <label className="block text-[11px] font-bold text-[#173612] mb-1">
+                          GPS Address: Street / Road / Locality <span className="text-rose-600">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 12th Main Road, Indiranagar, Bengaluru"
+                          value={enrollLine1}
+                          onChange={(e) => handleEnrollLine1Change(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612] shadow-sm"
+                        />
+
+                        {enrollAddressSuggestions.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                            {enrollAddressSuggestions.map((s, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setEnrollLine1(s.formatted);
+                                  setEnrollAddressSuggestions([]);
+                                }}
+                                className="w-full text-left px-3.5 py-2 text-xs hover:bg-[#F5FAF0] text-[#173612] flex items-center justify-between cursor-pointer"
+                              >
+                                <span className="truncate font-medium">{s.formatted}</span>
+                                <ChevronRight className="w-3 h-3 text-gray-400 shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Section 2: Landmark Address / Line 2 */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-bold text-[#173612]">
+                            Landmark Address: House No., Flat & Landmark <span className="text-rose-600">*</span>
+                          </label>
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            Mandatory
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Flat 402, Oakwood Palms, Near Sony Center / Landmark"
+                          value={enrollLine2}
+                          onChange={(e) => {
+                            setEnrollLine2(e.target.value);
+                            if (enrollError) setEnrollError('');
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 bg-white text-xs font-semibold text-[#173612] focus:outline-none focus:border-[#173612] shadow-sm"
+                        />
+                        <p className="text-[10px] text-[#385A2A] font-semibold mt-1">
+                          Complete address (House / Flat No.) and a nearby Landmark are compulsory for accurate doorstep delivery.
+                        </p>
+                      </div>
+
+                      {/* 1-Line Preview Banner */}
+                      {(enrollLine1 || enrollLine2) && (
+                        <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#CBE0A3] text-[11px] text-[#173612]">
+                          <span className="font-bold text-[#0F240B]">Delivery Destination: </span>
+                          {formatFullOneLineAddress(enrollLine1, enrollLine2)}
+                          {!enrollLine2.trim() && (
+                            <span className="block text-rose-600 font-bold mt-1 text-[10px]">
+                              ⚠️ Please enter House/Flat No. & Landmark above to complete your delivery address.
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Email Address (Optional)
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          placeholder="name@example.com"
+                          value={enrollEmail}
+                          onChange={(e) => setEnrollEmail(e.target.value)}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#173612]"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={enrollLoading}
+                      className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md transition active:scale-95 disabled:opacity-50 mt-2 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {enrollLoading ? (
+                        <span>Saving to Database...</span>
+                      ) : selectedPlanForEnroll === '1_month' ? (
+                        <>
+                          <Zap className="w-4 h-4 text-amber-300" />
+                          <span>Confirm & Activate 1-Month Postpaid (₹0 Today • Settle ₹{enrollMonthTotal.toLocaleString('en-IN')})</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4 text-amber-300" />
+                          <span>Proceed to Prepaid VIP Checkout (₹{enrollSixMonthTotal.toLocaleString('en-IN')}) →</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </>
+              );
+            })() : (() => {
+              const vipDailyPrice = selectedDailyQuantity === 0.5 ? 38 : selectedDailyQuantity * 72;
+              const vipTotal = vipDailyPrice * 180;
+              const vipQtyLabel = selectedDailyQuantity === 0.5 ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
+
+              return (
+                <>
+                  {/* STEP 2: PREPAID VIP PAYMENT PAGE FOR 6 MONTHS */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-widest text-amber-800">
+                        Step 2 of 2 • VIP Prepaid Checkout
+                      </span>
+                      <button
+                        onClick={() => setEnrollStep('details')}
+                        className="text-[11px] font-bold text-[#173612] hover:underline cursor-pointer"
+                      >
+                        ← Edit Details
+                      </button>
+                    </div>
+                    <h3 className="text-xl font-black text-[#0F240B]">
+                      Prepaid Membership Payment
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Pay upfront for 180 days of unlimited free doorstep deliveries ({vipQtyLabel}/day).
+                    </p>
+                  </div>
+
+                  {enrollError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
+                      {enrollError}
+                    </div>
+                  )}
+
+                  {/* Plan Invoice Breakdown */}
+                  <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
+                    <div className="flex justify-between text-gray-700">
+                      <span>6-Month VIP Club Scheme ({vipQtyLabel}/day @ ₹{vipDailyPrice}/day):</span>
+                      <span>₹{vipTotal.toLocaleString('en-IN')}.00</span>
+                    </div>
+                    <div className="flex justify-between text-gray-700">
+                      <span>Daily Packaging Option:</span>
+                      <strong className="text-emerald-900 font-bold">
+                        {selectedDailyQuantity === 0.5
+                          ? '1 × 500ml Glass Bottle'
+                          : enrollBottlePreference === '2 * 500ml'
+                          ? '2 × 500ml Glass Bottles'
+                          : `${selectedDailyQuantity} × 1L Glass Bottle`}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between text-emerald-800">
+                      <span>180 Days Daily Delivery Charges:</span>
+                      <strong>₹0.00 (Free)</strong>
+                    </div>
+                    <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
+                      <span>Total Prepaid Amount:</span>
+                      <span className="text-2xl text-emerald-900 font-black">₹{vipTotal.toLocaleString('en-IN')}.00</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Methods Choice */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-black uppercase tracking-wider text-gray-700">
+                      Select Prepaid Payment Method:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <label
+                        className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
+                          prepaidPaymentMethod === 'razorpay'
+                            ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
+                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <CreditCard className="w-4 h-4 text-[#173612]" />
+                          <input
+                            type="radio"
+                            name="prepaid_pay"
+                            checked={prepaidPaymentMethod === 'razorpay'}
+                            onChange={() => setPrepaidPaymentMethod('razorpay')}
+                            className="accent-[#173612]"
+                          />
+                        </div>
+                        <span className="text-[11px]">Razorpay UPI/Cards</span>
+                      </label>
+
+                      <label
+                        className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
+                          prepaidPaymentMethod === 'cod'
+                            ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
+                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <Banknote className="w-4 h-4 text-[#173612]" />
+                          <input
+                            type="radio"
+                            name="prepaid_pay"
+                            checked={prepaidPaymentMethod === 'cod'}
+                            onChange={() => setPrepaidPaymentMethod('cod')}
+                            className="accent-[#173612]"
+                          />
+                        </div>
+                        <span className="text-[11px]">Pay on First Delivery</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Submit Payment */}
+                  <div className="space-y-2 pt-2">
+                    <button
+                      onClick={handleCompletePrepaidPayment}
+                      disabled={enrollLoading}
+                      className="btn-shining-gold w-full py-4 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {enrollLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin text-[#261603]" />
+                          <span>Processing VIP Activation...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Crown className="w-4 h-4 text-[#261603] fill-[#261603]" />
+                          <span>⚡ Pay ₹{vipTotal.toLocaleString('en-IN')} & Activate VIP Pass</span>
+                        </>
+                      )}
+                    </button>
+
                     <button
                       onClick={() => setEnrollStep('details')}
-                      className="text-[11px] font-bold text-[#173612] hover:underline"
+                      className="w-full py-2 text-xs text-gray-500 font-bold hover:text-gray-800 cursor-pointer"
                     >
-                      ← Edit Details
+                      ← Back to Customer Details
                     </button>
                   </div>
-                  <h3 className="text-xl font-black text-[#0F240B]">
-                    Prepaid Membership Payment
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Pay upfront for 180 days of unlimited free doorstep deliveries.
-                  </p>
-                </div>
-
-                {enrollError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center">
-                    {enrollError}
-                  </div>
-                )}
-
-                {/* Plan Invoice Breakdown */}
-                <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
-                  <div className="flex justify-between text-gray-700">
-                    <span>6-Month VIP Club Scheme:</span>
-                    <span>₹12,960.00</span>
-                  </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>Daily Packaging Option:</span>
-                    <strong className="text-emerald-900 font-bold">
-                      {enrollBottlePreference === '2 * 500ml' ? '2 * 500ml Glass Bottles' : '1L Single Glass Bottle'}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between text-emerald-800">
-                    <span>180 Days Daily Delivery Charges:</span>
-                    <strong>₹0.00 (Free)</strong>
-                  </div>
-                  <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
-                    <span>Total Prepaid Amount:</span>
-                    <span className="text-2xl text-emerald-900 font-black">₹12,960.00</span>
-                  </div>
-                </div>
-
-                {/* Payment Methods Choice */}
-                <div className="space-y-3">
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-700">
-                    Select Prepaid Payment Method:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <label
-                      className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
-                        prepaidPaymentMethod === 'razorpay'
-                          ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
-                          : 'border-gray-200 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <CreditCard className="w-4 h-4 text-[#173612]" />
-                        <input
-                          type="radio"
-                          name="prepaid_pay"
-                          checked={prepaidPaymentMethod === 'razorpay'}
-                          onChange={() => setPrepaidPaymentMethod('razorpay')}
-                          className="accent-[#173612]"
-                        />
-                      </div>
-                      <span className="text-[11px]">Razorpay UPI/Cards</span>
-                    </label>
-
-                    <label
-                      className={`p-3 rounded-2xl border-2 cursor-pointer flex flex-col justify-between gap-1 transition ${
-                        prepaidPaymentMethod === 'cod'
-                          ? 'border-[#173612] bg-[#ECF5DE] font-bold text-[#0F240B]'
-                          : 'border-gray-200 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <Banknote className="w-4 h-4 text-[#173612]" />
-                        <input
-                          type="radio"
-                          name="prepaid_pay"
-                          checked={prepaidPaymentMethod === 'cod'}
-                          onChange={() => setPrepaidPaymentMethod('cod')}
-                          className="accent-[#173612]"
-                        />
-                      </div>
-                      <span className="text-[11px]">Pay on First Delivery</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Submit Payment */}
-                <div className="space-y-2 pt-2">
-                  <button
-                    onClick={handleCompletePrepaidPayment}
-                    disabled={enrollLoading}
-                    className="btn-shining-gold w-full py-4 rounded-2xl text-[#261603] font-black text-xs uppercase tracking-wider shadow-xl transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {enrollLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-[#261603]" />
-                        <span>Processing VIP Activation...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Crown className="w-4 h-4 text-[#261603] fill-[#261603]" />
-                        <span>⚡ Pay ₹12,960 & Activate VIP Pass</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setEnrollStep('details')}
-                    className="w-full py-2 text-xs text-gray-500 font-bold hover:text-gray-800"
-                  >
-                    ← Back to Customer Details
-                  </button>
-                </div>
-              </>
-            )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
