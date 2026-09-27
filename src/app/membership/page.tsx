@@ -1338,10 +1338,10 @@ export default function MembershipPage() {
                       </div>
                     </div>
 
-                    {/* DAILY MILK QUANTITY SELECTOR (0.5 for Half Liter, then integer 1, 2, 3, 4, 5, etc.) */}
+                    {/* BOTTLE SELECTION DROPDOWN */}
                     <div>
                       <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
-                        <span>Daily Milk Quantity (1 Day Quota) *</span>
+                        <span>Bottle Selection *</span>
                         <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                           ₹{enrollDailyPrice} / Day{isSixMonthPlan ? ' (VIP)' : ''}
                         </span>
@@ -1356,13 +1356,14 @@ export default function MembershipPage() {
                           className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
                         >
                           {[0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qty) => {
+                            const days = isSixMonthPlan ? 180 : 30;
                             const dayPrice = qty === 0.5
                               ? (isSixMonthPlan ? 36 : 38)
                               : qty * (isSixMonthPlan ? 70 : 72);
-                            const label = qty === 0.5 ? 'Half Liter (0.5 L / day)' : `${qty} Litre${qty > 1 ? 's' : ''} / day`;
+                            const qtyLabel = qty === 0.5 ? 'Half Liter' : `${qty} Liter${qty > 1 ? 's' : ''}`;
                             return (
                               <option key={qty} value={qty}>
-                                {label} — ₹{dayPrice} / day{isSixMonthPlan ? ' (VIP)' : ''}
+                                {`${qtyLabel}\\${days} days - rs ${dayPrice}x${days}`}
                               </option>
                             );
                           })}
@@ -1371,42 +1372,9 @@ export default function MembershipPage() {
                       <p className="text-[11px] text-gray-500 mt-1">
                         {isHalf
                           ? `Half liter milk delivered fresh every morning at ₹${enrollDailyPrice}/day${isSixMonthPlan ? ' (6-Month VIP rate)' : ''}.`
-                          : `${selectedDailyQuantity} Litre${selectedDailyQuantity > 1 ? 's' : ''} milk delivered fresh every morning at ₹${isSixMonthPlan ? '70' : '72'}/L (₹${enrollDailyPrice}/day).`}
+                          : `${selectedDailyQuantity} Liter${selectedDailyQuantity > 1 ? 's' : ''} milk delivered fresh every morning at ₹${isSixMonthPlan ? '70' : '72'}/L (₹${enrollDailyPrice}/day).`}
                       </p>
                     </div>
-
-                    {/* DAILY MILK PACKAGING PREFERENCE */}
-                    {selectedDailyQuantity === 1 ? (
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1 flex items-center justify-between">
-                          <span>Daily Milk Bottle Packaging *</span>
-                          <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            Sterilized Glass Bottles
-                          </span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={enrollBottlePreference}
-                            onChange={(e) => setEnrollBottlePreference(e.target.value as '1L' | '2 * 500ml')}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
-                          >
-                            <option value="1L">1L (Single 1 Litre Bottle / Day)</option>
-                            <option value="2 * 500ml">2 * 500ml (Two 500ml Bottles / Day)</option>
-                          </select>
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-1">
-                          Choose between a single 1L glass bottle or two 500ml bottles delivered fresh every morning.
-                        </p>
-                      </div>
-                    ) : selectedDailyQuantity === 0.5 ? (
-                      <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#D8ECCE] text-[11px] text-[#173612] flex items-center gap-2">
-                        <span>🥛 Daily Packaging: <strong>1 × 500ml sterilized glass bottle / day</strong></span>
-                      </div>
-                    ) : (
-                      <div className="p-2.5 bg-[#F5FAF0] rounded-xl border border-[#D8ECCE] text-[11px] text-[#173612] flex items-center gap-2">
-                        <span>🥛 Daily Packaging: <strong>{selectedDailyQuantity} × 1L sterilized glass bottles / day</strong></span>
-                      </div>
-                    )}
 
                     {/* CHANGE 2: DELIVERY ADDRESS WITH 2 SECTIONS (GPS ADDRESS & LANDMARK ADDRESS) */}
                     <div className="space-y-3 pt-1">
