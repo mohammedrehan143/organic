@@ -343,3 +343,21 @@ export function updateLocalMembershipBillApproved(idOrPhone: string, billApprove
   }
   return null;
 }
+
+export function cancelLocalMembership(idOrPhone: string, cancelledBy: 'customer' | 'admin' = 'customer'): Membership | null {
+  if (!serverStore.memberships) {
+    serverStore.memberships = [];
+  }
+  const clean = idOrPhone.replace(/[^0-9]/g, '').slice(-10);
+  const target = serverStore.memberships.find(
+    (m) => m.id === idOrPhone || (clean.length === 10 && m.phone.replace(/[^0-9]/g, '').slice(-10) === clean)
+  );
+  if (target) {
+    target.status = 'cancelled';
+    target.cancelledAt = new Date().toISOString();
+    target.cancelledBy = cancelledBy;
+    target.updatedAt = new Date().toISOString();
+    return target;
+  }
+  return null;
+}

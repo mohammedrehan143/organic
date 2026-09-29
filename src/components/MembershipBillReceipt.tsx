@@ -25,8 +25,9 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
     hour12: true,
   });
 
-  const isPaid = membership.paymentStatus === 'paid' || isSixMonths;
-  const isDue = membership.paymentStatus === 'due';
+  const isCancelled = membership.status === 'cancelled';
+  const isPaid = !isCancelled && (membership.paymentStatus === 'paid' || isSixMonths);
+  const isDue = !isCancelled && membership.paymentStatus === 'due';
 
   // Resolve daily quantity: 0.5, 1, 2, 3, etc.
   const rawDailyQty = membership.dailyQuantity || (
@@ -37,7 +38,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
   
   let dailyQty = rawDailyQty;
   if (!dailyQty) {
-    const duration = isSixMonths ? 180 : 30;
+    const duration = isSixMonths ? 180 : 7;
     if (membership.price > 0) {
       const perDay = membership.price / duration;
       const halfRate = isSixMonths ? 36 : 38;
@@ -209,7 +210,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
                 </span>
               </td>
               <td className="py-2.5 px-2.5 text-center font-mono text-gray-800">
-                <span className="font-bold">{isSixMonths ? '180 Days' : '30 Days'}</span>
+                <span className="font-bold">{isSixMonths ? '180 Days' : '7 Days'}</span>
                 <span className="block text-[9px] text-gray-500">
                   {startDate.toLocaleDateString('en-IN')} - {endDate.toLocaleDateString('en-IN')}
                 </span>
@@ -220,7 +221,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
               <td className="py-2.5 px-2.5 text-right font-bold font-mono text-[#0F240B] text-xs">
                 ₹{membership.price.toFixed(2)}
                 <span className="block text-[9px] text-gray-500 font-normal">
-                  ({isSixMonths ? '180' : '30'}d × ₹{dailyRate})
+                  ({isSixMonths ? '180' : '7'}d × ₹{dailyRate})
                 </span>
               </td>
             </tr>
@@ -246,7 +247,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
         {/* Totals Table */}
         <div className="w-full sm:w-72 space-y-1 text-[11px]">
           <div className="flex justify-between text-gray-700">
-            <span>Scheme Rate ({dailyQuantityLabel} × {isSixMonths ? '180' : '30'}d):</span>
+            <span>Scheme Rate ({dailyQuantityLabel} × {isSixMonths ? '180' : '7'}d):</span>
             <span className="font-mono font-semibold">₹{membership.price.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-emerald-800 font-bold">
@@ -266,14 +267,22 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
           <div className="pt-1 flex justify-end">
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                isPaid
+                isCancelled
+                  ? 'bg-rose-100 text-rose-900 border border-rose-400'
+                  : isPaid
                   ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                   : isDue
                   ? 'bg-rose-100 text-rose-900 border border-rose-300'
                   : 'bg-blue-100 text-blue-900 border border-blue-300'
               }`}
             >
-              {isPaid ? '✓ PAID & ACTIVATED' : isDue ? '🚨 MONTH-END SETTLEMENT DUE' : '● POSTPAID CYCLE ACTIVE'}
+              {isCancelled
+                ? '🚫 MEMBERSHIP CANCELLED'
+                : isPaid
+                ? '✓ PAID & ACTIVATED'
+                : isDue
+                ? '🚨 7-DAY SETTLEMENT DUE'
+                : '● POSTPAID CYCLE ACTIVE'}
             </span>
           </div>
         </div>

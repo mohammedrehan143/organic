@@ -61,7 +61,13 @@ export default function MembershipPage() {
   const [skipLoading, setSkipLoading] = useState(false);
   const [skipSuccessMsg, setSkipSuccessMsg] = useState('');
 
-  // Settlement modal state (for 1-month postpaid month-end bill)
+  // Cancellation modal state (Customer cancellation)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelTargetMembership, setCancelTargetMembership] = useState<Membership | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
+
+  // Settlement modal state (for 7-day postpaid week-end bill)
   const [settlementModalOpen, setSettlementModalOpen] = useState(false);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [settlementMethod, setSettlementMethod] = useState<'razorpay' | 'cod'>('razorpay');
@@ -158,7 +164,7 @@ export default function MembershipPage() {
     }
   };
 
-  // Skip / Fast-Forward 30 Days (Simulation for testing Postpaid payment flow)
+  // Skip / Fast-Forward 7 Days (Simulation for testing Postpaid payment flow)
   const handleSkipToDue = async () => {
     if (!searchResult?.membership?.phone) return;
     setSkipLoading(true);
@@ -178,12 +184,12 @@ export default function MembershipPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹2,160';
-        setSkipSuccessMsg(`⏩ Fast-forwarded 30 days! Month-end bill of ${billAmount} is now due for settlement.`);
+        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹504';
+        setSkipSuccessMsg(`⏩ Fast-forwarded 7 days! Week-end bill of ${billAmount} is now due for settlement.`);
         // Refresh membership profile
         await handleSearch(undefined, searchResult.membership.phone);
       } else {
-        setSearchError(data.message || 'Failed to simulate 30 days fast-forward.');
+        setSearchError(data.message || 'Failed to simulate 7 days fast-forward.');
       }
     } catch {
       setSearchError('Network error while updating membership status.');
@@ -192,7 +198,7 @@ export default function MembershipPage() {
     }
   };
 
-  // Pay Month-End Postpaid Settlement Bill
+  // Pay Week-End Postpaid Settlement Bill
   const handlePaySettlementBill = async () => {
     if (!searchResult?.membership?.phone) return;
     setSettlementLoading(true);
@@ -220,9 +226,11 @@ export default function MembershipPage() {
           });
         } catch {}
 
-        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹2,160';
+        const isSixMonths = searchResult.membership.planType === '6_months';
+        const durationText = isSixMonths ? '180 days' : '7 days';
+        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹504';
         setSettlementModalOpen(false);
-        setSettlementSuccessMsg(`🎉 Month-end bill of ${billAmount} settled successfully! Membership renewed for the next 30 days.`);
+        setSettlementSuccessMsg(`🎉 Bill of ${billAmount} settled successfully! Membership renewed for the next ${durationText}.`);
         // Refresh membership profile
         await handleSearch(undefined, searchResult.membership.phone);
       } else {
@@ -235,7 +243,39 @@ export default function MembershipPage() {
     }
   };
 
-  // Step 1 -> Step 2 validation or Direct 1-Month Postpaid activation
+  // Customer Cancellation Handler
+  const handleCancelMembership = async () => {
+    if (!cancelTargetMembership) return;
+    setCancelLoading(true);
+    setCancelSuccessMsg('');
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: cancelTargetMembership.id,
+          phone: cancelTargetMembership.phone,
+          action: 'cancel',
+          cancelledBy: 'customer',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCancelSuccessMsg('Your membership has been cancelled successfully. Morning milk deliveries have been stopped.');
+        setCancelModalOpen(false);
+        await handleSearch(undefined, cancelTargetMembership.phone);
+      } else {
+        alert(data.message || 'Failed to cancel membership.');
+      }
+    } catch {
+      alert('Network error while cancelling membership.');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Step 1 -> Step 2 validation or Direct 7-Day Postpaid activation
   const handleProceedFromDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     setEnrollError('');
@@ -428,7 +468,7 @@ export default function MembershipPage() {
           const isHalf = schemesDailyQuantity === 0.5;
           const monthDailyPrice = isHalf ? 38 : schemesDailyQuantity * 72;
           const sixMonthDailyPrice = isHalf ? 36 : schemesDailyQuantity * 70;
-          const schemesMonthTotal = monthDailyPrice * 30;
+          const schemesMonthTotal = monthDailyPrice * 7;
           const schemesSixMonthTotal = sixMonthDailyPrice * 180;
           const schemesQtyLabel = isHalf ? 'Half Liter (0.5L)' : `${schemesDailyQuantity}L`;
 
@@ -446,7 +486,7 @@ export default function MembershipPage() {
                     </h3>
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 bg-[#173612] text-amber-300 rounded-full self-start sm:self-auto shadow-sm">
-                    🥛 1-Mo: ₹{monthDailyPrice}/d • 6-Mo VIP: ₹{sixMonthDailyPrice}/d
+                    🥛 7-Day: ₹{monthDailyPrice}/d • 6-Mo VIP: ₹{sixMonthDailyPrice}/d
                   </span>
                 </div>
 
@@ -483,28 +523,28 @@ export default function MembershipPage() {
                 </div>
                 <p className="text-[11px] text-gray-500 font-medium pt-0.5">
                   {isHalf
-                    ? 'Pure organic cow milk bottled fresh every morning: 1 × 500ml sterilized glass bottle at ₹38/day (1-Month) or ₹36/day (6-Months VIP).'
-                    : `Pure organic cow milk bottled fresh every morning: ${schemesDailyQuantity} Litre${schemesDailyQuantity > 1 ? 's' : ''}/day at ₹72/L (1-Month) or ₹70/L (6-Months VIP).`}
+                    ? 'Pure organic cow milk bottled fresh every morning: 1 × 500ml sterilized glass bottle at ₹38/day (7-Day) or ₹36/day (6-Months VIP).'
+                    : `Pure organic cow milk bottled fresh every morning: ${schemesDailyQuantity} Litre${schemesDailyQuantity > 1 ? 's' : ''}/day at ₹72/L (7-Day) or ₹70/L (6-Months VIP).`}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-                {/* SCHEME 1: 1 MONTH (POSTPAID) */}
+                {/* SCHEME 1: 7 DAYS (POSTPAID - 1 WEEK) */}
                 <div className="bg-white rounded-3xl border-2 border-[#D8ECCE] shadow-lg p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden hover:border-[#86B970] transition">
                   <div className="absolute top-0 right-0 bg-[#EAF3E4] text-[#173612] text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl border-l border-b border-[#D8ECCE]">
-                    POSTPAID FLEXIBILITY
+                    POSTPAID FLEXIBILITY • 7 DAYS
                   </div>
 
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <span className="text-xs font-bold text-[#385A2A] uppercase tracking-widest">
-                        Flexible Scheme
+                        Weekly Flexible Scheme
                       </span>
                       <h2 className="text-2xl sm:text-3xl font-black text-[#0F240B]">
-                        1 Month Organic Pass
+                        7 Days Organic Pass
                       </h2>
                       <p className="text-xs text-gray-600">
-                        Perfect for trying daily pure organic milk with zero advance commitment. Pay at month-end.
+                        Starts tomorrow morning! Perfect for trying daily pure organic milk for 1 week with zero advance commitment. Pay after 7 days.
                       </p>
                     </div>
 
@@ -514,14 +554,14 @@ export default function MembershipPage() {
                         <span className="text-3xl sm:text-4xl font-black text-[#0F240B]">
                           ₹{schemesMonthTotal.toLocaleString('en-IN')}
                         </span>
-                        <span className="text-xs text-gray-500 font-bold">/ 30 Days</span>
+                        <span className="text-xs text-gray-500 font-bold">/ 7 Days (1 Week)</span>
                       </div>
                       <div className="text-[11px] font-bold text-gray-600">
-                        {schemesQtyLabel}/day × ₹{monthDailyPrice}/day × 30 days
+                        {schemesQtyLabel}/day × ₹{monthDailyPrice}/day × 7 days
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800">
                         <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-                        <span>Postpaid Billing: ₹0 Advance • Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} invoice at month-end</span>
+                        <span>Postpaid Billing: ₹0 Advance • Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} invoice after 7 days</span>
                       </div>
                     </div>
 
@@ -537,11 +577,15 @@ export default function MembershipPage() {
                         </li>
                         <li className="flex items-start gap-2.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span><strong>100% Free Daily Doorstep Delivery</strong> across entire 30 days</span>
+                          <span><strong>Starts Next Day:</strong> Sunrise milk deliveries begin from tomorrow morning</span>
                         </li>
                         <li className="flex items-start gap-2.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span><strong>Postpaid Settlement:</strong> Pay ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end</span>
+                          <span><strong>100% Free Daily Doorstep Delivery</strong> across entire 7 days (1 week)</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Postpaid Settlement:</strong> Pay ₹{schemesMonthTotal.toLocaleString('en-IN')} after 7 days</span>
                         </li>
                         <li className="flex items-start gap-2.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -563,11 +607,11 @@ export default function MembershipPage() {
                       }}
                       className="w-full py-3.5 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <span>Enroll in 1-Month Postpaid (₹0 Advance)</span>
+                      <span>Enroll in 7-Days Postpaid (₹0 Advance)</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <p className="text-[11px] text-gray-500 text-center mt-2">
-                      {schemesQtyLabel}/day at ₹{monthDailyPrice}/day. Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} at month-end.
+                      {schemesQtyLabel}/day at ₹{monthDailyPrice}/day. Settle ₹{schemesMonthTotal.toLocaleString('en-IN')} after 7 days.
                     </p>
                   </div>
                 </div>
@@ -684,7 +728,7 @@ export default function MembershipPage() {
                   </div>
                   <h4 className="font-bold text-sm text-[#0F240B]">Postpaid & Prepaid Choice</h4>
                   <p className="text-xs text-gray-600">
-                    Pick 1 Month Postpaid for month-end ease, or 6 Months Prepaid for maximum savings.
+                    Pick 7 Days Postpaid for 1-week flexibility, or 6 Months Prepaid for maximum savings.
                   </p>
                 </div>
               </div>
@@ -774,8 +818,8 @@ export default function MembershipPage() {
                   </div>
                 )}
 
-                {/* 1. FAST-FORWARD SKIP TEST BUTTON (For 1-Month Postpaid Scheme) */}
-                {searchResult.membership.billingType === 'postpaid' && !searchResult.isExpired && searchResult.membership.paymentStatus !== 'due' && (
+                {/* 1. FAST-FORWARD SKIP TEST BUTTON (For 7-Day Postpaid Scheme) */}
+                {searchResult.membership.billingType === 'postpaid' && searchResult.membership.status !== 'cancelled' && !searchResult.isExpired && searchResult.membership.paymentStatus !== 'due' && (
                   <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                     <div className="space-y-1 text-center sm:text-left">
                       <div className="flex items-center justify-center sm:justify-start gap-2">
@@ -785,13 +829,13 @@ export default function MembershipPage() {
                         </span>
                       </div>
                       <p className="text-xs text-amber-800">
-                        Fast-forward 30 days immediately to trigger the 1-month postpaid bill payment page.
+                        Fast-forward 7 days immediately to trigger the 7-day postpaid bill payment page.
                       </p>
                     </div>
                     <button
                       onClick={handleSkipToDue}
                       disabled={skipLoading}
-                      className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0 flex items-center gap-2"
+                      className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0 flex items-center gap-2 cursor-pointer"
                     >
                       {skipLoading ? (
                         <>
@@ -801,15 +845,15 @@ export default function MembershipPage() {
                       ) : (
                         <>
                           <FastForward className="w-3.5 h-3.5" />
-                          <span>⏩ Skip 30 Days (Bill Due)</span>
+                          <span>⏩ Skip 7 Days (Bill Due)</span>
                         </>
                       )}
                     </button>
                   </div>
                 )}
 
-                {/* 2. MONTH-END BILL PAYMENT ALERT (If due or expired on 1-month postpaid) */}
-                {(searchResult.isExpired || searchResult.membership.paymentStatus === 'due') && (
+                {/* 2. WEEK-END BILL PAYMENT ALERT (If due or expired on 7-day postpaid) */}
+                {searchResult.membership.status !== 'cancelled' && (searchResult.isExpired || searchResult.membership.paymentStatus === 'due') && (
                   <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white rounded-3xl p-6 shadow-xl border-2 border-rose-300 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -821,17 +865,17 @@ export default function MembershipPage() {
                             Action Required
                           </span>
                           <h4 className="text-lg font-black text-white">
-                            Month-End Settlement Due
+                            Week-End Settlement Due (7 Days Completed)
                           </h4>
                         </div>
                       </div>
                       <span className="text-sm font-black bg-amber-300 text-black px-3 py-1 rounded-xl shadow-xs">
-                        ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'} DUE
+                        ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'} DUE
                       </span>
                     </div>
 
                     <p className="text-xs text-rose-100 leading-relaxed">
-                      Your 30-day billing cycle for unlimited free doorstep deliveries is completed. Pay your month-end invoice to renew and continue receiving sunrise milk deliveries.
+                      Your 7-day billing cycle for unlimited free doorstep deliveries is completed. Settle your week-end invoice to renew and continue receiving sunrise milk deliveries.
                     </p>
 
                     <button
@@ -839,7 +883,7 @@ export default function MembershipPage() {
                       className="w-full py-3.5 bg-white hover:bg-rose-50 text-rose-800 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CreditCard className="w-4 h-4 text-rose-700" />
-                      <span>Pay Month-End Bill (₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'})</span>
+                      <span>Pay 7-Day Bill (₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'})</span>
                       <ArrowRight className="w-4 h-4 text-rose-700" />
                     </button>
                   </div>
@@ -849,15 +893,19 @@ export default function MembershipPage() {
                 {searchResult.memberships.map((m, idx) => {
                   const now = new Date();
                   const endDate = new Date(m.endDate);
+                  const startDate = new Date(m.startDate);
+                  const isCancelled = m.status === 'cancelled';
+                  const isFutureStart = !isCancelled && now < startDate;
                   const diffMs = endDate.getTime() - now.getTime();
                   const mDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
                   const mExpired = diffMs <= 0;
-                  const isDue = mExpired || m.paymentStatus === 'due';
+                  const isDue = !isCancelled && (mExpired || m.paymentStatus === 'due');
                   const mQty = m.dailyQuantity || (m.planName?.includes('0.5L') || m.planName?.toLowerCase().includes('half liter') ? 0.5 : 1);
                   const mQtyLabel = mQty === 0.5 ? 'Half Liter (0.5L)' : `${mQty}L`;
+                  const planDurationDays = m.planType === '6_months' ? 180 : 7;
 
                   return (
-                    <div key={m.id} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#173612] via-[#0F240B] to-[#0A1807] text-white p-6 sm:p-8 shadow-2xl border-2 border-[#CBE0A3]">
+                    <div key={m.id} className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#173612] via-[#0F240B] to-[#0A1807] text-white p-6 sm:p-8 shadow-2xl border-2 ${isCancelled ? 'border-rose-500/60 opacity-90' : isDue ? 'border-rose-400' : 'border-[#CBE0A3]'}`}>
                       {/* Decorative Watermark */}
                       <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
                         <Crown className="w-48 h-48 text-white" />
@@ -888,17 +936,37 @@ export default function MembershipPage() {
 
                         <span
                           className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            isDue
+                            isCancelled
+                              ? 'bg-rose-950 text-rose-300 border border-rose-500/50'
+                              : isDue
                               ? 'bg-rose-500 text-white'
+                              : isFutureStart
+                              ? 'bg-amber-400 text-black flex items-center gap-1 font-black'
                               : 'bg-emerald-400 text-black flex items-center gap-1'
                           }`}
                         >
-                          {!isDue && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
-                          )}
-                          {isDue ? 'BILL DUE / EXPIRED' : 'ACTIVE MEMBER'}
+                          {isCancelled
+                            ? '🚫 CANCELLED'
+                            : isDue
+                            ? 'BILL DUE / EXPIRED'
+                            : isFutureStart
+                            ? '🌅 STARTS TOMORROW'
+                            : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
+                                <span>ACTIVE MEMBER</span>
+                              </>
+                            )}
                         </span>
                       </div>
+
+                      {/* Next-Day Start Notice Banner */}
+                      {isFutureStart && (
+                        <div className="p-3 mb-4 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-300 shrink-0" />
+                          <span>Deliveries start tomorrow morning ({startDate.toLocaleDateString('en-IN')}) at sunrise!</span>
+                        </div>
+                      )}
 
                       {/* Member Information */}
                       <div className="grid grid-cols-2 gap-4 mb-6 text-xs">
@@ -947,34 +1015,42 @@ export default function MembershipPage() {
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px] text-gray-300">
                             <span>Validity Countdown</span>
-                            <strong className={isDue ? 'text-rose-400' : 'text-amber-300'}>
-                              {isDue
-                                ? 'Cycle Completed (Bill Due)'
+                            <strong className={isCancelled ? 'text-rose-400' : isDue ? 'text-rose-400' : isFutureStart ? 'text-amber-300' : 'text-emerald-300'}>
+                              {isCancelled
+                                ? 'Membership Cancelled'
+                                : isDue
+                                ? '7-Day Cycle Completed (Bill Due)'
+                                : isFutureStart
+                                ? 'Starts Tomorrow (7 full days)'
                                 : `${mDaysRemaining} days remaining`}
                             </strong>
                           </div>
                           <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
-                                isDue
+                                isCancelled
+                                  ? 'bg-rose-700'
+                                  : isDue
                                   ? 'bg-rose-500'
                                   : 'bg-gradient-to-r from-emerald-400 to-amber-300'
                               }`}
                               style={{
                                 width: `${
-                                  isDue
+                                  isCancelled
+                                    ? 100
+                                    : isDue
                                     ? 100
                                     : Math.min(
                                         100,
-                                        Math.max(5, (mDaysRemaining / (m.planType === '6_months' ? 180 : 30)) * 100)
+                                        Math.max(5, (mDaysRemaining / planDurationDays) * 100)
                                       )
                                 }%`,
                               }}
                             />
                           </div>
                           <div className="flex justify-between text-[10px] text-gray-400 pt-0.5">
-                            <span>Started: {new Date(m.startDate).toLocaleDateString('en-IN')}</span>
-                            <span>Expires: {new Date(m.endDate).toLocaleDateString('en-IN')}</span>
+                            <span>Start: {startDate.toLocaleDateString('en-IN')}</span>
+                            <span>End: {endDate.toLocaleDateString('en-IN')}</span>
                           </div>
                         </div>
                       </div>
@@ -1027,6 +1103,28 @@ export default function MembershipPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Customer Cancellation Option */}
+                      {!isCancelled ? (
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCancelTargetMembership(m);
+                              setCancelModalOpen(true);
+                            }}
+                            className="w-full py-2.5 px-3 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer mt-2"
+                          >
+                            <X className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Cancel Membership</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-200 text-xs text-center space-y-1 mt-3">
+                          <span className="font-bold block">🚫 This membership is cancelled</span>
+                          <span className="text-[11px] text-rose-300 block">Daily deliveries have been halted. You can enroll in a new scheme anytime.</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1045,7 +1143,7 @@ export default function MembershipPage() {
         )}
       </div>
 
-      {/* MONTH-END POSTPAID SETTLEMENT MODAL */}
+      {/* 7-DAY POSTPAID SETTLEMENT MODAL */}
       {settlementModalOpen && searchResult && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white max-w-lg w-full rounded-3xl border border-[#CBE0A3] shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[92vh] overflow-y-auto">
@@ -1061,18 +1159,18 @@ export default function MembershipPage() {
                 Postpaid Settle & Renew
               </span>
               <h3 className="text-2xl font-black text-[#0F240B]">
-                Month-End Bill Settlement
+                7-Day Bill Settlement
               </h3>
               <p className="text-xs text-gray-500">
-                Settle invoice for Member <strong>{searchResult.membership.customerName}</strong> ({searchResult.membership.phone}).
+                Settle week-end invoice for Member <strong>{searchResult.membership.customerName}</strong> ({searchResult.membership.phone}).
               </p>
             </div>
 
             {/* Bill Summary */}
             <div className="bg-[#F5FAF0] rounded-2xl border border-[#D8ECCE] p-4 space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
-                <span>1-Month Organic Pass (30 Days, {searchResult.membership.dailyQuantity === 0.5 ? 'Half Liter' : `${searchResult.membership.dailyQuantity || 1}L`}/day):</span>
-                <strong className="text-[#0F240B]">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '2,160.00'}</strong>
+                <span>7-Day Organic Pass (7 Days, {searchResult.membership.dailyQuantity === 0.5 ? 'Half Liter' : `${searchResult.membership.dailyQuantity || 1}L`}/day):</span>
+                <strong className="text-[#0F240B]">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '504.00'}</strong>
               </div>
               <div className="flex justify-between text-emerald-800">
                 <span>Free Daily Doorstep Deliveries:</span>
@@ -1088,7 +1186,7 @@ export default function MembershipPage() {
               </div>
               <div className="pt-2 border-t border-[#D8ECCE] flex justify-between items-baseline font-black text-sm text-[#0F240B]">
                 <span>Total Amount Due:</span>
-                <span className="text-xl text-emerald-800 font-black">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '2,160.00'}</span>
+                <span className="text-xl text-emerald-800 font-black">₹{searchResult.membership.price ? searchResult.membership.price.toFixed(2) : '504.00'}</span>
               </div>
             </div>
 
@@ -1155,7 +1253,7 @@ export default function MembershipPage() {
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Pay ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '2,160'} (Simulate Settlement)</span>
+                    <span>Pay ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'} & Renew 7 Days</span>
                   </>
                 )}
               </button>
@@ -1165,6 +1263,75 @@ export default function MembershipPage() {
                 className="w-full py-2.5 text-xs text-gray-500 font-bold hover:text-gray-800"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOMER CANCELLATION CONFIRMATION MODAL */}
+      {cancelModalOpen && cancelTargetMembership && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white max-w-md w-full rounded-3xl border border-rose-300 shadow-2xl p-6 sm:p-7 space-y-5 relative">
+            <button
+              onClick={() => setCancelModalOpen(false)}
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-black text-gray-900">
+                Cancel Membership?
+              </h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Are you sure you want to cancel your <strong>{cancelTargetMembership.planName}</strong>? Your 100% free daily doorstep milk deliveries will be halted immediately.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 text-xs space-y-1.5 text-rose-950 font-medium">
+              <div className="flex justify-between">
+                <span>Member:</span>
+                <strong>{cancelTargetMembership.customerName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Phone:</span>
+                <strong className="font-mono">{cancelTargetMembership.phone}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Plan:</span>
+                <strong className="text-emerald-800">{cancelTargetMembership.planName}</strong>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+              >
+                Keep Active
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelMembership}
+                disabled={cancelLoading}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+              >
+                {cancelLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3.5 h-3.5" />
+                    <span>Yes, Cancel</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1236,7 +1403,11 @@ export default function MembershipPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Validity:</span>
-                    <span>{enrollSuccess.planType === '6_months' ? '180 Days' : '30 Days'} (Daily Free Delivery)</span>
+                    <span>{enrollSuccess.planType === '6_months' ? '180 Days' : '7 Days (1 Week)'} (Daily Free Delivery)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Deliveries:</span>
+                    <strong className="text-emerald-800 font-black">Starts Tomorrow Morning</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Payment Status:</span>
@@ -1274,7 +1445,7 @@ export default function MembershipPage() {
               const enrollDailyPrice = isSixMonthPlan
                 ? (isHalf ? 36 : selectedDailyQuantity * 70)
                 : (isHalf ? 38 : selectedDailyQuantity * 72);
-              const enrollMonthTotal = enrollDailyPrice * 30;
+              const enrollMonthTotal = enrollDailyPrice * 7;
               const enrollSixMonthTotal = enrollDailyPrice * 180;
               const enrollQtyLabel = isHalf ? 'Half Liter (0.5L)' : `${selectedDailyQuantity}L`;
 
@@ -1287,12 +1458,12 @@ export default function MembershipPage() {
                     </span>
                     <h3 className="text-xl font-black text-[#0F240B]">
                       {selectedPlanForEnroll === '1_month'
-                        ? 'Enroll in 1 Month Pass (Postpaid)'
+                        ? 'Enroll in 7 Days Pass (Postpaid)'
                         : 'Enroll in 6 Months VIP Club (Prepaid)'}
                     </h3>
                     <p className="text-xs text-gray-500">
                       {selectedPlanForEnroll === '1_month'
-                        ? `₹${enrollMonthTotal.toLocaleString('en-IN')}/mo • Postpaid Billing (₹0 due today, ${enrollQtyLabel}/day × ₹${enrollDailyPrice}/day × 30 days, settle at month-end)`
+                        ? `₹${enrollMonthTotal.toLocaleString('en-IN')} for 7 Days • Postpaid Billing (₹0 due today, ${enrollQtyLabel}/day × ₹${enrollDailyPrice}/day × 7 days, settle after 7 days)`
                         : `₹${enrollSixMonthTotal.toLocaleString('en-IN')} for 180 Days • Prepaid VIP Scheme (${enrollQtyLabel}/day × ₹${enrollDailyPrice}/day × 180 days)`}
                     </p>
                   </div>
@@ -1356,14 +1527,15 @@ export default function MembershipPage() {
                           className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-[#0F240B] bg-white focus:outline-none focus:border-[#173612] shadow-xs cursor-pointer"
                         >
                           {[0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qty) => {
-                            const days = isSixMonthPlan ? 180 : 30;
+                            const days = isSixMonthPlan ? 180 : 7;
                             const dayPrice = qty === 0.5
                               ? (isSixMonthPlan ? 36 : 38)
                               : qty * (isSixMonthPlan ? 70 : 72);
+                            const total = dayPrice * days;
                             const qtyLabel = qty === 0.5 ? 'Half Liter' : `${qty} Liter${qty > 1 ? 's' : ''}`;
                             return (
                               <option key={qty} value={qty}>
-                                {`${qtyLabel}\\${days} days - rs ${dayPrice}x${days}`}
+                                {`${qtyLabel}\\${days} days - rs ${dayPrice}x${days} = rs ${total}`}
                               </option>
                             );
                           })}
@@ -1493,6 +1665,11 @@ export default function MembershipPage() {
                       </div>
                     </div>
 
+                    <div className="p-3 bg-[#ECF5DE] border border-[#CBE0A3] text-[#173612] text-xs font-bold rounded-xl flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#173612] shrink-0" />
+                      <span>Note: Your 7-day organic subscription and doorstep sunrise deliveries will start tomorrow morning!</span>
+                    </div>
+
                     <button
                       type="submit"
                       disabled={enrollLoading}
@@ -1503,7 +1680,7 @@ export default function MembershipPage() {
                       ) : selectedPlanForEnroll === '1_month' ? (
                         <>
                           <Zap className="w-4 h-4 text-amber-300" />
-                          <span>Confirm & Activate 1-Month Postpaid (₹0 Today • Settle ₹{enrollMonthTotal.toLocaleString('en-IN')})</span>
+                          <span>Confirm & Activate 7-Day Postpaid (₹0 Today • Settle ₹{enrollMonthTotal.toLocaleString('en-IN')})</span>
                         </>
                       ) : (
                         <>

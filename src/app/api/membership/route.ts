@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
-import { getLocalMemberships, saveLocalMembership, updateLocalMembershipBillApproved } from '@/lib/serverStore';
+import { getLocalMemberships, saveLocalMembership, updateLocalMembershipBillApproved, cancelLocalMembership } from '@/lib/serverStore';
 import { Membership, MembershipPlanType, MembershipBillingType } from '@/types/cafe';
 
 // Cache whether the remote Supabase project has the memberships table created
@@ -30,7 +30,7 @@ function formatDbRowToMembership(row: any): Membership {
   if (!dailyQuantity) {
     const p = Number(row.price);
     const isSixMonths = row.plan_type === '6_months';
-    const duration = isSixMonths ? 180 : 30;
+    const duration = isSixMonths ? 180 : 7;
     if (p > 0 && duration > 0) {
       const perDay = p / duration;
       const halfRate = isSixMonths ? 36 : 38;
@@ -50,6 +50,9 @@ function formatDbRowToMembership(row: any): Membership {
      row.plan_name && (row.plan_name.includes('2 * 500ml') || row.plan_name.includes('2*500ml')) ? '2 * 500ml' :
      dailyQuantity && dailyQuantity > 1 ? `${dailyQuantity} × 1L` : '1L');
 
+  const isCancelled = row.status === 'cancelled';
+  const computedStatus = isCancelled ? 'cancelled' : (isExpired ? 'expired' : row.status || 'active');
+
   return {
     id: row.id,
     phone: row.phone,
@@ -62,13 +65,15 @@ function formatDbRowToMembership(row: any): Membership {
     planName: row.plan_name,
     billingType: row.billing_type,
     price: Number(row.price) || 0,
-    status: isExpired ? 'expired' : row.status || 'active',
+    status: computedStatus,
     paymentStatus: cleanPaymentStatus,
     billApproved,
     startDate: row.start_date,
     endDate: row.end_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    cancelledAt: row.cancelled_at || undefined,
+    cancelledBy: row.cancelled_by || undefined,
   };
 }
 
@@ -149,11 +154,13 @@ export async function GET(req: NextRequest) {
           const allMemberships: Membership[] = data.map(formatDbRowToMembership);
 
           // Primary: most recently created active/valid membership
-          const primary = allMemberships.find(m => m.status === 'active') || allMemberships[0];
+          const primary = allMemberships.find(m => m.status === 'active') || 
+                          allMemberships.find(m => m.status === 'expired') || 
+                          allMemberships[0];
           const primaryEnd = new Date(primary.endDate);
           const primaryDiff = primaryEnd.getTime() - now.getTime();
           const daysRemaining = Math.max(0, Math.ceil(primaryDiff / (1000 * 60 * 60 * 24)));
-          const isExpired = primaryDiff <= 0;
+          const isExpired = primary.status === 'cancelled' ? false : primaryDiff <= 0;
 
           return NextResponse.json({
             success: true,
@@ -173,7 +180,9 @@ export async function GET(req: NextRequest) {
     const localMatches = getLocalMemberships(cleanInput);
     if (localMatches.length > 0) {
       const now = new Date();
-      const primary = localMatches.find(m => m.status === 'active') || localMatches[0];
+      const primary = localMatches.find(m => m.status === 'active') || 
+                      localMatches.find(m => m.status === 'expired') || 
+                      localMatches[0];
       const endDate = new Date(primary.endDate);
       const diffMs = endDate.getTime() - now.getTime();
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
@@ -183,7 +192,7 @@ export async function GET(req: NextRequest) {
         membership: primary,
         memberships: localMatches,
         daysRemaining,
-        isExpired: diffMs <= 0,
+        isExpired: primary.status === 'cancelled' ? false : diffMs <= 0,
         source: 'local_store',
       });
     }
@@ -231,18 +240,18 @@ export async function POST(req: NextRequest) {
     const isHalfLiter = validQty === 0.5;
     
     // Pricing:
-    // 1-month plan: half liter is 38rs, 1 liter is 72rs (N * 72)
+    // 7-day plan (1 week): half liter is 38rs, 1 liter is 72rs (N * 72)
     // 6-months plan: half liter is 36rs, 1 liter is 70rs (N * 70)
     const dailyPrice = isSixMonths
       ? (isHalfLiter ? 36 : validQty * 70)
       : (isHalfLiter ? 38 : validQty * 72);
-    const durationDays = isSixMonths ? 180 : 30;
+    const durationDays = isSixMonths ? 180 : 7;
     const price = dailyPrice * durationDays;
 
     const qtyLabel = isHalfLiter ? 'Half Liter (0.5L)/Day' : `${validQty}L/Day`;
     const basePlanName = isSixMonths
       ? '6 Months VIP Club (Prepaid)'
-      : '1 Month Organic Pass (Postpaid)';
+      : '7 Days Organic Pass (Postpaid)';
     const planName = `${basePlanName} • ${qtyLabel}`;
     const billingType: MembershipBillingType = isSixMonths ? 'prepaid' : 'postpaid';
 
@@ -255,7 +264,9 @@ export async function POST(req: NextRequest) {
       selectedBottlePref = `${validQty} × 1L`;
     }
 
-    const startDate = new Date();
+    // REQUIREMENT: Membership starts from the next day of buying the membership
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0); // Next day morning 6:00 AM
     const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
     const membershipId = `MEM-${cleanInput.slice(-4)}-${Date.now().toString(36).toUpperCase()}`;
 
@@ -275,8 +286,8 @@ export async function POST(req: NextRequest) {
       paymentStatus: isSixMonths ? (paymentStatus || 'paid') : 'postpaid_cycle',
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      createdAt: startDate.toISOString(),
-      updatedAt: startDate.toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     // 1. Save to Supabase database if configured and table is available
@@ -327,8 +338,8 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         message: isSixMonths
-          ? 'Congratulations! 6-Month VIP Membership activated with Prepaid billing.'
-          : 'Congratulations! 1-Month Membership activated with Postpaid billing (settle at month-end).',
+          ? 'Congratulations! 6-Month VIP Membership activated with Prepaid billing. Daily sunrise deliveries start tomorrow!'
+          : `Congratulations! 7-Day Organic Pass activated with Postpaid billing (settle ₹${price.toLocaleString('en-IN')} after 7 days). Daily sunrise deliveries start tomorrow!`,
         membership: newMembership,
         dbSaved,
       },
@@ -405,10 +416,38 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // Action 1: Skip to Month-End payment due (Simulate 30 days completed)
+    // Action: Cancel Membership (Customer or Admin)
+    if (action === 'cancel') {
+      const now = new Date().toISOString();
+      const updateData: any = {
+        status: 'cancelled',
+        updated_at: now,
+      };
+
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
+        try {
+          await client
+            .from('memberships')
+            .update(updateData)
+            .or(`id.eq.${id || 'NONE'},phone.ilike.%${cleanPhone}%`);
+        } catch (dbErr) {
+          console.warn('[Membership PATCH] db error on cancel:', dbErr);
+        }
+      }
+
+      cancelLocalMembership(id || cleanPhone, body.cancelledBy || 'customer');
+
+      return NextResponse.json({
+        success: true,
+        status: 'cancelled',
+        message: 'Membership has been cancelled successfully. Daily milk deliveries are stopped.',
+      });
+    }
+
+    // Action 1: Skip to Week-End payment due (Simulate 7 days completed)
     if (action === 'skip_to_due') {
       const now = new Date();
-      // Set end date to yesterday to simulate 30 days completed and due
+      // Set end date to yesterday to simulate 7 days completed and due
       const pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const updateData: any = {
         end_date: pastDate,
@@ -440,14 +479,17 @@ export async function PATCH(req: NextRequest) {
       const dueAmountStr = local.length > 0 && local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
       return NextResponse.json({
         success: true,
-        message: `Fast-forwarded 30 days. Month-end bill${dueAmountStr} is now due for settlement.`,
+        message: `Fast-forwarded 7 days. Week-end bill${dueAmountStr} is now due for settlement.`,
       });
     }
 
-    // Action 2: Settle month-end postpaid bill or record payment
+    // Action 2: Settle week-end postpaid bill or record payment
     if (action === 'mark_paid' || paymentStatus === 'paid') {
       const now = new Date();
-      const nextEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const local = getLocalMemberships(cleanPhone);
+      const isSixMonths = local.length > 0 && local[0].planType === '6_months';
+      const durationDays = isSixMonths ? 180 : 7;
+      const nextEndDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
       const updateData: any = {
         status: 'active',
         payment_status: 'paid',
@@ -467,7 +509,6 @@ export async function PATCH(req: NextRequest) {
         }
       }
 
-      const local = getLocalMemberships(cleanPhone);
       let settledAmountStr = '';
       if (local.length > 0) {
         settledAmountStr = local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
@@ -480,19 +521,22 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `Month-end bill${settledAmountStr} paid successfully! Membership renewed for next 30 days.`,
+        message: isSixMonths
+          ? `VIP Membership payment${settledAmountStr} recorded successfully!`
+          : `7-Day bill${settledAmountStr} paid successfully! Membership renewed for next 7 days.`,
       });
     }
 
-    // Action 3: Extend membership by 30 days
-    if (action === 'extend_30') {
+    // Action 3: Extend membership by 7 days (or 30 days)
+    if (action === 'extend_7' || action === 'extend_30') {
       const now = new Date();
+      const daysToAdd = action === 'extend_30' ? 30 : 7;
       const local = getLocalMemberships(cleanPhone);
       let currentEnd = now;
       if (local.length > 0 && new Date(local[0].endDate).getTime() > now.getTime()) {
         currentEnd = new Date(local[0].endDate);
       }
-      const newEndDate = new Date(currentEnd.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const newEndDate = new Date(currentEnd.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
       const updateData: any = {
         status: 'active',
         end_date: newEndDate,
@@ -518,7 +562,7 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Membership extended by 30 days successfully.',
+        message: `Membership extended by ${daysToAdd} days successfully.`,
       });
     }
 

@@ -21,7 +21,7 @@ export function MembershipSection() {
     {
       icon: Clock,
       title: 'Daily Morning Delivery',
-      desc: 'Freshly bottled organic milk waiting at your doorstep every morning.',
+      desc: 'Freshly bottled organic milk waiting at your doorstep every morning starting tomorrow.',
     },
     {
       icon: RefreshCw,
@@ -36,7 +36,7 @@ export function MembershipSection() {
     {
       icon: Zap,
       title: 'Flexible Postpaid / Prepaid',
-      desc: 'Choose 1-Month Postpaid (settle at month-end) or 6-Months Prepaid (upfront savings + free gift).',
+      desc: 'Choose 7-Days Postpaid (settle at week-end) or 6-Months Prepaid (upfront savings + free gift).',
     },
   ];
 
@@ -59,7 +59,7 @@ export function MembershipSection() {
           </h2>
 
           <p className="text-sm sm:text-base text-white/85 max-w-2xl mx-auto leading-relaxed">
-            Join the Zafiroo Organic Membership with our <strong>1-Month Postpaid</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
+            Join the Zafiroo Organic Membership with our <strong>7-Days Postpaid (1 Week)</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
           </p>
 
           <div className="pt-2 flex flex-wrap justify-center gap-3">
@@ -84,28 +84,28 @@ export function MembershipSection() {
 
         {/* 2 Plans Side-By-Side Preview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Plan 1: 1 Month Postpaid */}
+          {/* Plan 1: 7 Days Postpaid */}
           <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/15 space-y-5 flex flex-col justify-between hover:border-emerald-400/50 transition">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   POSTPAID SCHEME
                 </span>
-                <span className="text-xs text-gray-300 font-mono">30 Days</span>
+                <span className="text-xs text-gray-300 font-mono">7 Days (1 Week)</span>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white font-serif">1 Month Organic Pass</h3>
+                <h3 className="text-2xl font-black text-white font-serif">7 Days Organic Pass</h3>
                 <p className="text-xs text-emerald-100/80 mt-1">
-                  Pay at month-end. Enjoy 100% free daily deliveries with zero advance commitment.
+                  Starts next day of purchase. Pay after 7 days. Enjoy 100% free daily deliveries with zero advance commitment.
                 </p>
               </div>
               <div className="text-3xl font-black text-white">
-                ₹2,160 <span className="text-xs text-gray-400 font-normal">/ month (Postpaid • 1L/day @ ₹72, or Half Liter @ ₹38)</span>
+                ₹504 <span className="text-xs text-gray-400 font-normal">/ 7 days (Postpaid • 1L/day @ ₹72, or Half Liter @ ₹38 = ₹266)</span>
               </div>
               <ul className="space-y-2 text-xs text-gray-300">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Free doorstep deliveries every morning</span>
+                  <span>Free doorstep deliveries starting next day morning</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -113,11 +113,11 @@ export function MembershipSection() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Postpaid billing cycle (settle invoice at month-end)</span>
+                  <span>7-day postpaid billing cycle (settle invoice after 7 days)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Zero glass bottle deposit required</span>
+                  <span>Zero glass bottle deposit required • Cancel anytime</span>
                 </li>
               </ul>
             </div>
@@ -125,7 +125,7 @@ export function MembershipSection() {
               href="/membership"
               className="w-full py-3 bg-white text-[#173612] hover:bg-emerald-50 font-bold rounded-2xl text-xs uppercase tracking-wider text-center transition block"
             >
-              Select 1-Month Postpaid
+              Select 7-Day Postpaid
             </Link>
           </div>
 

@@ -189,4 +189,6 @@ export interface Membership {
   createdAt: string;
   updatedAt?: string;
   billApproved?: boolean;
+  cancelledAt?: string;
+  cancelledBy?: 'customer' | 'admin';
 }

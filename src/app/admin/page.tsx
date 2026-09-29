@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import {
   Order,
@@ -99,26 +99,49 @@ export default function AdminPage() {
   // Admin Memberships State
   const [adminMemberships, setAdminMemberships] = useState<Membership[]>([]);
   const [membershipsLoading, setMembershipsLoading] = useState(false);
-  const [membershipFilter, setMembershipFilter] = useState<'all' | '6_months' | '1_month' | 'due' | 'active'>('all');
+  const [membershipFilter, setMembershipFilter] = useState<'all' | '6_months' | '1_month' | 'due' | 'active' | 'cancelled'>('all');
   const [membershipSearch, setMembershipSearch] = useState('');
   const [membershipActionLoading, setMembershipActionLoading] = useState<string | null>(null);
   const [membershipActionMsg, setMembershipActionMsg] = useState('');
   const [extendConfirmMembership, setExtendConfirmMembership] = useState<Membership | null>(null);
+  const [adminCancelConfirmMembership, setAdminCancelConfirmMembership] = useState<Membership | null>(null);
+  const [recentCancellationNotice, setRecentCancellationNotice] = useState<Membership | null>(null);
+  const knownCancelledIdsRef = useRef<Set<string>>(new Set());
+  const isInitialMembershipFetchRef = useRef<boolean>(true);
 
-  const fetchAdminMemberships = async () => {
-    setMembershipsLoading(true);
+  const fetchAdminMemberships = useCallback(async (showLoading = false) => {
+    if (showLoading) setMembershipsLoading(true);
     try {
       const res = await fetch('/api/membership');
       const data = await res.json();
       if (res.ok && data.success) {
-        setAdminMemberships(data.memberships || []);
+        const list: Membership[] = data.memberships || [];
+        setAdminMemberships(list);
+
+        const currentCancelled = list.filter((m) => m.status === 'cancelled');
+
+        if (isInitialMembershipFetchRef.current) {
+          currentCancelled.forEach((m) => knownCancelledIdsRef.current.add(m.id));
+          isInitialMembershipFetchRef.current = false;
+        } else {
+          const newlyCancelled = currentCancelled.filter((m) => !knownCancelledIdsRef.current.has(m.id));
+          if (newlyCancelled.length > 0) {
+            newlyCancelled.forEach((m) => knownCancelledIdsRef.current.add(m.id));
+            setRecentCancellationNotice(newlyCancelled[0]);
+            try {
+              playOrderChime();
+            } catch {
+              // ignore audio permissions
+            }
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load admin memberships:', err);
     } finally {
-      setMembershipsLoading(false);
+      if (showLoading) setMembershipsLoading(false);
     }
-  };
+  }, [playOrderChime]);
 
   const [activeMembershipBill, setActiveMembershipBill] = useState<Membership | null>(null);
   const [membershipApprovalLoading, setMembershipApprovalLoading] = useState<string | null>(null);
@@ -164,8 +187,8 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setMembershipActionMsg(`✓ Marked month-end bill paid for ${membership.customerName}. Renewed for 30 days.`);
-        await fetchAdminMemberships();
+        setMembershipActionMsg(`✓ Marked 7-day bill paid for ${membership.customerName}. Renewed for 7 days.`);
+        await fetchAdminMemberships(false);
       }
     } catch (err) {
       console.error('Error marking paid:', err);
@@ -174,7 +197,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleExtendMembership30 = async (membership: Membership) => {
+  const handleExtendMembership7 = async (membership: Membership) => {
     setExtendConfirmMembership(null);
     setMembershipActionLoading(membership.id);
     setMembershipActionMsg('');
@@ -185,19 +208,50 @@ export default function AdminPage() {
         body: JSON.stringify({
           id: membership.id,
           phone: membership.phone,
-          action: 'extend_30',
+          action: 'extend_7',
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setMembershipActionMsg(`✓ Extended membership by 30 days for ${membership.customerName}.`);
-        await fetchAdminMemberships();
+        setMembershipActionMsg(`✓ Extended membership by 7 days for ${membership.customerName}.`);
+        await fetchAdminMemberships(false);
       } else {
         setMembershipActionMsg(`✗ Failed to extend membership. Please try again.`);
       }
     } catch (err) {
       console.error('Error extending membership:', err);
       setMembershipActionMsg(`✗ Network error. Please try again.`);
+    } finally {
+      setMembershipActionLoading(null);
+    }
+  };
+
+  const handleAdminCancelMembership = async (membership: Membership) => {
+    setAdminCancelConfirmMembership(null);
+    setMembershipActionLoading(membership.id);
+    setMembershipActionMsg('');
+    try {
+      const res = await fetch('/api/membership', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: membership.id,
+          phone: membership.phone,
+          action: 'cancel',
+          cancelledBy: 'admin',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembershipActionMsg(`✓ Membership for ${membership.customerName} has been cancelled by Admin. Milk deliveries stopped.`);
+        knownCancelledIdsRef.current.add(membership.id);
+        await fetchAdminMemberships(false);
+      } else {
+        setMembershipActionMsg(`✗ Failed to cancel membership: ${data.message || 'Please try again.'}`);
+      }
+    } catch (err) {
+      console.error('Error cancelling membership:', err);
+      setMembershipActionMsg(`✗ Network error while cancelling membership.`);
     } finally {
       setMembershipActionLoading(null);
     }
@@ -275,15 +329,17 @@ export default function AdminPage() {
     refreshOrders();
     refreshDeliveryAgents();
     refreshSosAlerts();
+    fetchAdminMemberships(false);
 
     const interval = setInterval(() => {
       refreshOrders();
       refreshDeliveryAgents();
       refreshSosAlerts();
+      fetchAdminMemberships(false);
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts]);
+  }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts, fetchAdminMemberships]);
 
   // Monitor latestActiveSos for Full-Screen Red Alert Takeover
   useEffect(() => {
@@ -535,10 +591,13 @@ export default function AdminPage() {
       return list.filter((m) => m.planType === '1_month');
     }
     if (membershipFilter === 'due') {
-      return list.filter((m) => m.paymentStatus === 'due' || m.status === 'expired');
+      return list.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled');
     }
     if (membershipFilter === 'active') {
       return list.filter((m) => m.status === 'active' && m.paymentStatus !== 'due');
+    }
+    if (membershipFilter === 'cancelled') {
+      return list.filter((m) => m.status === 'cancelled');
     }
     return list;
   }, [adminMemberships, membershipSearch, membershipFilter]);
@@ -814,6 +873,11 @@ export default function AdminPage() {
               >
                 <Crown className="w-3.5 h-3.5" />
                 <span>Memberships</span>
+                {adminMemberships.filter((m) => m.status === 'cancelled').length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs animate-pulse">
+                    {adminMemberships.filter((m) => m.status === 'cancelled').length} Cancelled
+                  </span>
+                )}
               </button>
             </div>
 
@@ -827,6 +891,59 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {/* Real-time Membership Cancellation Alert Banner (Visible on any active tab) */}
+      {recentCancellationNotice && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 animate-fadeIn">
+          <div className="bg-rose-600 text-white p-4 rounded-3xl shadow-xl border-2 border-rose-400 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border border-white/30">
+                <AlertTriangle className="w-5 h-5 text-white animate-bounce" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-950/70 text-rose-200 px-2.5 py-0.5 rounded-full border border-rose-400">
+                    🚨 MEMBERSHIP CANCELLED
+                  </span>
+                  <span className="text-xs font-bold text-rose-100">
+                    Cancelled by {recentCancellationNotice.cancelledBy === 'customer' ? 'Customer' : 'Admin'}
+                  </span>
+                  {recentCancellationNotice.cancelledAt && (
+                    <span className="text-[11px] text-rose-200 font-mono">
+                      • {new Date(recentCancellationNotice.cancelledAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-black mt-1 text-white">
+                  {recentCancellationNotice.customerName} ({recentCancellationNotice.phone}) has cancelled their membership ({recentCancellationNotice.planName || '7-Day Organic Pass'}).
+                </p>
+                <p className="text-xs text-rose-100 font-medium">
+                  Morning sunrise milk delivery is discontinued immediately. Do not dispatch bottles for this member.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  setActiveTab('memberships');
+                  setMembershipFilter('cancelled');
+                  setMembershipSearch(recentCancellationNotice.phone);
+                }}
+                className="px-3.5 py-2 bg-white text-rose-700 hover:bg-rose-50 font-black text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
+              >
+                View in Registry
+              </button>
+              <button
+                onClick={() => setRecentCancellationNotice(null)}
+                className="px-3 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                title="Dismiss Alert"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4. TAB 1: KITCHEN DISPLAY SYSTEM (KDS) */}
       {activeTab === 'kds' && (
@@ -1899,15 +2016,15 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <p className="text-xs text-espresso-600 mt-0.5">
-                  View, track, settle month-end bills, and manage 6-Month Prepaid VIP & 1-Month Postpaid Pass holders.
+                  View, track, settle week-end bills, and manage 6-Month Prepaid VIP & 7-Day Postpaid Pass holders.
                 </p>
               </div>
             </div>
 
             <button
-              onClick={fetchAdminMemberships}
+              onClick={() => fetchAdminMemberships(true)}
               disabled={membershipsLoading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-espresso-900 hover:bg-black text-cream-50 font-bold text-xs rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-espresso-900 hover:bg-black text-cream-50 font-bold text-xs rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${membershipsLoading ? 'animate-spin' : ''}`} />
               <span>{membershipsLoading ? 'Syncing...' : 'Sync Memberships'}</span>
@@ -1927,8 +2044,26 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Cancelled Memberships Alert Notice in Registry */}
+          {adminMemberships.some((m) => m.status === 'cancelled') && (
+            <div className="p-4 bg-red-50 border-2 border-red-300 text-red-950 text-xs font-bold rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Ban className="w-4 h-4 text-red-600 shrink-0" />
+                <span>
+                  <strong>Notice:</strong> {adminMemberships.filter((m) => m.status === 'cancelled').length} Membership(s) are currently cancelled. Daily sunrise milk deliveries are suspended.
+                </span>
+              </div>
+              <button
+                onClick={() => setMembershipFilter('cancelled')}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow transition shrink-0 cursor-pointer"
+              >
+                View Cancelled ({adminMemberships.filter((m) => m.status === 'cancelled').length})
+              </button>
+            </div>
+          )}
+
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-sm space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-espresso-500">
                 Total Members
@@ -1955,26 +2090,39 @@ export default function AdminPage() {
 
             <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-sm space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                1-Month Postpaid Pass
+                7-Day Postpaid Pass
               </span>
               <p className="text-3xl font-black text-emerald-700 font-mono">
                 {adminMemberships.filter((m) => m.planType === '1_month').length}
               </p>
               <p className="text-[11px] text-emerald-700 font-medium">
-                30-day postpaid cycle
+                7-day postpaid cycle
               </p>
             </div>
 
             <div className="bg-white p-5 rounded-3xl border-2 border-rose-300 bg-rose-50/40 shadow-warm-sm space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                <span>Month-End Bills Due</span>
+                <span>Week-End Bills Due</span>
               </span>
               <p className="text-3xl font-black text-rose-700 font-mono">
-                {adminMemberships.filter((m) => m.paymentStatus === 'due' || m.status === 'expired').length}
+                {adminMemberships.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled').length}
               </p>
               <p className="text-[11px] text-rose-600 font-medium">
                 Requires payment / renewal
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border-2 border-red-300 bg-red-50/40 shadow-warm-sm space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-800 flex items-center gap-1">
+                <Ban className="w-3.5 h-3.5 text-red-600" />
+                <span>Cancelled</span>
+              </span>
+              <p className="text-3xl font-black text-red-700 font-mono">
+                {adminMemberships.filter((m) => m.status === 'cancelled').length}
+              </p>
+              <p className="text-[11px] text-red-600 font-medium">
+                Deliveries discontinued
               </p>
             </div>
           </div>
@@ -1998,14 +2146,15 @@ export default function AdminPage() {
               {[
                 { key: 'all' as const, label: 'All', count: adminMemberships.length },
                 { key: '6_months' as const, label: '6-Mo VIP', count: adminMemberships.filter((m) => m.planType === '6_months').length },
-                { key: '1_month' as const, label: '1-Mo Postpaid', count: adminMemberships.filter((m) => m.planType === '1_month').length },
-                { key: 'due' as const, label: '🚨 Bill Due', count: adminMemberships.filter((m) => m.paymentStatus === 'due' || m.status === 'expired').length },
+                { key: '1_month' as const, label: '7-Day Postpaid', count: adminMemberships.filter((m) => m.planType === '1_month').length },
+                { key: 'due' as const, label: '🚨 Bill Due', count: adminMemberships.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled').length },
                 { key: 'active' as const, label: 'Active', count: adminMemberships.filter((m) => m.status === 'active' && m.paymentStatus !== 'due').length },
+                { key: 'cancelled' as const, label: '🚫 Cancelled', count: adminMemberships.filter((m) => m.status === 'cancelled').length },
               ].map((pill) => (
                 <button
                   key={pill.key}
                   onClick={() => setMembershipFilter(pill.key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                     membershipFilter === pill.key
                       ? 'bg-espresso-950 text-cream-50 shadow-sm'
                       : 'bg-cream-100 text-espresso-700 hover:bg-cream-200'
@@ -2033,18 +2182,27 @@ export default function AdminPage() {
               </div>
             ) : (
               filteredAdminMemberships.map((m) => {
-                const isDue = m.paymentStatus === 'due' || m.status === 'expired';
+                const isCancelled = m.status === 'cancelled';
+                const isDue = !isCancelled && (m.paymentStatus === 'due' || m.status === 'expired');
                 const now = new Date();
+                const startDate = new Date(m.startDate);
                 const endDate = new Date(m.endDate);
+                const isUpcoming = !isCancelled && now < startDate;
                 const diffMs = endDate.getTime() - now.getTime();
-                const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                const daysRemaining = isUpcoming
+                  ? (m.planType === '6_months' ? 180 : 7)
+                  : Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
                 const cleanPhone = m.phone.replace(/[^0-9]/g, '');
                 const dailyQty = m.dailyQuantity || (m.planName.toLowerCase().includes('half') || m.planName.includes('0.5') ? 0.5 : 1);
                 const dailyQtyLabel = dailyQty === 0.5 ? 'Half Liter (0.5L)' : `${dailyQty}L`;
 
                 const waMessage = encodeURIComponent(
-                  isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 1-Month Postpaid cycle has completed. Your month-end bill of ₹${m.price.toLocaleString('en-IN')} for 30 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                  isCancelled
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your membership (${m.planName}) has been cancelled. Sunrise milk deliveries have been suspended. If you would like to reactivate or renew, visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership`
+                    : isDue
+                    ? `Hello ${m.customerName}, this is Zafiroo Organic Farm. Your 7-Day Postpaid cycle has completed. Your week-end bill of ₹${m.price.toLocaleString('en-IN')} for 7 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    : isUpcoming
+                    ? `Hello ${m.customerName}, thank you for enrolling in Zafiroo Organic Farm Membership (${dailyQtyLabel} Daily - ${m.bottlePreference})! Your free sunrise deliveries will begin tomorrow morning between 6:00 AM - 7:30 AM.`
                     : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Organic Farm! Your free sunrise deliveries are active.`
                 );
 
@@ -2052,7 +2210,9 @@ export default function AdminPage() {
                   <div
                     key={m.id}
                     className={`bg-white rounded-3xl border-2 p-5 sm:p-6 transition shadow-warm-sm hover:shadow-warm-md relative overflow-hidden ${
-                      isDue
+                      isCancelled
+                        ? 'border-red-400 bg-red-50/20'
+                        : isDue
                         ? 'border-rose-400 bg-rose-50/20'
                         : m.planType === '6_months'
                         ? 'border-amber-300'
@@ -2064,7 +2224,9 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2.5 flex-wrap">
                         <span
                           className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                            m.planType === '6_months'
+                            isCancelled
+                              ? 'bg-red-100 text-red-900 border border-red-300'
+                              : m.planType === '6_months'
                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
                               : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                           }`}
@@ -2077,7 +2239,7 @@ export default function AdminPage() {
                           ) : (
                             <>
                               <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-700" />
-                              <span>1-Month Organic Pass (Postpaid)</span>
+                              <span>7-Day Organic Pass (Postpaid)</span>
                             </>
                           )}
                         </span>
@@ -2123,15 +2285,28 @@ export default function AdminPage() {
                       {/* Status Pill */}
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                          isDue
+                          isCancelled
+                            ? 'bg-red-700 text-white shadow-xs'
+                            : isDue
                             ? 'bg-rose-600 text-white animate-pulse'
+                            : isUpcoming
+                            ? 'bg-amber-500 text-white'
                             : 'bg-emerald-500 text-white'
                         }`}
                       >
-                        {isDue ? (
+                        {isCancelled ? (
+                          <>
+                            <Ban className="w-3 h-3 text-white" />
+                            <span>🚫 CANCELLED ({m.cancelledBy === 'customer' ? 'By Customer' : 'By Admin'})</span>
+                          </>
+                        ) : isDue ? (
                           <>
                             <AlertTriangle className="w-3 h-3" />
-                            <span>🚨 MONTH-END BILL DUE (₹{m.price.toLocaleString('en-IN')})</span>
+                            <span>🚨 7-DAY BILL DUE (₹{m.price.toLocaleString('en-IN')})</span>
+                          </>
+                        ) : isUpcoming ? (
+                          <>
+                            <span>🌅 STARTS TOMORROW</span>
                           </>
                         ) : (
                           <>
@@ -2175,6 +2350,12 @@ export default function AdminPage() {
                               {m.bottlePreference || `${dailyQtyLabel} Daily`}
                             </span>
                           </div>
+                          {isCancelled && m.cancelledAt && (
+                            <div className="pt-1 text-[10px] text-red-700 font-bold flex items-center gap-1">
+                              <Ban className="w-3 h-3 text-red-600" />
+                              <span>Cancelled on {new Date(m.cancelledAt).toLocaleString('en-IN')}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -2188,29 +2369,49 @@ export default function AdminPage() {
                             <span className="text-espresso-600 text-[11px]">Days Remaining:</span>
                             <strong
                               className={`text-sm font-black ${
-                                isDue ? 'text-rose-600' : 'text-emerald-700'
+                                isCancelled
+                                  ? 'text-red-700'
+                                  : isDue
+                                  ? 'text-rose-600'
+                                  : isUpcoming
+                                  ? 'text-amber-700'
+                                  : 'text-emerald-700'
                               }`}
                             >
-                              {isDue ? 'Cycle Completed (Due)' : `${daysRemaining} Days`}
+                              {isCancelled
+                                ? 'Membership Cancelled'
+                                : isDue
+                                ? 'Cycle Completed (Due)'
+                                : isUpcoming
+                                ? 'Starts Tomorrow Morning'
+                                : `${daysRemaining} Days`}
                             </strong>
                           </div>
 
                           <div className="w-full h-2 bg-cream-200 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
-                                isDue
+                                isCancelled
+                                  ? 'bg-red-500'
+                                  : isDue
                                   ? 'bg-rose-500'
+                                  : isUpcoming
+                                  ? 'bg-amber-400'
                                   : 'bg-gradient-to-r from-emerald-500 to-amber-500'
                               }`}
                               style={{
                                 width: `${
-                                  isDue
+                                  isCancelled
+                                    ? 100
+                                    : isDue
+                                    ? 100
+                                    : isUpcoming
                                     ? 100
                                     : Math.min(
                                         100,
                                         Math.max(
                                           5,
-                                          (daysRemaining / (m.planType === '6_months' ? 180 : 30)) * 100
+                                          (daysRemaining / (m.planType === '6_months' ? 180 : 7)) * 100
                                         )
                                       )
                                 }%`,
@@ -2234,7 +2435,7 @@ export default function AdminPage() {
                           <div className="flex justify-between items-center">
                             <span className="text-espresso-600">Scheme Rate:</span>
                             <strong className="text-espresso-950 font-black">
-                              ₹{m.price.toLocaleString('en-IN')}{m.planType === '6_months' ? ' (180d)' : ' / mo'}
+                              ₹{m.price.toLocaleString('en-IN')}{m.planType === '6_months' ? ' (180d)' : ' / 7 days'}
                             </strong>
                           </div>
                           <div className="flex justify-between items-center">
@@ -2247,12 +2448,16 @@ export default function AdminPage() {
                             <span className="text-espresso-600">Payment Status:</span>
                             <span
                               className={`px-2 py-0.5 rounded-md font-black text-[10px] uppercase ${
-                                isDue
+                                isCancelled
+                                  ? 'bg-red-100 text-red-800'
+                                  : isDue
                                   ? 'bg-rose-600 text-white'
                                   : 'bg-emerald-100 text-emerald-800'
                               }`}
                             >
-                              {isDue
+                              {isCancelled
+                                ? 'CANCELLED'
+                                : isDue
                                 ? `₹${m.price.toLocaleString('en-IN')} DUE NOW`
                                 : m.billingType === 'prepaid'
                                 ? 'PAID UPFRONT'
@@ -2307,24 +2512,43 @@ export default function AdminPage() {
 
                       {/* Right: Operational actions */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        {isDue && (
+                        {!isCancelled && isDue && (
                           <button
                             onClick={() => handleMarkMembershipPaid(m)}
                             disabled={membershipActionLoading === m.id}
-                            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Mark Month-End Bill Paid (₹{m.price.toLocaleString('en-IN')})</span>
+                            <span>Mark 7-Day Bill Paid (₹{m.price.toLocaleString('en-IN')})</span>
                           </button>
                         )}
 
-                        <button
-                          onClick={() => setExtendConfirmMembership(m)}
-                          disabled={membershipActionLoading === m.id}
-                          className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50"
-                        >
-                          + Extend 30 Days
-                        </button>
+                        {!isCancelled && (
+                          <button
+                            onClick={() => setExtendConfirmMembership(m)}
+                            disabled={membershipActionLoading === m.id}
+                            className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                          >
+                            + Extend 7 Days
+                          </button>
+                        )}
+
+                        {!isCancelled ? (
+                          <button
+                            onClick={() => setAdminCancelConfirmMembership(m)}
+                            disabled={membershipActionLoading === m.id}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 hover:text-rose-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                            title="Cancel membership and discontinue sunrise milk delivery immediately"
+                          >
+                            <Ban className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Cancel Membership</span>
+                          </button>
+                        ) : (
+                          <span className="px-3 py-1.5 bg-red-100 text-red-800 text-xs font-black rounded-xl border border-red-300 flex items-center gap-1.5">
+                            <Ban className="w-3.5 h-3.5 text-red-600" />
+                            <span>Delivery Discontinued</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2335,7 +2559,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 8. EXTEND 30 DAYS CONFIRMATION MODAL */}
+      {/* 8. EXTEND 7 DAYS CONFIRMATION MODAL */}
       {extendConfirmMembership && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div
@@ -2348,31 +2572,79 @@ export default function AdminPage() {
               </div>
               <h3 className="text-lg font-black text-espresso-950">Extend Membership?</h3>
               <p className="text-xs text-espresso-600">
-                You are about to extend <strong>{extendConfirmMembership.customerName}&apos;s</strong> membership by <strong>30 days</strong> from their current expiry date.
+                You are about to extend <strong>{extendConfirmMembership.customerName}&apos;s</strong> membership by <strong>7 days</strong> from their current expiry date.
               </p>
             </div>
 
             <div className="bg-cream-50 rounded-2xl p-3 border border-cream-200 text-xs text-espresso-700 space-y-1">
-              <div className="flex justify-between"><span>Customer</span><strong>{extendConfirmMembership.customerName}</strong></div>
-              <div className="flex justify-between"><span>Phone</span><strong className="font-mono">{extendConfirmMembership.phone}</strong></div>
-              <div className="flex justify-between"><span>Plan</span><strong>{extendConfirmMembership.planType === '6_months' ? '6-Month VIP' : '1-Month Postpaid'}</strong></div>
-              <div className="flex justify-between"><span>Current Expiry</span><strong>{new Date(extendConfirmMembership.endDate).toLocaleDateString('en-IN')}</strong></div>
-              <div className="flex justify-between text-emerald-700"><span>New Expiry</span><strong>{new Date(new Date(extendConfirmMembership.endDate).getTime() + 30*24*60*60*1000).toLocaleDateString('en-IN')}</strong></div>
+              <div className="flex justify-between"><span>Customer:</span><strong>{extendConfirmMembership.customerName}</strong></div>
+              <div className="flex justify-between"><span>Phone:</span><strong className="font-mono">{extendConfirmMembership.phone}</strong></div>
+              <div className="flex justify-between"><span>Plan:</span><strong>{extendConfirmMembership.planType === '6_months' ? '6-Month VIP' : '7-Day Postpaid'}</strong></div>
+              <div className="flex justify-between"><span>Current Expiry:</span><strong>{new Date(extendConfirmMembership.endDate).toLocaleDateString('en-IN')}</strong></div>
+              <div className="flex justify-between text-emerald-700"><span>New Expiry:</span><strong>{new Date(new Date(extendConfirmMembership.endDate).getTime() + 7*24*60*60*1000).toLocaleDateString('en-IN')}</strong></div>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setExtendConfirmMembership(null)}
-                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition"
+                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleExtendMembership30(extendConfirmMembership)}
-                className="flex-1 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider shadow transition active:scale-95 flex items-center justify-center gap-1.5"
+                onClick={() => handleExtendMembership7(extendConfirmMembership)}
+                className="flex-1 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />
-                Confirm Extend
+                Confirm (+7 Days)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN CANCEL MEMBERSHIP CONFIRMATION MODAL */}
+      {adminCancelConfirmMembership && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 border-2 border-red-300 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 border border-red-300 flex items-center justify-center mx-auto text-red-600">
+                <Ban className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-espresso-950">Cancel Customer Membership?</h3>
+              <p className="text-xs text-red-700 font-medium">
+                Daily sunrise milk deliveries will be suspended immediately for this member.
+              </p>
+            </div>
+
+            <div className="bg-red-50/60 rounded-2xl p-3.5 border border-red-200 text-xs text-espresso-800 space-y-1.5">
+              <div className="flex justify-between"><span>Member:</span><strong>{adminCancelConfirmMembership.customerName}</strong></div>
+              <div className="flex justify-between"><span>Phone:</span><strong className="font-mono">{adminCancelConfirmMembership.phone}</strong></div>
+              <div className="flex justify-between"><span>Plan:</span><strong>{adminCancelConfirmMembership.planName}</strong></div>
+              <div className="flex justify-between"><span>Daily Bottle:</span><strong>{adminCancelConfirmMembership.bottlePreference || `${adminCancelConfirmMembership.dailyQuantity || 1}L Daily`}</strong></div>
+            </div>
+
+            <p className="text-[11px] text-espresso-500 text-center leading-relaxed">
+              Are you sure you want to cancel this membership? The member will be marked as cancelled in the database and server registry.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setAdminCancelConfirmMembership(null)}
+                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition cursor-pointer"
+              >
+                Keep Active
+              </button>
+              <button
+                onClick={() => handleAdminCancelMembership(adminCancelConfirmMembership)}
+                disabled={membershipActionLoading === adminCancelConfirmMembership.id}
+                className="flex-1 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider shadow transition active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Ban className="w-3.5 h-3.5" />
+                <span>Confirm Cancel</span>
               </button>
             </div>
           </div>
