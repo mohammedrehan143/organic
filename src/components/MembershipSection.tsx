@@ -51,7 +51,7 @@ export function MembershipSection() {
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#173612] text-xs font-black uppercase tracking-wider shadow-lg">
             <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-            <span>Zafiroo Farm Membership Schemes</span>
+            <span>Zafiroo Dairy Membership Schemes</span>
           </div>
 
           <h2 className="text-3xl xs:text-4xl sm:text-6xl font-black uppercase tracking-tight text-white font-bebas">

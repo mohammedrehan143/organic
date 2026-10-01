@@ -291,7 +291,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
       {/* 5. Policy & Quality Guarantee Note */}
       <div className="p-2.5 bg-amber-50/90 rounded-xl border border-amber-300 text-[10px] text-amber-950 space-y-0.5 leading-snug">
         <p className="font-black uppercase tracking-wider text-amber-900">
-          ★ Zafiroo Farm Membership Guarantee:
+          ★ Zafiroo Dairy Membership Guarantee:
         </p>
         <p>• All milk is delivered in sterilized glass bottles; eggs are cushioned in eco-molded pulp crates.</p>
         <p>• Zero cancellation fees during trial; instant replacement in case of any glass breakage or spoilage.</p>
@@ -301,7 +301,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
       {/* 6. Footer Note */}
       <div className="text-center text-[10px] text-gray-600 pt-1 space-y-0.5 border-t border-dashed border-gray-300">
         <p className="font-black text-[#173612] uppercase tracking-wider">
-          *** Thank You for Being an Esteemed Zafiroo Farm Member ***
+          *** Thank You for Being an Esteemed Zafiroo Dairy Member ***
         </p>
         <p>Pure single-source organic dairy straight from our Hoskote pasture farm to your doorstep.</p>
       </div>

@@ -731,7 +731,7 @@ export function CheckoutModal() {
             </div>
             <div>
               <h2 className="text-xl font-black text-[#0F240B] font-bebas tracking-wide">
-                Zafiroo Farm Checkout
+                Zafiroo Dairy Checkout
               </h2>
               <p className="text-xs text-[#2E6125] font-semibold">
                 Fresh organic produce — direct farm to your doorstep
@@ -950,7 +950,7 @@ export function CheckoutModal() {
             <div className="p-4 bg-[#F5FAF0] rounded-2xl border border-[#CBE0A3] space-y-2 text-xs text-[#173612]">
               <div className="flex items-center gap-2 font-bold text-[#0F240B]">
                 <Store className="w-4 h-4 text-[#173612]" />
-                <span>Zafiroo Farm Hub Pickup Point</span>
+                <span>Zafiroo Dairy Hub Pickup Point</span>
               </div>
               <p className="leading-relaxed">
                 <strong>Address:</strong> {CAFE_METADATA.address}

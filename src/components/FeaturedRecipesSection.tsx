@@ -21,7 +21,7 @@ const RECIPES: RecipeItem[] = [
   {
     id: 'r1',
     title: 'Farmhouse Saffron Cardamom Kheer',
-    author: 'Zafiroo Farm Kitchen',
+    author: 'Zafiroo Dairy Kitchen',
     authorUrl: '#',
     image: '/images/recipe-1.png',
     description: 'A rich and comforting traditional slow-simmered dessert crafted with pure A2 farm milk in glass bottles, fragrant Kashmiri saffron, and green cardamom.',

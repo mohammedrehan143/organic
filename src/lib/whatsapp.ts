@@ -34,8 +34,8 @@ export function generateWhatsAppOtpLink(
 ): string {
   const greeting = customerName ? `Hello ${customerName}` : 'Hello';
   const message = 
-`☕ *ZAFIROO GOURMET CAFE*
-${greeting}! Your artisan order is on the way!
+`🥛 *ZAFIROO DAIRY*
+${greeting}! Your dairy order is on the way!
 
 📦 *Order Token:* #${tokenId}
 💰 *Total Amount:* ₹${total.toFixed(2)}

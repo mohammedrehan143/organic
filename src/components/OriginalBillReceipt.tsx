@@ -191,7 +191,7 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
       {/* 5. Policy & Quality Guarantee Note */}
       <div className="p-2.5 bg-amber-50/90 rounded-xl border border-amber-300 text-[10px] text-amber-950 space-y-0.5 leading-snug">
         <p className="font-black uppercase tracking-wider text-amber-900">
-          ★ Zafiroo Farm Quality &amp; Spot Check Guarantee:
+          ★ Zafiroo Dairy Quality &amp; Spot Check Guarantee:
         </p>
         <p>• Please inspect the sterilized glass bottles and egg crates upon delivery.</p>
         <p>• In case of any breakage or discrepancy, instant on-the-spot replacement is provided.</p>
