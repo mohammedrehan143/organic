@@ -18,6 +18,13 @@ const nextConfig = {
   experimental: {
     webpackBuildWorker: false,
   },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      express: false,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIp, RATE_LIMIT_RULES, RateLimitConfig } from '@/lib/rateLimit';
+import { scanSearchParams } from '@/lib/sqlguard';
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method;
+
+  // Scan URL query parameters for SQL injection, XSS, and NoSQL injection
+  const queryScan = scanSearchParams(req.nextUrl.searchParams);
+  if (!queryScan.safe) {
+    return new NextResponse(
+      JSON.stringify({
+        success: false,
+        error: `Security violation: Malicious ${queryScan.threatType?.toUpperCase() || 'injection'} detected. Request blocked by SQLGuardJS.`,
+      }),
+      {
+        status: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-SQLGuard-Action': 'blocked',
+          'X-SQLGuard-Threat': queryScan.threatType || 'unknown',
+        },
+      }
+    );
+  }
 
   // Only apply rate limiting to API routes
   if (!pathname.startsWith('/api')) {

@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isMasterKey } from '@/lib/adminAuth';
 import { serverStore } from '@/lib/serverStore';
 import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
+import { scanValue, createSecurityBlockedResponse } from '@/lib/sqlguard';
 
 export async function POST(req: NextRequest) {
   try {
-    const { pin, action, newPin } = await req.json();
+    const rawBody = await req.json();
+
+    // SQLGuardJS: Protect auth from injection payloads
+    const scan = scanValue(rawBody);
+    if (!scan.safe) {
+      return createSecurityBlockedResponse(scan);
+    }
+
+    const { pin, action, newPin } = rawBody;
     const cleanPin = String(pin || '').trim();
 
     if (!cleanPin && action !== 'update_pin') {

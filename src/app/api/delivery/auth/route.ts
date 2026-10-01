@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLocalAgents } from '@/lib/serverStore';
 import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
 import { DeliveryAgent } from '@/types/cafe';
+import { scanValue, createSecurityBlockedResponse } from '@/lib/sqlguard';
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone } = await req.json();
+    const body = await req.json();
+
+    // SQLGuardJS: Inspect payload
+    const scan = scanValue(body);
+    if (!scan.safe) {
+      return createSecurityBlockedResponse(scan);
+    }
+
+    const { phone } = body;
     if (!phone) {
       return NextResponse.json({ success: false, message: 'Phone number is required' }, { status: 400 });
     }

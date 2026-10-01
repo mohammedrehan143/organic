@@ -12,6 +12,7 @@ import {
   upsertCustomerInDb,
 } from '@/lib/supabase';
 import { Order } from '@/types/cafe';
+import { scanValue, createSecurityBlockedResponse } from '@/lib/sqlguard';
 
 export async function GET(req: NextRequest) {
   try {
@@ -155,6 +156,12 @@ export async function DELETE(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // SQLGuardJS: Inspect payload for SQL injection, XSS, and NoSQL injection
+    const scan = scanValue(body);
+    if (!scan.safe) {
+      return createSecurityBlockedResponse(scan);
+    }
 
     // 1. Generate collision-proof IDs
     const orderId = body.id || generateCollisionSafeOrderId();

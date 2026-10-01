@@ -20,6 +20,7 @@
     "razorpay": "^2.9.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sqlguardjs": "^1.0.4",
     "tailwind-merge": "^3.0.1",
     "three": "^0.173.0"
   },
