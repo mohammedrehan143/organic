@@ -44,6 +44,7 @@ import {
   searchAddressQuery,
   AddressSuggestion,
 } from '@/lib/location';
+import { loadRazorpayScript } from '@/lib/razorpayClient';
 
 export default function MembershipPage() {
   const [activeTab, setActiveTab] = useState<'schemes' | 'check'>('schemes');
@@ -203,7 +204,7 @@ export default function MembershipPage() {
     if (!searchResult?.membership?.phone) return;
     setSettlementLoading(true);
 
-    try {
+    const executeSettlement = async (method: string) => {
       const res = await fetch('/api/membership', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -211,7 +212,7 @@ export default function MembershipPage() {
           phone: searchResult.membership.phone,
           id: searchResult.membership.id,
           action: 'mark_paid',
-          paymentMethod: settlementMethod,
+          paymentMethod: method,
         }),
       });
 
@@ -236,10 +237,104 @@ export default function MembershipPage() {
       } else {
         alert(data.message || 'Payment processing failed. Please try again.');
       }
-    } catch {
-      alert('Network error while settling bill.');
+    };
+
+    try {
+      if (settlementMethod === 'razorpay') {
+        const billPrice = searchResult.membership.price || 504;
+        const amountInPaise = Math.round(billPrice * 100);
+
+        const orderRes = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `rcpt_set_${Date.now()}`.slice(0, 40),
+            notes: {
+              type: 'membership_bill_settlement',
+              membershipId: searchResult.membership.id,
+              phone: searchResult.membership.phone,
+              customer: searchResult.membership.customerName,
+            },
+          }),
+        });
+
+        const orderData = await orderRes.json();
+        if (!orderRes.ok || !orderData.success) {
+          throw new Error(orderData.error || 'Failed to initialize Razorpay checkout');
+        }
+
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          throw new Error('Could not load Razorpay SDK. Please check your internet connection.');
+        }
+
+        const cleanPhone = searchResult.membership.phone.replace(/[^0-9]/g, '');
+        const options = {
+          key: orderData.key,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'Zafiroo Dairy',
+          description: `7-Day Milk Bill Settlement (₹${billPrice})`,
+          image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=200&auto=format&fit=crop',
+          order_id: orderData.order_id || orderData.id,
+          prefill: {
+            name: searchResult.membership.customerName,
+            contact: cleanPhone,
+            email: searchResult.membership.customerEmail || 'care@zafiroo-dairy.com',
+          },
+          theme: {
+            color: '#173612',
+          },
+          handler: async function (response: any) {
+            try {
+              const verifyRes = await fetch('/api/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+
+              const verifyData = await verifyRes.json();
+              if (!verifyRes.ok || !verifyData.success) {
+                throw new Error(verifyData.error || 'Payment signature verification failed.');
+              }
+
+              await executeSettlement('razorpay');
+            } catch (verErr: any) {
+              alert(verErr.message || 'Payment verification failed.');
+            } finally {
+              setSettlementLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setSettlementLoading(false);
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          alert(resp.error?.description || 'Payment was declined or failed.');
+          setSettlementLoading(false);
+        });
+        rzp.open();
+        return;
+      }
+
+      // COD payment method
+      await executeSettlement('cod');
+    } catch (err: any) {
+      alert(err.message || 'Network error while settling bill.');
     } finally {
-      setSettlementLoading(false);
+      if (settlementMethod !== 'razorpay') {
+        setSettlementLoading(false);
+      }
     }
   };
 
@@ -361,7 +456,7 @@ export default function MembershipPage() {
       ? enrollBottlePreference
       : `${selectedDailyQuantity} × 1L`;
 
-    try {
+    const executeEnrollment = async (method: string) => {
       const res = await fetch('/api/membership', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -373,7 +468,7 @@ export default function MembershipPage() {
           planType: '6_months',
           bottlePreference: finalBottlePref,
           dailyQuantity: selectedDailyQuantity,
-          paymentMethod: prepaidPaymentMethod,
+          paymentMethod: method,
           paymentStatus: 'paid',
         }),
       });
@@ -393,10 +488,105 @@ export default function MembershipPage() {
       } else {
         setEnrollError(data.message || 'Failed to process prepaid membership activation.');
       }
-    } catch {
-      setEnrollError('Unable to connect to payment server. Please try again.');
+    };
+
+    try {
+      if (prepaidPaymentMethod === 'razorpay') {
+        const isHalf = selectedDailyQuantity === 0.5;
+        const dailyPrice = isHalf ? 36 : selectedDailyQuantity * 70;
+        const totalAmount = dailyPrice * 180;
+        const amountInPaise = Math.round(totalAmount * 100);
+
+        const orderRes = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `rcpt_vip_${Date.now()}`.slice(0, 40),
+            notes: {
+              type: 'vip_membership_6_months',
+              customer: enrollName.trim(),
+              phone: clean,
+              address: fullAddress,
+            },
+          }),
+        });
+
+        const orderData = await orderRes.json();
+        if (!orderRes.ok || !orderData.success) {
+          throw new Error(orderData.error || 'Failed to initialize Razorpay checkout');
+        }
+
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          throw new Error('Could not load Razorpay SDK. Please check your internet connection.');
+        }
+
+        const options = {
+          key: orderData.key,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'Zafiroo Dairy',
+          description: `VIP 6-Months Membership (${selectedDailyQuantity}L/day)`,
+          image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=200&auto=format&fit=crop',
+          order_id: orderData.order_id || orderData.id,
+          prefill: {
+            name: enrollName.trim(),
+            contact: clean,
+            email: enrollEmail.trim() || 'care@zafiroo-dairy.com',
+          },
+          theme: {
+            color: '#173612',
+          },
+          handler: async function (response: any) {
+            try {
+              const verifyRes = await fetch('/api/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+
+              const verifyData = await verifyRes.json();
+              if (!verifyRes.ok || !verifyData.success) {
+                throw new Error(verifyData.error || 'Payment signature verification failed.');
+              }
+
+              await executeEnrollment('razorpay');
+            } catch (verErr: any) {
+              setEnrollError(verErr.message || 'Payment verification failed.');
+            } finally {
+              setEnrollLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setEnrollLoading(false);
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          setEnrollError(resp.error?.description || 'Payment was declined or failed.');
+          setEnrollLoading(false);
+        });
+        rzp.open();
+        return;
+      }
+
+      // COD payment method
+      await executeEnrollment('cod');
+    } catch (err: any) {
+      setEnrollError(err.message || 'Unable to connect to payment server. Please try again.');
     } finally {
-      setEnrollLoading(false);
+      if (prepaidPaymentMethod !== 'razorpay') {
+        setEnrollLoading(false);
+      }
     }
   };
 

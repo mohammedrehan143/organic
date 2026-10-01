@@ -1018,56 +1018,6 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* 💵 Payment Received → Awaiting Bill Send */}
-          {orders.filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled').length > 0 && (
-            <div className="p-4 sm:p-5 rounded-3xl border-2 border-emerald-400 bg-emerald-50 shadow-warm-sm space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-emerald-900">
-                  <span className="text-lg">💵</span>
-                  <h3 className="text-sm font-black uppercase tracking-wider">
-                    Payment Received — Bill Pending Send
-                  </h3>
-                </div>
-                <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
-                  {orders.filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled').length} order(s)
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {orders
-                  .filter((o) => o.paymentStatus === 'paid' && !o.billApproved && o.status !== 'cancelled')
-                  .map((pb) => (
-                    <div key={pb.id} className="bg-white rounded-2xl border border-emerald-200 p-3.5 text-xs space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-black text-espresso-950">#{pb.tokenId}</span>
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          {pb.status}
-                        </span>
-                      </div>
-                      <div className="text-espresso-800 space-y-0.5">
-                        <p className="font-bold text-espresso-950">👤 {pb.customer.name}</p>
-                        <p>📞 {pb.customer.phone}</p>
-                        <p className="leading-relaxed truncate">📍 {pb.customer.address}</p>
-                        <p className="font-bold text-espresso-950">💳 {pb.paymentMethod}</p>
-                        {pb.paymentReceivedBy && (
-                          <p>🛵 Collected by {pb.paymentReceivedBy}{pb.paymentReceivedAt ? ` • ${new Date(pb.paymentReceivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-cream-200">
-                        <span className="font-black text-banhmi-red font-mono">₹{pb.total}</span>
-                        <button
-                          onClick={() => updateOrderStatus(pb.id, pb.status as any, { billApproved: true } as any)}
-                          className="px-3.5 py-2 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-xl text-[11px] uppercase tracking-wider transition active:scale-95 flex items-center gap-1.5"
-                        >
-                          <Lock className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Approve &amp; Unlock Bill →</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
           {/* KDS Active Order Cards Grid */}
           {filteredKdsOrders.length === 0 ? (
             <div className="bg-white rounded-3xl border border-cream-200 p-12 text-center space-y-3 shadow-warm-sm">
