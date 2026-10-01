@@ -23,7 +23,7 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#173612]" />
             <h1 className="text-base sm:text-lg font-black text-[#173612] tracking-wide uppercase">
-              Zafiroo Organic Dairy Farm
+              Zafiroo Dairy Farm
             </h1>
           </div>
           <p className="text-[11px] font-bold text-emerald-900">
@@ -39,7 +39,7 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
               <span>Direct Helpline: +91 7259635948, +91 9731301135</span>
             </p>
             <p className="text-[10px] text-gray-600">
-              Email: care@zafiroo-organic.com | 100% Free Doorstep Delivery
+              Email: care@zafiroo-dairy.com | 100% Free Doorstep Delivery
             </p>
           </div>
         </div>
@@ -201,7 +201,7 @@ export function OriginalBillReceipt({ order }: OriginalBillReceiptProps) {
       {/* 6. Footer Note */}
       <div className="text-center text-[10px] text-gray-600 pt-1 space-y-0.5 border-t border-dashed border-gray-300">
         <p className="font-black text-[#173612] uppercase tracking-wider">
-          *** Thank You for Choosing Zafiroo Organic Dairy Farm ***
+          *** Thank You for Choosing Zafiroo Dairy Farm ***
         </p>
         <p>Nourishing families with farm-fresh organic dairy straight from local pasture farms.</p>
       </div>

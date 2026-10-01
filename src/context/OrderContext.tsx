@@ -407,7 +407,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         const defaultLoc: UserLocation = {
-          formattedAddress: 'Zafiroo Organic Farm, Bylanarasapura, Hoskote Taluk, Bangalore - 562122',
+          formattedAddress: 'Zafiroo Dairy Farm, Bylanarasapura, Hoskote Taluk, Bangalore - 562122',
           shortAddress: 'Bylanarasapura, Hoskote',
           suburb: 'Bylanarasapura',
           city: 'Bangalore',

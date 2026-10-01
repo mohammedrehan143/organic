@@ -1,4 +1,4 @@
-# 🥛 Zafiroo Organic Store
+# 🥛 Zafiroo Dairy Store
 
 > **Farm-Fresh Pure A2 Milk, Artisan Dairy & Wholesome Goods**  
 > Complete full-stack E-Commerce, Kitchen Display System (KDS), and Live Delivery Logistics web platform built with **Next.js 15 App Router**, **TypeScript**, and **Tailwind CSS**.  
@@ -144,4 +144,4 @@ organic/
 ---
 
 ## 📄 License
-MIT License © 2026 Zafiroo Organic Store. Inspired by Florida Dairy Farmers.
+MIT License © 2026 Zafiroo Dairy Store. Inspired by Florida Dairy Farmers.

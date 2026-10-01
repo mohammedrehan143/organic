@@ -236,6 +236,8 @@ export function CheckoutModal() {
           : 'Razorpay UPI/Cards',
       paymentStatus,
       paymentReceivedAt: paymentStatus === 'paid' ? new Date().toISOString() : undefined,
+      paymentId: razorpayPaymentId,
+      paymentOrderId: razorpayOrderId,
     });
 
     try {
@@ -336,14 +338,14 @@ export function CheckoutModal() {
           key: rzpData.key,
           amount: rzpData.amount,
           currency: rzpData.currency,
-          name: 'Zafiroo Organic Dairy Farm',
+          name: 'Zafiroo Dairy',
           description: `Order Payment (${cart.length} Farm Items)`,
           image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=200&auto=format&fit=crop',
           order_id: rzpData.id,
           prefill: {
             name: customerName.trim(),
             contact: cleanPhone,
-            email: customerEmail.trim() || 'care@zafiroo-organic.com',
+            email: customerEmail.trim() || 'care@zafiroo-dairy.com',
           },
           notes: {
             address: finalAddress,

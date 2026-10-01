@@ -158,6 +158,8 @@ export interface Order {
   paymentReceivedAt?: string; // When payment was actually received (rider marks COD, gateway marks online)
   paymentReceivedBy?: string; // Rider who collected the payment
   paymentReceivedByPhone?: string;
+  paymentId?: string; // Razorpay payment ID (e.g. pay_xxx)
+  paymentOrderId?: string; // Razorpay order ID (e.g. order_xxx)
 }
 
 export interface AdminCredentials {

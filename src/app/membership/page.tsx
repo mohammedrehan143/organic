@@ -419,7 +419,7 @@ export default function MembershipPage() {
           <div className="text-center max-w-2xl mx-auto space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#173612] text-[#EBF5E5] text-xs font-bold tracking-wide uppercase shadow-sm">
               <Crown className="w-4 h-4 text-amber-300 fill-amber-300" />
-              <span>Zafiroo Organic Club</span>
+              <span>Zafiroo Dairy Club</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[#0F240B]">
               FARM MEMBERSHIP SCHEMES
@@ -701,7 +701,7 @@ export default function MembershipPage() {
               {/* Quick Benefits Banner */}
               <div className="bg-[#F5FAF0] rounded-3xl border border-[#D8ECCE] p-6 sm:p-8">
                 <h3 className="text-lg font-bold text-[#0F240B] text-center mb-6">
-                  Why Join the Zafiroo Organic Family?
+                  Why Join the Zafiroo Dairy Family?
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
                 <div className="p-4 bg-white rounded-2xl border border-[#D8ECCE] space-y-2">
@@ -926,7 +926,7 @@ export default function MembershipPage() {
                           </div>
                           <div>
                             <h3 className="font-black text-sm uppercase tracking-wider text-white">
-                              ZAFIROO ORGANIC PASS
+                              ZAFIROO DAIRY PASS
                             </h3>
                             <span className="text-[10px] text-emerald-300 font-mono">
                               ID: {m.id}

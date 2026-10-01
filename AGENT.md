@@ -1,4 +1,4 @@
-# 🌿 AGENT.md — Zafiroo Organic Store Guide
+# 🌿 AGENT.md — Zafiroo Dairy Store Guide
 
 > **Notice for AI Agents & Developers:**  
 > Read this file first. It contains the comprehensive architectural overview, business rules, design invariants, database workflows, and strict instructions required to work safely and effectively on this codebase.
@@ -7,7 +7,7 @@
 
 ## 1. What This Project Actually Is
 
-**Zafiroo Organic Store** (`zafiroo-organic-store`) is a full-stack, hyper-local farm-to-doorstep e-commerce, dispatch, and delivery platform built with **Next.js 15 (App Router)**, **TypeScript**, and **Tailwind CSS**.
+**Zafiroo Dairy Store** (`zafiroo-dairy-store`) is a full-stack, hyper-local farm-to-doorstep e-commerce, dispatch, and delivery platform built with **Next.js 15 (App Router)**, **TypeScript**, and **Tailwind CSS**.
 
 The platform is purpose-built for an organic dairy and farm produce business (headquartered for urban direct cold-chain delivery in Bangalore/South India). It connects local organic dairy pastures directly with urban households.
 

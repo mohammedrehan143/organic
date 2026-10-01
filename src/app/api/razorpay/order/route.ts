@@ -10,12 +10,40 @@ export async function POST(req: NextRequest) {
   try {
     const { amount, currency = 'INR', receipt, notes } = await req.json();
 
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid order amount. Amount must be greater than zero.' },
+        { status: 400 }
+      );
+    }
+
     const amountInPaise = Math.round(Number(amount) * 100);
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (amountInPaise < 100) {
+      return NextResponse.json(
+        { success: false, error: 'Order amount must be at least ₹1.00 for payment processing.' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize and detect credentials
+    const sanitize = (val?: string) => val?.trim().replace(/^["']|["']$/g, '');
+    const isPlaceholder = (val?: string) =>
+      !val ||
+      val === '' ||
+      val.includes('your_') ||
+      val.includes('placeholder') ||
+      val.includes('xxx');
+
+    let keyId = sanitize(process.env.RAZORPAY_KEY_ID);
+    if (isPlaceholder(keyId)) {
+      keyId = sanitize(process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+    }
+    const keySecret = sanitize(process.env.RAZORPAY_KEY_SECRET);
+
+    const hasRealKeys = !isPlaceholder(keyId) && !isPlaceholder(keySecret);
 
     // If real keys are provided and not placeholders, call Razorpay Orders API
-    if (keyId && keySecret && !keyId.includes('your_') && !keyId.includes('placeholder')) {
+    if (hasRealKeys && keyId && keySecret) {
       const authHeader = `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
 
       const response = await fetch('https://api.razorpay.com/v1/orders', {
@@ -27,8 +55,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           amount: amountInPaise,
           currency,
-          receipt: receipt || `rcpt_${Date.now()}`,
-          notes: notes || { store: 'Zafiroo Organic Dairy Farm' },
+          receipt: String(receipt || `rcpt_${Date.now()}`).slice(0, 40),
+          notes: typeof notes === 'object' && notes !== null ? notes : { store: 'Zafiroo Dairy' },
         }),
       });
 
@@ -39,7 +67,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: rzpData.error?.description || 'Failed to create Razorpay order',
+            error: rzpData.error?.description || rzpData.error?.message || 'Failed to create Razorpay order',
           },
           { status: response.status }
         );
@@ -62,7 +90,7 @@ export async function POST(req: NextRequest) {
       id: fallbackId,
       amount: amountInPaise,
       currency,
-      receipt: receipt || `rcpt_${Date.now()}`,
+      receipt: String(receipt || `rcpt_${Date.now()}`).slice(0, 40),
       key: keyId || 'rzp_test_placeholder',
       isMock: true,
       message: 'Running in sandbox mode. Add RAZORPAY_KEY_ID & RAZORPAY_KEY_SECRET to .env.local for live payments.',

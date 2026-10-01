@@ -59,7 +59,7 @@ export function MembershipSection() {
           </h2>
 
           <p className="text-sm sm:text-base text-white/85 max-w-2xl mx-auto leading-relaxed">
-            Join the Zafiroo Organic Membership with our <strong>7-Days Postpaid (1 Week)</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
+            Join the Zafiroo Dairy Membership with our <strong>7-Days Postpaid (1 Week)</strong> or <strong>6-Months Prepaid</strong> schemes. Check your active membership anytime using your mobile number.
           </p>
 
           <div className="pt-2 flex flex-wrap justify-center gap-3">

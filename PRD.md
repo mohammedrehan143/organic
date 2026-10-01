@@ -1,4 +1,4 @@
-# Zafiroo Organic Farm Store — Product Requirements Document (PRD)
+# Zafiroo Dairy Farm Store — Product Requirements Document (PRD)
 
 **Document Version:** 2.0.0  
 **Status:** Production-Ready & Feature Complete  
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary & Vision
 
-**Zafiroo Organic Farm** is a hyper-local, farm-to-doorstep dairy and organic groceries fulfillment ecosystem designed for Bangalore households. The platform delivers pure, unadulterated A2 desi cow milk in sanitized, eco-friendly returnable glass bottles, certified organic free-range brown eggs, traditional bilona desi cow ghee, and farm-fresh cold-chain daily essentials directly to the customer's doorstep before sunrise (6:00 AM – 8:30 AM).
+**Zafiroo Dairy Farm** is a hyper-local, farm-to-doorstep dairy and organic groceries fulfillment ecosystem designed for Bangalore households. The platform delivers pure, unadulterated A2 desi cow milk in sanitized, eco-friendly returnable glass bottles, certified organic free-range brown eggs, traditional bilona desi cow ghee, and farm-fresh cold-chain daily essentials directly to the customer's doorstep before sunrise (6:00 AM – 8:30 AM).
 
 ### Core Objectives
 1. **Uncompromised Quality & Freshness:** Direct morning dispatch from our Bylanarasapura farm directly to Bangalore homes with zero middlemen and zero chemical preservatives.

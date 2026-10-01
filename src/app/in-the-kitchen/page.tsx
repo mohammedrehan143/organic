@@ -30,7 +30,7 @@ const KITCHEN_RECIPES: FullRecipe[] = [
     servings: '4 Servings',
     description: 'A rich and aromatic traditional slow-simmered dessert crafted with pure A2 farm milk in glass bottles, fragrant Kashmiri saffron, and green cardamom.',
     ingredients: [
-      '1 Litre Zafiroo Organic Milk in Glass Bottle',
+      '1 Litre Zafiroo Dairy Milk in Glass Bottle',
       '1/4 cup Aromatic Basmati Rice',
       '1/3 cup Organic Raw Cane Sugar or Jaggery',
       'Pinch of Pure Kashmiri Saffron Strands',
@@ -39,7 +39,7 @@ const KITCHEN_RECIPES: FullRecipe[] = [
     ],
     instructions: [
       'Rinse the basmati rice and soak in clean water for 15 minutes.',
-      'In a heavy-bottomed pot, bring 1 Litre of Zafiroo Organic Milk to a gentle rolling boil.',
+      'In a heavy-bottomed pot, bring 1 Litre of Zafiroo Dairy Milk to a gentle rolling boil.',
       'Add soaked rice and simmer on low heat for 20 minutes, stirring occasionally until thick and creamy.',
       'Stir in organic raw cane sugar, crushed cardamom, and saffron strands infused in warm milk.',
       'Garnish with slivered almonds and pistachios. Serve warm or chilled.',

@@ -181,16 +181,9 @@ function OrderCard({
           )}
         </div>
 
-        {/* Action Buttons: Cancel Order & Bill */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
-          <CustomerBillDownloadCard
-            order={order}
-            onOpenBill={() => onOpenBill(order)}
-            className="flex-1 sm:flex-initial min-w-[85px] !py-2.5 !px-4 !rounded-2xl"
-          />
-
-          {/* Customer Cancel Button (Enabled strictly before Out for Delivery) */}
-          {isCancellable && onCancelOrder && (
+        {/* Action Button: Cancel Order (Enabled strictly before Out for Delivery) */}
+        {isCancellable && onCancelOrder && (
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
             <button
               onClick={() => setShowCancelModal(true)}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl border-2 border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-bold transition shadow-sm cursor-pointer"
@@ -198,8 +191,8 @@ function OrderCard({
               <XCircle className="w-4 h-4 text-rose-600" />
               <span>Cancel Order</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Cancellation Confirmation Modal */}
