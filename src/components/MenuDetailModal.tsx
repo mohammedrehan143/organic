@@ -40,9 +40,15 @@ export function MenuDetailModal() {
   const selectedPortionPrice = priceMatch ? parseInt(priceMatch[1], 10) : null;
   
   // Match corresponding pack size item if switching portion
-  const matchedItem = selectedPortionPrice
+  const matchedItem = portionVal
     ? menuItems.find(
-        (m) => m.category === selectedMenuDetail.category && m.priceNumber === selectedPortionPrice
+        (m) =>
+          m.category === selectedMenuDetail.category &&
+          ((portionVal.includes('30') && (m.id.includes('30') || m.name.includes('30'))) ||
+            (portionVal.includes('12') && (m.id.includes('12') || m.name.includes('12'))) ||
+            (portionVal.includes('Half') && (m.id.includes('half') || m.name.includes('Half'))) ||
+            (portionVal.includes('1L') && (m.id.includes('1l') || m.name.includes('1L'))) ||
+            (selectedPortionPrice !== null && m.priceNumber === selectedPortionPrice))
       )
     : null;
 
