@@ -162,7 +162,7 @@ export function ZafirooFooter() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <span>© {new Date().getFullYear()} Zafiroo Dairy Farm. All Rights Reserved.</span>
+            <span>© {new Date().getFullYear()} Zafiroo Dairy. All Rights Reserved.</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6">

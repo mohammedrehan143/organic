@@ -26,7 +26,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-[#0F240B] font-bebas tracking-wide">
-                Zafiroo Dairy Farm Policies & Terms
+                Zafiroo Dairy Policies & Terms
               </h2>
               <p className="text-xs text-[#2E6125] font-semibold">
                 Bylanarasapura, Hoskote Taluk, Bangalore - 562122
@@ -45,7 +45,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
         {/* Content */}
         <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-xs sm:text-sm text-[#173612] leading-relaxed">
           <p className="font-semibold text-gray-700">
-            Welcome to Zafiroo Dairy Farm. Please read our official delivery, inspection, exchange, and glass bottle handling policies carefully:
+            Welcome to Zafiroo Dairy. Please read our official delivery, inspection, exchange, and glass bottle handling policies carefully:
           </p>
 
           {/* Policy 1: Glass Bottle Policy */}

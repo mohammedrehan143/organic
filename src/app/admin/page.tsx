@@ -2198,12 +2198,12 @@ export default function AdminPage() {
 
                 const waMessage = encodeURIComponent(
                   isCancelled
-                    ? `Hello ${m.customerName}, this is Zafiroo Dairy Farm. Your membership (${m.planName}) has been cancelled. Sunrise milk deliveries have been suspended. If you would like to reactivate or renew, visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership`
+                    ? `Hello ${m.customerName}, this is Zafiroo Dairy. Your membership (${m.planName}) has been cancelled. Sunrise milk deliveries have been suspended. If you would like to reactivate or renew, visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership`
                     : isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Dairy Farm. Your 7-Day Postpaid cycle has completed. Your week-end bill of ₹${m.price.toLocaleString('en-IN')} for 7 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    ? `Hello ${m.customerName}, this is Zafiroo Dairy. Your 7-Day Postpaid cycle has completed. Your week-end bill of ₹${m.price.toLocaleString('en-IN')} for 7 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
                     : isUpcoming
-                    ? `Hello ${m.customerName}, thank you for enrolling in Zafiroo Dairy Farm Membership (${dailyQtyLabel} Daily - ${m.bottlePreference})! Your free sunrise deliveries will begin tomorrow morning between 6:00 AM - 7:30 AM.`
-                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Dairy Farm! Your free sunrise deliveries are active.`
+                    ? `Hello ${m.customerName}, thank you for enrolling in Zafiroo Dairy Membership (${dailyQtyLabel} Daily - ${m.bottlePreference})! Your free sunrise deliveries will begin tomorrow morning between 6:00 AM - 7:30 AM.`
+                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Dairy! Your free sunrise deliveries are active.`
                 );
 
                 return (

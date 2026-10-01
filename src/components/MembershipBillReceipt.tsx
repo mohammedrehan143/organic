@@ -71,7 +71,7 @@ export function MembershipBillReceipt({ membership }: MembershipBillReceiptProps
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#173612]" />
             <h1 className="text-base sm:text-lg font-black text-[#173612] tracking-wide uppercase">
-              Zafiroo Dairy Farm
+              Zafiroo Dairy
             </h1>
           </div>
           <p className="text-[11px] font-bold text-emerald-900">

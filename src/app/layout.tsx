@@ -11,11 +11,11 @@ import { LocationModal } from '@/components/LocationModal';
 import { FloatingCartBar } from '@/components/FloatingCartBar';
 
 export const metadata: Metadata = {
-  title: 'Zafiroo Dairy Farm | Farm-Fresh Pure Milk, Artisan Dairy & Wholesome Goods',
+  title: 'Zafiroo Dairy | Farm-Fresh Pure Milk, Artisan Dairy & Wholesome Goods',
   description:
     'Delivering wholesome organic dairy products, pasture-fed milk, cultured butter, Vedic ghee, and farm-fresh produce from our dedicated local farms directly to your doorstep.',
   keywords: [
-    'Zafiroo Dairy Farm',
+    'Zafiroo Dairy',
     'Pure Milk',
     'Organic Dairy',
     'Farm Fresh Milk',

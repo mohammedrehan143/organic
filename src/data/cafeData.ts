@@ -6,7 +6,7 @@ export const WHATSAPP_COMMUNITY_URL =
 
 export const CAFE_METADATA = {
   name: "Zafiroo",
-  brand: "Zafiroo Dairy Farm",
+  brand: "Zafiroo Dairy",
   tagline: "Wholesome Dairy & Farm-Fresh Organic Goods",
   subtitle: "Delivering wholesome organic products from our local farms to your table.",
   phone: "+91 7259635948, +91 9731301135",

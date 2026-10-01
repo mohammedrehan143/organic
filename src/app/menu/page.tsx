@@ -131,7 +131,7 @@ export default function MenuPage() {
                 </span>
               </div>
               <h1 className="text-3xl sm:text-5xl font-black text-[#0F240B] uppercase tracking-tight mt-1 font-bebas">
-                Zafiroo Dairy Farm Catalog
+                Zafiroo Dairy Catalog
               </h1>
               <p className="text-xs sm:text-sm text-[#173612]/80 mt-1 font-sans">
                 Pure A2 milk in glass bottles, normal white eggs in 12 & 30 packs, and organic farm goods with 100% Free Doorstep Delivery.

@@ -7,7 +7,7 @@ import { Newspaper, Trophy, CheckCircle2, ArrowRight, Sparkles } from 'lucide-re
 const NEWS_ARTICLES = [
   {
     id: 'n1',
-    title: 'Zafiroo Dairy Farm Awarded National Regenerative Agriculture Certification',
+    title: 'Zafiroo Dairy Awarded National Regenerative Agriculture Certification',
     category: 'Press Release',
     date: 'September 2026',
     image: '/images/blog-1.png',
