@@ -101,8 +101,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     category: "Normal Eggs",
     description: "Daily fresh farm table white eggs, sanitized and packed in protective 12-egg cartons. (Currently Out of Stock)",
     detailedDescription: "Fresh daily farm table white eggs with clean, smooth white shells from healthy hens. Packed in protective 12-egg cartons. Currently out of stock.",
-    price: "₹1",
-    priceNumber: 1,
+    price: "₹72",
+    priceNumber: 72,
     image: "/images/eggs-12-white.jpg",
     calories: 70,
     dietary: "non-veg",
@@ -113,7 +113,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: false,
     displayOrder: 4,
     customizationOptions: {
-      portion: ["12 White Eggs Pack (₹1)", "30 White Eggs Tray (₹1)"]
+      portion: ["12 White Eggs Pack (₹72)", "30 White Eggs Tray (₹170)"]
     }
   },
   {
@@ -122,8 +122,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     category: "Normal Eggs",
     description: "Value farm crate of 30 fresh white table eggs in molded pulp tray for everyday cooking. (Currently Out of Stock)",
     detailedDescription: "Household monthly tray of 30 fresh farm white table eggs arranged in commercial protective molded pulp crates. Currently out of stock.",
-    price: "₹1",
-    priceNumber: 1,
+    price: "₹170",
+    priceNumber: 170,
     image: "/images/eggs-30-white.jpg",
     calories: 70,
     dietary: "non-veg",
@@ -134,7 +134,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: false,
     displayOrder: 5,
     customizationOptions: {
-      portion: ["30 White Eggs Tray (₹1)", "12 White Eggs Pack (₹1)"]
+      portion: ["30 White Eggs Tray (₹170)", "12 White Eggs Pack (₹72)"]
     }
   },
 
@@ -145,8 +145,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     category: "Nati Eggs",
     description: "Authentic free-range country (Nati) eggs with deep golden yolks. (Currently Out of Stock)",
     detailedDescription: "Genuine free-range country (Nati) eggs laid by healthy heritage hens foraging freely on sunlit pastures. Rich in natural Omega-3. Currently out of stock.",
-    price: "₹1",
-    priceNumber: 1,
+    price: "₹299",
+    priceNumber: 299,
     image: "/images/zafiroo-organic-eggs-12.png",
     calories: 72,
     dietary: "non-veg",
@@ -157,7 +157,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: false,
     displayOrder: 6,
     customizationOptions: {
-      portion: ["12 Eggs Pack (₹1)", "30 Eggs Tray (₹1)"]
+      portion: ["12 Eggs Pack (₹299)", "30 Eggs Tray (₹720)"]
     }
   },
   {
@@ -166,8 +166,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     category: "Nati Eggs",
     description: "Value monthly tray of 30 authentic free-range country (Nati) eggs. (Currently Out of Stock)",
     detailedDescription: "Direct-from-farm monthly crate of 30 authentic free-range country (Nati) eggs carefully cradled in protective molded pulp trays. Currently out of stock.",
-    price: "₹1",
-    priceNumber: 1,
+    price: "₹720",
+    priceNumber: 720,
     image: "/images/zafiroo-organic-eggs-30.png",
     calories: 72,
     dietary: "non-veg",
@@ -178,7 +178,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     isAvailable: false,
     displayOrder: 7,
     customizationOptions: {
-      portion: ["30 Eggs Tray (₹1)", "12 Eggs Pack (₹1)"]
+      portion: ["30 Eggs Tray (₹720)", "12 Eggs Pack (₹299)"]
     }
   }
 ];
