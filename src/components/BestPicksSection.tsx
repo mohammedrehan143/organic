@@ -52,6 +52,11 @@ export function BestPicksSection() {
 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex gap-2">
+                  {!item.isAvailable && (
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm">
+                      Out of Stock
+                    </span>
+                  )}
                   <span
                     className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-sm ${
                       item.dietary === 'veg'
@@ -135,6 +140,14 @@ export function BestPicksSection() {
                       >
                         Subscription only
                       </Link>
+                    ) : !item.isAvailable ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3.5 py-2.5 bg-gray-100 border border-gray-300 text-gray-500 rounded-xl text-xs font-bold cursor-not-allowed"
+                      >
+                        Out of Stock
+                      </button>
                     ) : (
                       <button
                         onClick={() => addToCart(item, 1)}

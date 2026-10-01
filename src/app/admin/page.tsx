@@ -615,7 +615,7 @@ export default function AdminPage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Website</span>
           </Link>
-          <span className="text-[11px] font-bold text-[#385A2A]">Zafiroo Kitchen & KDS</span>
+          <span className="text-[11px] font-bold text-[#385A2A]">Zafiroo Dairy KDS</span>
         </div>
 
         <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-cream-200 shadow-warm-xl space-y-6">
@@ -799,7 +799,7 @@ export default function AdminPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-black tracking-tight font-display text-cream-50">
-                  ZAFIROO KITCHEN & LOGISTICS
+                  ZAFIROO LOGISTICS
                 </h1>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
                   LIVE

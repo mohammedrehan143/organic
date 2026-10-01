@@ -11,6 +11,7 @@ export function CartDrawer() {
   const router = useRouter();
   const {
     cart,
+    menuItems,
     cartDrawerOpen,
     setCartDrawerOpen,
     updateQuantity,
@@ -21,6 +22,12 @@ export function CartDrawer() {
     userLocation,
     setLocationModalOpen,
   } = useOrder();
+
+  const isItemOutOfStock = (item: (typeof cart)[0]) => {
+    const live = menuItems?.find((m) => m.id === item.menuItem?.id);
+    return live ? !live.isAvailable : !item.menuItem?.isAvailable;
+  };
+  const hasOutOfStockItems = cart.some(isItemOutOfStock);
 
   if (!cartDrawerOpen) return null;
 
@@ -34,6 +41,7 @@ export function CartDrawer() {
   const grandTotal = cartSubtotal + deliveryFee;
 
   const handleCheckoutClick = () => {
+    if (hasOutOfStockItems) return;
     setCartDrawerOpen(false);
     setCheckoutModalOpen(true);
   };
@@ -143,9 +151,16 @@ export function CartDrawer() {
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-1">
-                        <h4 className="text-sm font-bold text-[#0F240B] truncate">
-                          {item.menuItem.name}
-                        </h4>
+                        <div>
+                          <h4 className="text-sm font-bold text-[#0F240B] truncate">
+                            {item.menuItem.name}
+                          </h4>
+                          {isItemOutOfStock(item) && (
+                            <span className="text-[10px] font-black uppercase text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md inline-block mt-0.5 animate-pulse">
+                              Out of Stock
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => removeFromCart(item.id)}
                           className="text-gray-400 hover:text-rose-600 p-1 transition"
@@ -231,12 +246,19 @@ export function CartDrawer() {
                 </button>
                 <button
                   onClick={handleCheckoutClick}
-                  className="flex-1 h-12 flex items-center justify-between px-6 bg-[#173612] hover:bg-[#0F240B] text-white font-bold rounded-2xl shadow-md hover:shadow-xl transition active:scale-[0.98]"
+                  disabled={hasOutOfStockItems}
+                  className={`flex-1 h-12 flex items-center justify-between px-6 font-bold rounded-2xl shadow-md transition ${
+                    hasOutOfStockItems
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed shadow-none'
+                      : 'bg-[#173612] hover:bg-[#0F240B] text-white hover:shadow-xl active:scale-[0.98]'
+                  }`}
                 >
-                  <span className="font-bold">Checkout</span>
+                  <span className="font-bold text-xs sm:text-sm">
+                    {hasOutOfStockItems ? 'Remove Out of Stock Items' : 'Checkout'}
+                  </span>
                   <span className="flex items-center gap-1 font-black">
                     ₹{grandTotal.toFixed(2)}
-                    <ArrowRight className="w-4 h-4 ml-1" />
+                    {!hasOutOfStockItems && <ArrowRight className="w-4 h-4 ml-1" />}
                   </span>
                 </button>
               </div>

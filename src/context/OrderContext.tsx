@@ -688,6 +688,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   // Cart operations
   const addToCart = (item: MenuItem, quantity = 1, selectedOptions: Record<string, string> = {}) => {
+    if (item.isAvailable === false) return;
     setCart((prev) => {
       const optionsKey = JSON.stringify(selectedOptions);
       const existingIndex = prev.findIndex(

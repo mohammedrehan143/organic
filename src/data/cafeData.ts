@@ -94,13 +94,13 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     }
   },
 
-  // --- NORMAL WHITE EGGS CATEGORY ---
+  // --- NORMAL WHITE EGGS CATEGORY (Out of stock) ---
   {
     id: "org-norm-12",
     name: "Normal White Eggs (Pack of 12)",
     category: "Normal Eggs",
-    description: "Daily fresh farm table white eggs, sanitized and packed in protective 12-egg cartons.",
-    detailedDescription: "Fresh daily farm table white eggs with clean, smooth white shells from healthy hens. Packed in protective 12-egg cartons. Please check eggs on the spot upon delivery for exchange.",
+    description: "Daily fresh farm table white eggs, sanitized and packed in protective 12-egg cartons. (Currently Out of Stock)",
+    detailedDescription: "Fresh daily farm table white eggs with clean, smooth white shells from healthy hens. Packed in protective 12-egg cartons. Currently out of stock.",
     price: "₹1",
     priceNumber: 1,
     image: "/images/eggs-12-white.jpg",
@@ -109,8 +109,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Pure White Shells", "12-Egg Pack Carton", "Free Delivery"],
     featured: false,
     signature: false,
-    prepTime: "Farm Packaged",
-    isAvailable: true,
+    prepTime: "Out of Stock",
+    isAvailable: false,
     displayOrder: 4,
     customizationOptions: {
       portion: ["12 White Eggs Pack (₹1)", "30 White Eggs Tray (₹1)"]
@@ -120,8 +120,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     id: "org-norm-30",
     name: "Normal White Eggs (Tray of 30)",
     category: "Normal Eggs",
-    description: "Value farm crate of 30 fresh white table eggs in molded pulp tray for everyday cooking.",
-    detailedDescription: "Household monthly tray of 30 fresh farm white table eggs arranged in commercial protective molded pulp crates. Please inspect eggs on the spot upon arrival for immediate exchange.",
+    description: "Value farm crate of 30 fresh white table eggs in molded pulp tray for everyday cooking. (Currently Out of Stock)",
+    detailedDescription: "Household monthly tray of 30 fresh farm white table eggs arranged in commercial protective molded pulp crates. Currently out of stock.",
     price: "₹1",
     priceNumber: 1,
     image: "/images/eggs-30-white.jpg",
@@ -130,21 +130,21 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Value 30-Egg Tray", "Pure White Shells", "Free Delivery"],
     featured: true,
     signature: false,
-    prepTime: "Farm Packaged",
-    isAvailable: true,
+    prepTime: "Out of Stock",
+    isAvailable: false,
     displayOrder: 5,
     customizationOptions: {
       portion: ["30 White Eggs Tray (₹1)", "12 White Eggs Pack (₹1)"]
     }
   },
 
-  // --- NATI EGGS CATEGORY ---
+  // --- NATI EGGS CATEGORY (Out of stock) ---
   {
     id: "org-nati-12",
     name: "Nati Eggs (Pack of 12)",
     category: "Nati Eggs",
-    description: "Authentic free-range country (Nati) eggs with deep golden yolks.",
-    detailedDescription: "Genuine free-range country (Nati) eggs laid by healthy heritage hens foraging freely on sunlit pastures. Rich in natural Omega-3. Please check on the spot upon delivery.",
+    description: "Authentic free-range country (Nati) eggs with deep golden yolks. (Currently Out of Stock)",
+    detailedDescription: "Genuine free-range country (Nati) eggs laid by healthy heritage hens foraging freely on sunlit pastures. Rich in natural Omega-3. Currently out of stock.",
     price: "₹1",
     priceNumber: 1,
     image: "/images/zafiroo-organic-eggs-12.png",
@@ -153,8 +153,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["100% Free-Range Nati", "Deep Golden Yolk", "Free Delivery"],
     featured: true,
     signature: true,
-    prepTime: "Farm Packaged",
-    isAvailable: true,
+    prepTime: "Out of Stock",
+    isAvailable: false,
     displayOrder: 6,
     customizationOptions: {
       portion: ["12 Eggs Pack (₹1)", "30 Eggs Tray (₹1)"]
@@ -164,8 +164,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     id: "org-nati-30",
     name: "Nati Eggs (Tray of 30)",
     category: "Nati Eggs",
-    description: "Value monthly tray of 30 authentic free-range country (Nati) eggs.",
-    detailedDescription: "Direct-from-farm monthly crate of 30 authentic free-range country (Nati) eggs carefully cradled in protective molded pulp trays. Please check on the spot upon arrival.",
+    description: "Value monthly tray of 30 authentic free-range country (Nati) eggs. (Currently Out of Stock)",
+    detailedDescription: "Direct-from-farm monthly crate of 30 authentic free-range country (Nati) eggs carefully cradled in protective molded pulp trays. Currently out of stock.",
     price: "₹1",
     priceNumber: 1,
     image: "/images/zafiroo-organic-eggs-30.png",
@@ -174,8 +174,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Family Value Pack", "100% Free-Range Nati", "Free Delivery"],
     featured: false,
     signature: true,
-    prepTime: "Farm Packaged",
-    isAvailable: true,
+    prepTime: "Out of Stock",
+    isAvailable: false,
     displayOrder: 7,
     customizationOptions: {
       portion: ["30 Eggs Tray (₹1)", "12 Eggs Pack (₹1)"]
