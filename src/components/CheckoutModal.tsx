@@ -300,11 +300,11 @@ export function CheckoutModal() {
             ? formatFullOneLineAddress(line1, line2)
             : CAFE_METADATA.address;
 
-        const rzpRes = await fetch('/api/razorpay/order', {
+        const rzpRes = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: grandTotal,
+            amount: Math.round(grandTotal * 100), // In paise per Razorpay Standard Checkout spec
             currency: 'INR',
             receipt: `rcpt_${Date.now()}`,
             notes: {
@@ -341,7 +341,7 @@ export function CheckoutModal() {
           name: 'Zafiroo Dairy',
           description: `Order Payment (${cart.length} Farm Items)`,
           image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=200&auto=format&fit=crop',
-          order_id: rzpData.id,
+          order_id: rzpData.order_id || rzpData.id,
           prefill: {
             name: customerName.trim(),
             contact: cleanPhone,
@@ -356,7 +356,7 @@ export function CheckoutModal() {
           handler: async function (response: any) {
             try {
               setSubmitting(true);
-              const verifyRes = await fetch('/api/razorpay/verify', {
+              const verifyRes = await fetch('/api/verify-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1186,7 +1186,7 @@ export function CheckoutModal() {
                       setSubmitting(true);
                       setShowSandboxModal(false);
                       const mockPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-                      const verifyRes = await fetch('/api/razorpay/verify', {
+                      const verifyRes = await fetch('/api/verify-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

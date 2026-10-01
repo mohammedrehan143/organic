@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        order_id: rzpData.id,
         id: rzpData.id,
         amount: rzpData.amount,
         currency: rzpData.currency,

@@ -110,7 +110,7 @@ export function ZafirooHero() {
             Zafiroo
           </span>
           <h1 className="text-4xl xs:text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-wider font-bebas text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] leading-[0.9]">
-            ORGANIC DAIRY FARM
+            DAIRY
           </h1>
           <p className="text-sm xs:text-base sm:text-xl font-medium text-white/95 max-w-2xl mx-auto drop-shadow-md leading-relaxed px-2">
             Pure organic milk in glass bottles & farm-fresh white eggs delivered fresh from our local pastures in Bylanarasapura, Hoskote to your table.
@@ -131,7 +131,7 @@ export function ZafirooHero() {
             onClick={scrollToShop}
             className="w-full xs:w-auto px-6 sm:px-8 py-3.5 bg-[#173612]/90 hover:bg-[#173612] text-white border border-white/30 font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl hover:scale-105 transition flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Browse Farm Items</span>
+            <span>Browse Dairy Items</span>
           </a>
           <Link
             href="/membership"

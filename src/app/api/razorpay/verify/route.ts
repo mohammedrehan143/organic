@@ -9,7 +9,10 @@ import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const orderId = body.razorpay_order_id || body.order_id;
+    const paymentId = body.razorpay_payment_id || body.payment_id;
+    const signature = body.razorpay_signature || body.signature;
 
     const sanitize = (val?: string) => val?.trim().replace(/^["']|["']$/g, '');
     const isPlaceholder = (val?: string) =>
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     // If real key secret is provided, strictly verify authentic Razorpay HMAC signature
     if (hasRealSecret && keySecret) {
-      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      if (!orderId || !paymentId || !signature) {
         return NextResponse.json(
           {
             success: false,
@@ -36,10 +39,10 @@ export async function POST(req: NextRequest) {
 
       const generatedSignature = crypto
         .createHmac('sha256', keySecret)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .update(`${orderId}|${paymentId}`)
         .digest('hex');
 
-      const sigBuffer = Buffer.from(razorpay_signature, 'utf-8');
+      const sigBuffer = Buffer.from(signature, 'utf-8');
       const genBuffer = Buffer.from(generatedSignature, 'utf-8');
 
       const isSignatureValid =
@@ -60,8 +63,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Razorpay payment verified successfully',
-      paymentId: razorpay_payment_id || `pay_${Date.now()}`,
-      orderId: razorpay_order_id,
+      paymentId: paymentId || `pay_${Date.now()}`,
+      orderId: orderId,
+      order_id: orderId,
+      payment_id: paymentId,
       isMock: !hasRealSecret,
     });
   } catch (error: any) {

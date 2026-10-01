@@ -112,7 +112,7 @@ export function ZafirooFooter() {
                   onClick={() => setTermsModalOpen(true)}
                   className="hover:text-emerald-300 transition text-left cursor-pointer underline text-white"
                 >
-                  Zafiroo Store Policy & Terms
+                  Zafiroo Dairy Policy & Terms
                 </button>
               </li>
             </ul>

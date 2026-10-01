@@ -142,6 +142,14 @@ export const RATE_LIMIT_RULES: Record<string, RateLimitConfig> = {
     limit: 20,
     windowMs: 60_000,
   },
+  '/api/create-order': {
+    limit: 20,
+    windowMs: 60_000,
+  },
+  '/api/verify-payment': {
+    limit: 30,
+    windowMs: 60_000,
+  },
   '/api/cashfree/order': {
     limit: 20,
     windowMs: 60_000,
