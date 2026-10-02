@@ -444,46 +444,7 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // Action 1: Skip to Week-End payment due (Simulate 7 days completed)
-    if (action === 'skip_to_due') {
-      const now = new Date();
-      // Set end date to yesterday to simulate 7 days completed and due
-      const pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-      const updateData: any = {
-        end_date: pastDate,
-        status: 'expired',
-        payment_status: 'due',
-        updated_at: now.toISOString(),
-      };
-
-      if (isSupabaseConfigured && client && supabaseTableAvailable) {
-        try {
-          await client
-            .from('memberships')
-            .update(updateData)
-            .or(`id.eq.${id || 'NONE'},phone.ilike.%${cleanPhone}%`);
-        } catch (dbErr) {
-          console.warn('[Membership PATCH] db error:', dbErr);
-        }
-      }
-
-      // Update local store
-      const local = getLocalMemberships(cleanPhone);
-      if (local.length > 0) {
-        local[0].endDate = pastDate;
-        local[0].status = 'expired';
-        local[0].paymentStatus = 'due';
-        saveLocalMembership(local[0]);
-      }
-
-      const dueAmountStr = local.length > 0 && local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
-      return NextResponse.json({
-        success: true,
-        message: `Fast-forwarded 7 days. Week-end bill${dueAmountStr} is now due for settlement.`,
-      });
-    }
-
-    // Action 2: Settle week-end postpaid bill or record payment
+    // Action: Settle week-end postpaid bill or record payment
     if (action === 'mark_paid' || paymentStatus === 'paid') {
       const now = new Date();
       const local = getLocalMemberships(cleanPhone);

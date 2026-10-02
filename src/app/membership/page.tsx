@@ -23,7 +23,6 @@ import {
   CreditCard,
   Banknote,
   AlertTriangle,
-  FastForward,
   QrCode,
   RefreshCw,
   X,
@@ -59,8 +58,6 @@ export default function MembershipPage() {
     isExpired: boolean;
   } | null>(null);
   const [searchError, setSearchError] = useState('');
-  const [skipLoading, setSkipLoading] = useState(false);
-  const [skipSuccessMsg, setSkipSuccessMsg] = useState('');
 
   // Cancellation modal state (Customer cancellation)
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -132,7 +129,6 @@ export default function MembershipPage() {
   const handleSearch = async (e?: React.FormEvent, overridePhone?: string) => {
     if (e) e.preventDefault();
     setSearchError('');
-    setSkipSuccessMsg('');
     setSettlementSuccessMsg('');
 
     const phoneToLookup = overridePhone || searchPhone;
@@ -162,40 +158,6 @@ export default function MembershipPage() {
       setSearchError('Unable to connect to database server. Please check your network.');
     } finally {
       setSearchLoading(false);
-    }
-  };
-
-  // Skip / Fast-Forward 7 Days (Simulation for testing Postpaid payment flow)
-  const handleSkipToDue = async () => {
-    if (!searchResult?.membership?.phone) return;
-    setSkipLoading(true);
-    setSkipSuccessMsg('');
-    setSearchError('');
-
-    try {
-      const res = await fetch('/api/membership', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: searchResult.membership.phone,
-          id: searchResult.membership.id,
-          action: 'skip_to_due',
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const billAmount = searchResult.membership.price ? `₹${searchResult.membership.price.toLocaleString('en-IN')}` : '₹504';
-        setSkipSuccessMsg(`⏩ Fast-forwarded 7 days! Week-end bill of ${billAmount} is now due for settlement.`);
-        // Refresh membership profile
-        await handleSearch(undefined, searchResult.membership.phone);
-      } else {
-        setSearchError(data.message || 'Failed to simulate 7 days fast-forward.');
-      }
-    } catch {
-      setSearchError('Network error while updating membership status.');
-    } finally {
-      setSkipLoading(false);
     }
   };
 
@@ -951,12 +913,6 @@ export default function MembershipPage() {
                   </div>
                 )}
 
-                {skipSuccessMsg && (
-                  <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold rounded-2xl text-center">
-                    {skipSuccessMsg}
-                  </div>
-                )}
-
                 {settlementSuccessMsg && (
                   <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold rounded-2xl text-center">
                     {settlementSuccessMsg}
@@ -1008,41 +964,7 @@ export default function MembershipPage() {
                   </div>
                 )}
 
-                {/* 1. FAST-FORWARD SKIP TEST BUTTON (For 7-Day Postpaid Scheme) */}
-                {searchResult.membership.billingType === 'postpaid' && searchResult.membership.status !== 'cancelled' && !searchResult.isExpired && searchResult.membership.paymentStatus !== 'due' && (
-                  <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                    <div className="space-y-1 text-center sm:text-left">
-                      <div className="flex items-center justify-center sm:justify-start gap-2">
-                        <FastForward className="w-4 h-4 text-amber-700" />
-                        <span className="text-xs font-black text-amber-950 uppercase tracking-wide">
-                          Test Postpaid Billing Flow
-                        </span>
-                      </div>
-                      <p className="text-xs text-amber-800">
-                        Fast-forward 7 days immediately to trigger the 7-day postpaid bill payment page.
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleSkipToDue}
-                      disabled={skipLoading}
-                      className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition active:scale-95 disabled:opacity-50 shrink-0 flex items-center gap-2 cursor-pointer"
-                    >
-                      {skipLoading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Fast-Forwarding...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FastForward className="w-3.5 h-3.5" />
-                          <span>⏩ Skip 7 Days (Bill Due)</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                {/* 2. WEEK-END BILL PAYMENT ALERT (If due or expired on 7-day postpaid) */}
+                {/* WEEK-END BILL PAYMENT ALERT (If due or expired on 7-day postpaid) */}
                 {searchResult.membership.status !== 'cancelled' && (searchResult.isExpired || searchResult.membership.paymentStatus === 'due') && (
                   <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white rounded-3xl p-6 shadow-xl border-2 border-rose-300 space-y-4">
                     <div className="flex items-center justify-between">
