@@ -60,6 +60,7 @@ import {
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
 import { MembershipBillModal } from '@/components/MembershipBillModal';
+import { calculateMembershipTimeline } from '@/lib/membershipTimeline';
 import { generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
 
@@ -591,10 +592,16 @@ export default function AdminPage() {
       return list.filter((m) => m.planType === '1_month');
     }
     if (membershipFilter === 'due') {
-      return list.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled');
+      return list.filter((m) => {
+        const timeline = calculateMembershipTimeline(m);
+        return (timeline.isDue || m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled';
+      });
     }
     if (membershipFilter === 'active') {
-      return list.filter((m) => m.status === 'active' && m.paymentStatus !== 'due');
+      return list.filter((m) => {
+        const timeline = calculateMembershipTimeline(m);
+        return m.status === 'active' && !timeline.isDue && m.paymentStatus !== 'due';
+      });
     }
     if (membershipFilter === 'cancelled') {
       return list.filter((m) => m.status === 'cancelled');
@@ -2056,7 +2063,10 @@ export default function AdminPage() {
                 <span>Week-End Bills Due</span>
               </span>
               <p className="text-3xl font-black text-rose-700 font-mono">
-                {adminMemberships.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled').length}
+                {adminMemberships.filter((m) => {
+                  const t = calculateMembershipTimeline(m);
+                  return (t.isDue || m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled';
+                }).length}
               </p>
               <p className="text-[11px] text-rose-600 font-medium">
                 Requires payment / renewal
@@ -2097,8 +2107,22 @@ export default function AdminPage() {
                 { key: 'all' as const, label: 'All', count: adminMemberships.length },
                 { key: '6_months' as const, label: '6-Mo VIP', count: adminMemberships.filter((m) => m.planType === '6_months').length },
                 { key: '1_month' as const, label: '7-Day Postpaid', count: adminMemberships.filter((m) => m.planType === '1_month').length },
-                { key: 'due' as const, label: '🚨 Bill Due', count: adminMemberships.filter((m) => (m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled').length },
-                { key: 'active' as const, label: 'Active', count: adminMemberships.filter((m) => m.status === 'active' && m.paymentStatus !== 'due').length },
+                {
+                  key: 'due' as const,
+                  label: '🚨 Bill Due',
+                  count: adminMemberships.filter((m) => {
+                    const t = calculateMembershipTimeline(m);
+                    return (t.isDue || m.paymentStatus === 'due' || m.status === 'expired') && m.status !== 'cancelled';
+                  }).length,
+                },
+                {
+                  key: 'active' as const,
+                  label: 'Active',
+                  count: adminMemberships.filter((m) => {
+                    const t = calculateMembershipTimeline(m);
+                    return m.status === 'active' && !t.isDue && m.paymentStatus !== 'due';
+                  }).length,
+                },
                 { key: 'cancelled' as const, label: '🚫 Cancelled', count: adminMemberships.filter((m) => m.status === 'cancelled').length },
               ].map((pill) => (
                 <button
@@ -2132,16 +2156,11 @@ export default function AdminPage() {
               </div>
             ) : (
               filteredAdminMemberships.map((m) => {
+                const timeline = calculateMembershipTimeline(m);
                 const isCancelled = m.status === 'cancelled';
-                const isDue = !isCancelled && (m.paymentStatus === 'due' || m.status === 'expired');
-                const now = new Date();
-                const startDate = new Date(m.startDate);
-                const endDate = new Date(m.endDate);
-                const isUpcoming = !isCancelled && now < startDate;
-                const diffMs = endDate.getTime() - now.getTime();
-                const daysRemaining = isUpcoming
-                  ? (m.planType === '6_months' ? 180 : 7)
-                  : Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                const isDue = !isCancelled && (timeline.isDue || m.paymentStatus === 'due' || m.status === 'expired');
+                const isUpcoming = !isCancelled && timeline.isUpcoming;
+                const daysRemaining = timeline.daysRemaining;
                 const cleanPhone = m.phone.replace(/[^0-9]/g, '');
                 const dailyQty = m.dailyQuantity || (m.planName.toLowerCase().includes('half') || m.planName.includes('0.5') ? 0.5 : 1);
                 const dailyQtyLabel = dailyQty === 0.5 ? 'Half Liter (0.5L)' : `${dailyQty}L`;
@@ -2150,10 +2169,10 @@ export default function AdminPage() {
                   isCancelled
                     ? `Hello ${m.customerName}, this is Zafiroo Dairy. Your membership (${m.planName}) has been cancelled. Sunrise milk deliveries have been suspended. If you would like to reactivate or renew, visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership`
                     : isDue
-                    ? `Hello ${m.customerName}, this is Zafiroo Dairy. Your 7-Day Postpaid cycle has completed. Your week-end bill of ₹${m.price.toLocaleString('en-IN')} for 7 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement. Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
+                    ? `Hello ${m.customerName}, this is Zafiroo Dairy. Your 7-Day Postpaid cycle has completed. Your week-end bill of ₹${m.price.toLocaleString('en-IN')} for 7 days of free daily deliveries (${dailyQtyLabel} Daily - ${m.bottlePreference}) is ready for settlement today (${timeline.endDateStr}). Visit: ${typeof window !== 'undefined' ? window.location.origin : ''}/membership to settle & renew.`
                     : isUpcoming
-                    ? `Hello ${m.customerName}, thank you for enrolling in Zafiroo Dairy Membership (${dailyQtyLabel} Daily - ${m.bottlePreference})! Your free sunrise deliveries will begin tomorrow morning between 6:00 AM - 7:30 AM.`
-                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Dairy! Your free sunrise deliveries are active.`
+                    ? `Hello ${m.customerName}, thank you for enrolling in Zafiroo Dairy Membership (${dailyQtyLabel} Daily - ${m.bottlePreference})! Your free sunrise deliveries will begin tomorrow morning (${timeline.startDateStr}) between 6:00 AM - 7:30 AM.`
+                    : `Hello ${m.customerName}, thank you for being an esteemed ${m.planName} member (${dailyQtyLabel} Daily - ${m.bottlePreference}) with Zafiroo Dairy! Today is Day ${timeline.currentDayNumber} of 7 of your free sunrise deliveries.`
                 );
 
                 return (
@@ -2256,12 +2275,12 @@ export default function AdminPage() {
                           </>
                         ) : isUpcoming ? (
                           <>
-                            <span>🌅 STARTS TOMORROW</span>
+                            <span>🌅 STARTS TOMORROW ({timeline.startDateStr})</span>
                           </>
                         ) : (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                            <span>ACTIVE MEMBER</span>
+                            <span>{timeline.statusBadgeText}</span>
                           </>
                         )}
                       </span>
@@ -2331,10 +2350,10 @@ export default function AdminPage() {
                               {isCancelled
                                 ? 'Membership Cancelled'
                                 : isDue
-                                ? 'Cycle Completed (Due)'
+                                ? (timeline.isDueToday ? 'Ends Today • Payment Due' : 'Cycle Completed (Due)')
                                 : isUpcoming
-                                ? 'Starts Tomorrow Morning'
-                                : `${daysRemaining} Days`}
+                                ? `Starts Tomorrow (${timeline.startDateStr})`
+                                : `Day ${timeline.currentDayNumber} of ${timeline.totalDays} (${daysRemaining} Days Left)`}
                             </strong>
                           </div>
 
@@ -2370,8 +2389,8 @@ export default function AdminPage() {
                           </div>
 
                           <div className="text-[11px] text-espresso-500 flex justify-between">
-                            <span>Started: {new Date(m.startDate).toLocaleDateString('en-IN')}</span>
-                            <span>Expires: {new Date(m.endDate).toLocaleDateString('en-IN')}</span>
+                            <span>Started: {timeline.startDateStr}</span>
+                            <span>Ends: {timeline.endDateStr}</span>
                           </div>
                         </div>
                       </div>

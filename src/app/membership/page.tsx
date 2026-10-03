@@ -37,6 +37,8 @@ import {
 import confetti from 'canvas-confetti';
 import { Membership, MembershipPlanType } from '@/types/cafe';
 import { MembershipBillModal } from '@/components/MembershipBillModal';
+import { Membership7DayTimeline } from '@/components/Membership7DayTimeline';
+import { calculateMembershipTimeline } from '@/lib/membershipTimeline';
 import {
   getCurrentLocationAddress,
   formatFullOneLineAddress,
@@ -965,53 +967,57 @@ export default function MembershipPage() {
                 )}
 
                 {/* WEEK-END BILL PAYMENT ALERT (If due or expired on 7-day postpaid) */}
-                {searchResult.membership.status !== 'cancelled' && (searchResult.isExpired || searchResult.membership.paymentStatus === 'due') && (
-                  <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white rounded-3xl p-6 shadow-xl border-2 border-rose-300 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-2xl bg-white text-rose-700 flex items-center justify-center font-bold">
-                          <AlertTriangle className="w-5 h-5 animate-bounce" />
+                {(() => {
+                  const primaryTimeline = calculateMembershipTimeline(searchResult.membership);
+                  if (primaryTimeline.isCancelled || !primaryTimeline.isDue) return null;
+
+                  return (
+                    <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white rounded-3xl p-6 shadow-xl border-2 border-rose-300 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-white text-rose-700 flex items-center justify-center font-bold">
+                            <AlertTriangle className="w-5 h-5 animate-bounce" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
+                              Action Required • Week-End Settlement
+                            </span>
+                            <h4 className="text-lg font-black text-white">
+                              {primaryTimeline.isDueToday
+                                ? '7-Day Pass Completed (Bill Due Today)'
+                                : 'Week-End Settlement Due (7 Days Completed)'}
+                            </h4>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                            Action Required
-                          </span>
-                          <h4 className="text-lg font-black text-white">
-                            Week-End Settlement Due (7 Days Completed)
-                          </h4>
-                        </div>
+                        <span className="text-sm font-black bg-amber-300 text-black px-3 py-1 rounded-xl shadow-xs">
+                          ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'} DUE
+                        </span>
                       </div>
-                      <span className="text-sm font-black bg-amber-300 text-black px-3 py-1 rounded-xl shadow-xs">
-                        ₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'} DUE
-                      </span>
+
+                      <p className="text-xs text-rose-100 leading-relaxed">
+                        Your 7-day billing cycle for unlimited free doorstep deliveries is completed on{' '}
+                        <strong>{primaryTimeline.settleDay.formattedDate} ({primaryTimeline.settleDay.dayName})</strong>. Settle your week-end invoice to renew and continue receiving sunrise milk deliveries.
+                      </p>
+
+                      <button
+                        onClick={() => setSettlementModalOpen(true)}
+                        className="w-full py-3.5 bg-white hover:bg-rose-50 text-rose-800 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4 text-rose-700" />
+                        <span>Pay 7-Day Bill (₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'})</span>
+                        <ArrowRight className="w-4 h-4 text-rose-700" />
+                      </button>
                     </div>
-
-                    <p className="text-xs text-rose-100 leading-relaxed">
-                      Your 7-day billing cycle for unlimited free doorstep deliveries is completed. Settle your week-end invoice to renew and continue receiving sunrise milk deliveries.
-                    </p>
-
-                    <button
-                      onClick={() => setSettlementModalOpen(true)}
-                      className="w-full py-3.5 bg-white hover:bg-rose-50 text-rose-800 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <CreditCard className="w-4 h-4 text-rose-700" />
-                      <span>Pay 7-Day Bill (₹{searchResult.membership.price ? searchResult.membership.price.toLocaleString('en-IN') : '504'})</span>
-                      <ArrowRight className="w-4 h-4 text-rose-700" />
-                    </button>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* 3. MEMBERSHIP CARDS — One per membership */}
                 {searchResult.memberships.map((m, idx) => {
-                  const now = new Date();
-                  const endDate = new Date(m.endDate);
-                  const startDate = new Date(m.startDate);
-                  const isCancelled = m.status === 'cancelled';
-                  const isFutureStart = !isCancelled && now < startDate;
-                  const diffMs = endDate.getTime() - now.getTime();
-                  const mDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-                  const mExpired = diffMs <= 0;
-                  const isDue = !isCancelled && (mExpired || m.paymentStatus === 'due');
+                  const timeline = calculateMembershipTimeline(m);
+                  const isCancelled = timeline.isCancelled;
+                  const isDue = timeline.isDue;
+                  const isUpcoming = timeline.isUpcoming;
+                  const startsTomorrow = timeline.startsTomorrow;
                   const mQty = m.dailyQuantity || (m.planName?.includes('0.5L') || m.planName?.toLowerCase().includes('half liter') ? 0.5 : 1);
                   const mQtyLabel = mQty === 0.5 ? 'Half Liter (0.5L)' : `${mQty}L`;
                   const planDurationDays = m.planType === '6_months' ? 180 : 7;
@@ -1051,32 +1057,23 @@ export default function MembershipPage() {
                             isCancelled
                               ? 'bg-rose-950 text-rose-300 border border-rose-500/50'
                               : isDue
-                              ? 'bg-rose-500 text-white'
-                              : isFutureStart
+                              ? 'bg-rose-500 text-white animate-pulse'
+                              : startsTomorrow
                               ? 'bg-amber-400 text-black flex items-center gap-1 font-black'
-                              : 'bg-emerald-400 text-black flex items-center gap-1'
+                              : isUpcoming
+                              ? 'bg-amber-400 text-black'
+                              : 'bg-emerald-400 text-black flex items-center gap-1 font-black'
                           }`}
                         >
-                          {isCancelled
-                            ? '🚫 CANCELLED'
-                            : isDue
-                            ? 'BILL DUE / EXPIRED'
-                            : isFutureStart
-                            ? '🌅 STARTS TOMORROW'
-                            : (
-                              <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
-                                <span>ACTIVE MEMBER</span>
-                              </>
-                            )}
+                          {timeline.statusBadgeText}
                         </span>
                       </div>
 
-                      {/* Next-Day Start Notice Banner */}
-                      {isFutureStart && (
+                      {/* Next-Day Start Notice Banner (Only shown if start date is strictly tomorrow) */}
+                      {startsTomorrow && (
                         <div className="p-3 mb-4 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-2">
                           <Clock className="w-4 h-4 text-amber-300 shrink-0" />
-                          <span>Deliveries start tomorrow morning ({startDate.toLocaleDateString('en-IN')}) at sunrise!</span>
+                          <span>Deliveries start tomorrow morning ({timeline.startDateDisplay}) at sunrise!</span>
                         </div>
                       )}
 
@@ -1114,8 +1111,8 @@ export default function MembershipPage() {
                             <span
                               className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg ${
                                 m.billingType === 'postpaid'
-                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
-                                  : 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                                   ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
+                                   : 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
                               }`}
                             >
                               {m.billingType === 'postpaid' ? 'Postpaid' : 'Prepaid'}
@@ -1127,14 +1124,18 @@ export default function MembershipPage() {
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px] text-gray-300">
                             <span>Validity Countdown</span>
-                            <strong className={isCancelled ? 'text-rose-400' : isDue ? 'text-rose-400' : isFutureStart ? 'text-amber-300' : 'text-emerald-300'}>
+                            <strong className={isCancelled ? 'text-rose-400' : isDue ? 'text-rose-400' : isUpcoming ? 'text-amber-300' : 'text-emerald-300'}>
                               {isCancelled
                                 ? 'Membership Cancelled'
+                                : timeline.isDueToday
+                                ? '7-Day Cycle Completed (Due Today)'
                                 : isDue
                                 ? '7-Day Cycle Completed (Bill Due)'
-                                : isFutureStart
-                                ? 'Starts Tomorrow (7 full days)'
-                                : `${mDaysRemaining} days remaining`}
+                                : startsTomorrow
+                                ? 'Starts Tomorrow (7 Full Days)'
+                                : isUpcoming
+                                ? `Starts on ${timeline.startDateDisplay}`
+                                : `Day ${timeline.currentDayNumber} of ${planDurationDays} • ${timeline.daysRemaining} days remaining`}
                             </strong>
                           </div>
                           <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
@@ -1154,18 +1155,29 @@ export default function MembershipPage() {
                                     ? 100
                                     : Math.min(
                                         100,
-                                        Math.max(5, (mDaysRemaining / planDurationDays) * 100)
+                                        Math.max(5, (timeline.daysRemaining / planDurationDays) * 100)
                                       )
                                 }%`,
                               }}
                             />
                           </div>
                           <div className="flex justify-between text-[10px] text-gray-400 pt-0.5">
-                            <span>Start: {startDate.toLocaleDateString('en-IN')}</span>
-                            <span>End: {endDate.toLocaleDateString('en-IN')}</span>
+                            <span>Start: {timeline.startDateDisplay} ({new Date(m.startDate).toLocaleDateString('en-IN')})</span>
+                            <span>End / Settle: {timeline.endDateDisplay} ({new Date(m.endDate).toLocaleDateString('en-IN')})</span>
                           </div>
                         </div>
                       </div>
+
+                      {/* 7-DAY DELIVERY TIMELINE (For 7-day postpaid memberships) */}
+                      {m.planType !== '6_months' && (
+                        <div className="mb-6">
+                          <Membership7DayTimeline
+                            timeline={timeline}
+                            price={m.price || 504}
+                            onPayDue={() => setSettlementModalOpen(true)}
+                          />
+                        </div>
+                      )}
 
                       {/* Privileges Unlocked */}
                       <div className="space-y-2 text-xs">
@@ -1191,6 +1203,21 @@ export default function MembershipPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Prominent Direct Settle Button when Bill is Due */}
+                      {!isCancelled && isDue && (
+                        <div className="pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setSettlementModalOpen(true)}
+                            className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#0F240B] font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer ring-2 ring-amber-300/80"
+                          >
+                            <CreditCard className="w-4 h-4 text-[#0F240B]" />
+                            <span>Pay 7-Day Week-End Bill (₹{m.price ? m.price.toLocaleString('en-IN') : '504'})</span>
+                            <ArrowRight className="w-4 h-4 text-[#0F240B]" />
+                          </button>
+                        </div>
+                      )}
 
                       {/* Official Membership Tax Invoice & Bill (Permission controlled by store admin) */}
                       <div className="pt-4 mt-2 border-t border-white/15">
@@ -1519,7 +1546,9 @@ export default function MembershipPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Deliveries:</span>
-                    <strong className="text-emerald-800 font-black">Starts Tomorrow Morning</strong>
+                    <strong className="text-emerald-800 font-black">
+                      Starts Tomorrow ({new Date(enrollSuccess.startDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' })})
+                    </strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Payment Status:</span>

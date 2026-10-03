@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useOrder } from '@/context/OrderContext';
 import { ShoppingBag, Navigation, MapPin, ChevronDown, Loader2, Crown, MessageSquare } from 'lucide-react';
 import { WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
+import { InstallAppButton } from '@/components/PwaInstallPrompt';
 
 export function ZafirooNavbar() {
   const pathname = usePathname();
@@ -104,6 +105,9 @@ export function ZafirooNavbar() {
           >
             <Crown className="w-5 h-5 text-[#261603] fill-[#261603] drop-shadow-xs" />
           </Link>
+
+          {/* Web App Install Button */}
+          <InstallAppButton className="hidden md:inline-flex bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black border border-amber-500/80 shadow-xs" />
 
           {/* WhatsApp Community Button */}
           <a

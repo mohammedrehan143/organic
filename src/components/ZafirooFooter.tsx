@@ -6,6 +6,7 @@ import { CAFE_METADATA, WHATSAPP_COMMUNITY_URL } from '@/data/cafeData';
 import Link from 'next/link';
 import { MessageSquare, PhoneCall, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
 import { TermsModal } from './TermsModal';
+import { InstallAppButton } from '@/components/PwaInstallPrompt';
 
 export function ZafirooFooter() {
   const pathname = usePathname();
@@ -35,6 +36,7 @@ export function ZafirooFooter() {
           </div>
 
           <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-3">
+            <InstallAppButton className="w-full sm:w-auto px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-lg" />
             <a
               href={WHATSAPP_COMMUNITY_URL}
               target="_blank"

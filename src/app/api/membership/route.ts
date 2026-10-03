@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase, supabaseAdmin } from '@/lib/supabase';
 import { getLocalMemberships, saveLocalMembership, updateLocalMembershipBillApproved, cancelLocalMembership } from '@/lib/serverStore';
 import { Membership, MembershipPlanType, MembershipBillingType } from '@/types/cafe';
+import {
+  calculateMembershipTimeline,
+  calculateNewEnrollmentDates,
+  getISTDateString,
+  addDaysToDateString,
+} from '@/lib/membershipTimeline';
 
 // Cache whether the remote Supabase project has the memberships table created
 let supabaseTableAvailable = true;
 
 function formatDbRowToMembership(row: any): Membership {
-  const now = new Date();
-  const endDate = new Date(row.end_date);
-  const diffMs = endDate.getTime() - now.getTime();
-  const isExpired = diffMs <= 0;
-
   const rawStatus = row.payment_status || '';
   const billApproved = Boolean(row.bill_approved) || rawStatus.includes('__BILL_APPROVED__');
   const cleanPaymentStatus = rawStatus.replace('__BILL_APPROVED__', '').trim() || (row.billing_type === 'prepaid' ? 'paid' : 'postpaid_cycle');
@@ -51,7 +52,21 @@ function formatDbRowToMembership(row: any): Membership {
      dailyQuantity && dailyQuantity > 1 ? `${dailyQuantity} × 1L` : '1L');
 
   const isCancelled = row.status === 'cancelled';
-  const computedStatus = isCancelled ? 'cancelled' : (isExpired ? 'expired' : row.status || 'active');
+  const tempMembership: any = {
+    planType: row.plan_type,
+    billingType: row.billing_type,
+    status: row.status,
+    paymentStatus: cleanPaymentStatus,
+    startDate: row.start_date,
+    endDate: row.end_date,
+  };
+  const timeline = calculateMembershipTimeline(tempMembership);
+  const computedStatus = isCancelled ? 'cancelled' : (timeline.isDue ? 'expired' : row.status || 'active');
+  const finalPaymentStatus = isCancelled || cleanPaymentStatus === 'paid'
+    ? cleanPaymentStatus
+    : timeline.isDue
+    ? 'due'
+    : cleanPaymentStatus;
 
   return {
     id: row.id,
@@ -66,7 +81,7 @@ function formatDbRowToMembership(row: any): Membership {
     billingType: row.billing_type,
     price: Number(row.price) || 0,
     status: computedStatus,
-    paymentStatus: cleanPaymentStatus,
+    paymentStatus: finalPaymentStatus,
     billApproved,
     startDate: row.start_date,
     endDate: row.end_date,
@@ -155,19 +170,16 @@ export async function GET(req: NextRequest) {
 
           // Primary: most recently created active/valid membership
           const primary = allMemberships.find(m => m.status === 'active') || 
-                          allMemberships.find(m => m.status === 'expired') || 
+                          allMemberships.find(m => m.paymentStatus === 'due' || m.status === 'expired') || 
                           allMemberships[0];
-          const primaryEnd = new Date(primary.endDate);
-          const primaryDiff = primaryEnd.getTime() - now.getTime();
-          const daysRemaining = Math.max(0, Math.ceil(primaryDiff / (1000 * 60 * 60 * 24)));
-          const isExpired = primary.status === 'cancelled' ? false : primaryDiff <= 0;
+          const timeline = calculateMembershipTimeline(primary);
 
           return NextResponse.json({
             success: true,
             membership: primary,
             memberships: allMemberships,
-            daysRemaining,
-            isExpired,
+            daysRemaining: timeline.daysRemaining,
+            isExpired: timeline.isDue,
             source: 'database',
           });
         }
@@ -179,20 +191,17 @@ export async function GET(req: NextRequest) {
     // 2. Fallback to serverStore in-memory records (when Supabase table unavailable)
     const localMatches = getLocalMemberships(cleanInput);
     if (localMatches.length > 0) {
-      const now = new Date();
       const primary = localMatches.find(m => m.status === 'active') || 
-                      localMatches.find(m => m.status === 'expired') || 
+                      localMatches.find(m => m.paymentStatus === 'due' || m.status === 'expired') || 
                       localMatches[0];
-      const endDate = new Date(primary.endDate);
-      const diffMs = endDate.getTime() - now.getTime();
-      const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      const timeline = calculateMembershipTimeline(primary);
 
       return NextResponse.json({
         success: true,
         membership: primary,
         memberships: localMatches,
-        daysRemaining,
-        isExpired: primary.status === 'cancelled' ? false : diffMs <= 0,
+        daysRemaining: timeline.daysRemaining,
+        isExpired: timeline.isDue,
         source: 'local_store',
       });
     }
@@ -266,8 +275,7 @@ export async function POST(req: NextRequest) {
 
     // REQUIREMENT: Membership starts from the next day of buying the membership
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0); // Next day morning 6:00 AM
-    const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = calculateNewEnrollmentDates(selectedPlan, now);
     const membershipId = `MEM-${cleanInput.slice(-4)}-${Date.now().toString(36).toUpperCase()}`;
 
     const newMembership: Membership = {
@@ -284,8 +292,8 @@ export async function POST(req: NextRequest) {
       price,
       status: 'active',
       paymentStatus: isSixMonths ? (paymentStatus || 'paid') : 'postpaid_cycle',
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate,
+      endDate,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -450,11 +458,14 @@ export async function PATCH(req: NextRequest) {
       const local = getLocalMemberships(cleanPhone);
       const isSixMonths = local.length > 0 && local[0].planType === '6_months';
       const durationDays = isSixMonths ? 180 : 7;
-      const nextEndDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+      const todayStr = getISTDateString(now);
+      const nextEndStr = addDaysToDateString(todayStr, durationDays);
+      const nextStartDate = `${todayStr}T06:00:00+05:30`;
+      const nextEndDate = `${nextEndStr}T06:00:00+05:30`;
       const updateData: any = {
         status: 'active',
-        payment_status: 'paid',
-        start_date: now.toISOString(),
+        payment_status: isSixMonths ? 'paid' : 'postpaid_cycle',
+        start_date: nextStartDate,
         end_date: nextEndDate,
         updated_at: now.toISOString(),
       };
@@ -474,8 +485,8 @@ export async function PATCH(req: NextRequest) {
       if (local.length > 0) {
         settledAmountStr = local[0].price ? ` of ₹${local[0].price.toLocaleString('en-IN')}` : '';
         local[0].status = 'active';
-        local[0].paymentStatus = 'paid';
-        local[0].startDate = now.toISOString();
+        local[0].paymentStatus = isSixMonths ? 'paid' : 'postpaid_cycle';
+        local[0].startDate = nextStartDate;
         local[0].endDate = nextEndDate;
         saveLocalMembership(local[0]);
       }
