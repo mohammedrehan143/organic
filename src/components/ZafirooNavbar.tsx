@@ -107,7 +107,7 @@ export function ZafirooNavbar() {
           </Link>
 
           {/* Web App Install Button */}
-          <InstallAppButton className="hidden md:inline-flex bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black border border-amber-500/80 shadow-xs" />
+          {/* <InstallAppButton className="hidden md:inline-flex bg-amber-400 hover:bg-amber-300 text-[#0F240B] font-black border border-amber-500/80 shadow-xs" /> */}
 
           {/* WhatsApp Community Button */}
           <a

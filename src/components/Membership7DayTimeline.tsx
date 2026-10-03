@@ -30,12 +30,12 @@ export function Membership7DayTimeline({
               <span>7-Day Doorstep Milk Delivery Timeline</span>
             </h4>
             <span className="text-[10px] text-emerald-200">
-              {isActive
-                ? `Currently on Day ${currentDayNumber} of 7 • Sunrise Deliveries Active`
-                : isDueToday
-                ? '7 Days Completed! Week-End Bill Due Today'
+              {isDueToday
+                ? `Final Day (Day 7)! Week-End Bill Due Today (${settleDay.formattedDate})`
                 : isOverdue
                 ? '7-Day Billing Cycle Completed • Bill Overdue'
+                : isActive
+                ? `Currently on Day ${currentDayNumber} of 7 • Sunrise Deliveries Active (Payment Date: ${settleDay.formattedDate})`
                 : isUpcoming
                 ? 'Sunrise deliveries starting soon'
                 : '7-Day Postpaid Delivery Schedule'}
@@ -56,7 +56,7 @@ export function Membership7DayTimeline({
           }`}
         >
           {isDueToday
-            ? '🚨 Settle Bill Today'
+            ? '🚨 Settle Bill Today (Day 7)'
             : isOverdue
             ? '🚨 Bill Due Now'
             : isActive
@@ -65,43 +65,82 @@ export function Membership7DayTimeline({
         </span>
       </div>
 
-      {/* 7-Day Grid Steps */}
-      <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-2 pt-1">
+      {/* 7-Day Grid Steps (Days 1 to 7: Oct 3 to Oct 9) */}
+      <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-1">
         {timelineDays.map((day) => {
           const isToday = day.status === 'active_today';
           const isDelivered = day.status === 'delivered';
+          const isFinalPaymentDay = day.isPaymentDate || day.dayNumber === 7;
 
           return (
             <div
               key={day.dayNumber}
               className={`p-2.5 rounded-2xl border text-center transition flex flex-col justify-between relative ${
-                isToday
+                isFinalPaymentDay && (isDueToday || isOverdue)
+                  ? 'bg-rose-600 text-white border-rose-300 shadow-xl ring-2 ring-rose-400 font-bold scale-[1.04]'
+                  : isToday
                   ? 'bg-amber-400 text-black border-amber-300 shadow-lg ring-2 ring-amber-300/60 font-bold scale-[1.03]'
                   : isDelivered
                   ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
+                  : isFinalPaymentDay
+                  ? 'bg-white/10 border-amber-400/50 text-amber-200 ring-1 ring-amber-400/30'
                   : 'bg-white/5 border-white/10 text-gray-300'
               }`}
             >
               {/* Day Number Tag */}
               <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={`font-mono font-black ${isToday ? 'text-black' : 'text-emerald-300'}`}>
-                  D{day.dayNumber}
+                <span
+                  className={`font-mono font-black ${
+                    isFinalPaymentDay && (isDueToday || isOverdue)
+                      ? 'text-amber-300'
+                      : isToday
+                      ? 'text-black'
+                      : isFinalPaymentDay
+                      ? 'text-amber-300'
+                      : 'text-emerald-300'
+                  }`}
+                >
+                  {isFinalPaymentDay ? `D${day.dayNumber} • PAY` : `D${day.dayNumber}`}
                 </span>
-                {isDelivered ? (
+                {isFinalPaymentDay && (isDueToday || isOverdue) ? (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-300 animate-bounce shrink-0" />
+                ) : isDelivered ? (
                   <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 ) : isToday ? (
                   <span className="w-2 h-2 rounded-full bg-black animate-ping shrink-0" />
+                ) : isFinalPaymentDay ? (
+                  <CreditCard className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                 ) : (
-                  <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 )}
               </div>
 
               {/* Date & Day */}
               <div className="my-1">
-                <div className={`text-xs font-black ${isToday ? 'text-black' : 'text-white'}`}>
+                <div
+                  className={`text-xs font-black ${
+                    isFinalPaymentDay && (isDueToday || isOverdue)
+                      ? 'text-white'
+                      : isToday
+                      ? 'text-black'
+                      : isFinalPaymentDay
+                      ? 'text-amber-200'
+                      : 'text-white'
+                  }`}
+                >
                   {day.formattedDate}
                 </div>
-                <div className={`text-[10px] ${isToday ? 'text-black/80 font-bold' : 'text-gray-400'}`}>
+                <div
+                  className={`text-[10px] ${
+                    isFinalPaymentDay && (isDueToday || isOverdue)
+                      ? 'text-rose-100 font-bold'
+                      : isToday
+                      ? 'text-black/80 font-bold'
+                      : isFinalPaymentDay
+                      ? 'text-amber-300/80 font-semibold'
+                      : 'text-gray-400'
+                  }`}
+                >
                   {day.dayName}
                 </div>
               </div>
@@ -109,10 +148,14 @@ export function Membership7DayTimeline({
               {/* Pill status */}
               <div
                 className={`mt-1 py-0.5 px-1 rounded-md text-[9px] font-black uppercase tracking-wider truncate ${
-                  isToday
+                  isFinalPaymentDay && (isDueToday || isOverdue)
+                    ? 'bg-amber-300 text-black font-black'
+                    : isToday
                     ? 'bg-black text-amber-300'
                     : isDelivered
                     ? 'bg-emerald-500/20 text-emerald-300'
+                    : isFinalPaymentDay
+                    ? 'bg-amber-400/20 text-amber-300 font-bold'
                     : 'bg-white/10 text-gray-400'
                 }`}
               >
@@ -121,41 +164,6 @@ export function Membership7DayTimeline({
             </div>
           );
         })}
-
-        {/* Step 8: End Date / Settlement Day (e.g. 10th) */}
-        <div
-          className={`p-2.5 rounded-2xl border text-center transition flex flex-col justify-between relative ${
-            isDueToday || isOverdue
-              ? 'bg-rose-600 text-white border-rose-300 shadow-xl ring-2 ring-rose-400 font-bold scale-[1.04]'
-              : 'bg-white/5 border-white/10 text-gray-300'
-          }`}
-        >
-          <div className="flex items-center justify-between text-[10px] mb-1">
-            <span className={`font-mono font-black ${isDueToday || isOverdue ? 'text-amber-300' : 'text-amber-400'}`}>
-              END
-            </span>
-            <AlertTriangle className={`w-3.5 h-3.5 ${isDueToday || isOverdue ? 'text-amber-300 animate-bounce' : 'text-amber-400'}`} />
-          </div>
-
-          <div className="my-1">
-            <div className={`text-xs font-black ${isDueToday || isOverdue ? 'text-white' : 'text-amber-300'}`}>
-              {settleDay.formattedDate}
-            </div>
-            <div className={`text-[10px] ${isDueToday || isOverdue ? 'text-rose-100' : 'text-gray-400'}`}>
-              {settleDay.dayName}
-            </div>
-          </div>
-
-          <div
-            className={`mt-1 py-0.5 px-1 rounded-md text-[9px] font-black uppercase tracking-wider truncate ${
-              isDueToday || isOverdue
-                ? 'bg-amber-300 text-black font-black'
-                : 'bg-amber-400/20 text-amber-300'
-            }`}
-          >
-            {settleDay.label}
-          </div>
-        </div>
       </div>
 
       {/* Bill Due Notice / Payment Button */}
@@ -166,10 +174,10 @@ export function Membership7DayTimeline({
               <CreditCard className="w-5 h-5 text-amber-300 shrink-0" />
               <div>
                 <strong className="block text-xs font-black uppercase tracking-wide text-white">
-                  Week-End Settlement Due on {settleDay.formattedDate} ({settleDay.dayName})
+                  Week-End Settlement Due on {settleDay.formattedDate} ({settleDay.dayName}) • Last Day of Membership
                 </strong>
                 <span className="text-[11px] text-rose-100">
-                  Your 7-day milk pass is completed. Settle ₹{price ? price.toLocaleString('en-IN') : '504'} to renew.
+                  Your 7-day milk pass completes on {settleDay.formattedDate}. Settle ₹{price ? price.toLocaleString('en-IN') : '504'} to renew.
                 </span>
               </div>
             </div>
@@ -185,12 +193,14 @@ export function Membership7DayTimeline({
           </div>
         </div>
       ) : isActive && onPayDue ? (
-        <div className="pt-1 flex items-center justify-between text-[11px] text-emerald-200">
-          <span>Fresh milk deliveries arrive every morning between 6:00 AM - 7:30 AM.</span>
+        <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-emerald-200">
+          <span>
+            Fresh milk deliveries arrive every morning between 6:00 AM - 7:30 AM. Final day &amp; payment date: <strong className="text-amber-300">{settleDay.formattedDate} ({settleDay.dayName})</strong>.
+          </span>
           <button
             type="button"
             onClick={onPayDue}
-            className="text-amber-300 hover:underline font-bold text-xs shrink-0 cursor-pointer"
+            className="text-amber-300 hover:underline font-bold text-xs shrink-0 cursor-pointer self-start sm:self-auto"
           >
             Settle Bill Early &rarr;
           </button>

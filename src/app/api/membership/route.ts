@@ -61,10 +61,10 @@ function formatDbRowToMembership(row: any): Membership {
     endDate: row.end_date,
   };
   const timeline = calculateMembershipTimeline(tempMembership);
-  const computedStatus = isCancelled ? 'cancelled' : (timeline.isDue ? 'expired' : row.status || 'active');
+  const computedStatus = isCancelled ? 'cancelled' : (timeline.isOverdue ? 'expired' : row.status || 'active');
   const finalPaymentStatus = isCancelled || cleanPaymentStatus === 'paid'
     ? cleanPaymentStatus
-    : timeline.isDue
+    : (timeline.isDueToday || timeline.isDue)
     ? 'due'
     : cleanPaymentStatus;
 
@@ -459,7 +459,7 @@ export async function PATCH(req: NextRequest) {
       const isSixMonths = local.length > 0 && local[0].planType === '6_months';
       const durationDays = isSixMonths ? 180 : 7;
       const todayStr = getISTDateString(now);
-      const nextEndStr = addDaysToDateString(todayStr, durationDays);
+      const nextEndStr = addDaysToDateString(todayStr, durationDays - 1);
       const nextStartDate = `${todayStr}T06:00:00+05:30`;
       const nextEndDate = `${nextEndStr}T06:00:00+05:30`;
       const updateData: any = {

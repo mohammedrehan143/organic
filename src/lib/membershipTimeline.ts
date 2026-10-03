@@ -48,11 +48,13 @@ export interface DayTimelineItem {
   dayName: string; // 'Sat'
   status: 'delivered' | 'active_today' | 'upcoming';
   label: string;
+  isLastDay?: boolean;
+  isPaymentDate?: boolean;
 }
 
 export interface SettleDayInfo {
   dateStr: string; // 'YYYY-MM-DD'
-  formattedDate: string; // '10 Oct'
+  formattedDate: string; // '09 Oct'
   dayName: string;
   status: 'upcoming_settlement' | 'due_today' | 'overdue' | 'settled';
   label: string;
@@ -105,12 +107,14 @@ export function calculateMembershipTimeline(
   const startsTomorrow = !isCancelled && diffStart === 1;
   const startsToday = !isCancelled && diffStart === 0;
 
-  // On the end date (diffEnd === 0) or past the end date (diffEnd < 0), postpaid bill is due
+  // On the end date (diffEnd === 0), it is the last day of membership & week-end bill is due today.
+  // Past the end date (diffEnd < 0), postpaid bill is overdue.
   const isDueToday = !isCancelled && isPostpaid && !isPaid && diffEnd === 0;
   const isOverdue = !isCancelled && isPostpaid && !isPaid && diffEnd < 0;
   const isDue = !isCancelled && (!isPaid ? (isPostpaid && diffEnd <= 0) || membership.paymentStatus === 'due' : diffEnd <= 0 && membership.planType === '6_months');
 
-  const isActive = !isCancelled && !isUpcoming && !isDue;
+  // Active while within membership cycle (not cancelled, not upcoming, not overdue)
+  const isActive = !isCancelled && !isUpcoming && !isOverdue;
 
   // Current day index of the 7-day cycle (Day 1 to Day 7)
   const daysSinceStart = diffCalendarDays(todayStr, startStr);
@@ -127,8 +131,11 @@ export function calculateMembershipTimeline(
   if (isCancelled) {
     statusBadgeText = '🚫 CANCELLED';
     statusBadgeVariant = 'cancelled';
+  } else if (isOverdue) {
+    statusBadgeText = '🚨 BILL OVERDUE';
+    statusBadgeVariant = 'due';
   } else if (isDueToday) {
-    statusBadgeText = '🚨 BILL DUE TODAY';
+    statusBadgeText = '🚨 BILL DUE TODAY • FINAL DAY';
     statusBadgeVariant = 'due';
   } else if (isDue) {
     statusBadgeText = '🚨 7-DAY BILL DUE';
@@ -144,7 +151,7 @@ export function calculateMembershipTimeline(
     statusBadgeVariant = 'active';
   }
 
-  // Generate 7-day milk delivery timeline items (Day 1 to Day 7)
+  // Generate 7-day milk delivery timeline items (Day 1 to Day 7: e.g. Oct 3 to Oct 9)
   const timelineDays: DayTimelineItem[] = [];
   const daysToGenerate = Math.min(7, totalDurationDays);
 
@@ -152,19 +159,21 @@ export function calculateMembershipTimeline(
     const dayDateStr = addDaysToDateString(startStr, i);
     const { formattedDate, dayName } = formatDayDisplay(dayDateStr);
     const dayDiff = diffCalendarDays(dayDateStr, todayStr);
+    const isLastDay = i === daysToGenerate - 1;
+    const isPaymentDate = isLastDay;
 
     let status: 'delivered' | 'active_today' | 'upcoming';
     let label: string;
 
     if (dayDiff < 0) {
       status = 'delivered';
-      label = 'Delivered ✓';
+      label = isLastDay ? (isPaid ? 'Delivered & Paid ✓' : 'Delivered (Due)') : 'Delivered ✓';
     } else if (dayDiff === 0) {
       status = 'active_today';
-      label = 'Today 🥛';
+      label = isLastDay ? (isPaid ? 'Today 🥛' : 'Due Today 💳') : 'Today 🥛';
     } else {
       status = 'upcoming';
-      label = 'Scheduled';
+      label = isLastDay ? 'Pay Date 💳' : 'Scheduled';
     }
 
     timelineDays.push({
@@ -174,10 +183,12 @@ export function calculateMembershipTimeline(
       dayName,
       status,
       label,
+      isLastDay,
+      isPaymentDate,
     });
   }
 
-  // Settlement Day (End Date, e.g. Oct 10)
+  // Settlement Day is the Last Date of Membership (End Date, e.g. Oct 9)
   const { formattedDate: settleFormatted, dayName: settleDayName } = formatDayDisplay(endStr);
   let settleStatus: 'upcoming_settlement' | 'due_today' | 'overdue' | 'settled';
   let settleLabel: string;
@@ -232,7 +243,8 @@ export function calculateMembershipTimeline(
 /**
  * Calculates start_date and end_date for a brand new membership enrolled today.
  * Rule: Starts tomorrow morning at 06:00:00 IST.
- * 7-Day plan ends on Day 8 morning at 06:00:00 IST (giving 7 full days of milk delivery: Days 1 to 7).
+ * 7-Day plan ends on Day 7 (giving exactly 7 full days of milk delivery: Days 1 to 7 inclusive, e.g. 3rd to 9th).
+ * The last date of membership (Day 7) is also the payment / settlement date.
  */
 export function calculateNewEnrollmentDates(
   planType: MembershipPlanType,
@@ -241,7 +253,9 @@ export function calculateNewEnrollmentDates(
   const durationDays = planType === '6_months' ? 180 : 7;
   const todayStr = getISTDateString(refDate);
   const startStr = addDaysToDateString(todayStr, 1); // Next day
-  const endStr = addDaysToDateString(startStr, durationDays); // Next day + 7 days = End date (Day 8 / 10th)
+  // 7 days duration inclusive: Day 1 (startStr + 0) to Day 7 (startStr + 6).
+  // E.g. start Oct 3 -> end Oct 9 (from 3 to 9 is exactly 7 days).
+  const endStr = addDaysToDateString(startStr, durationDays - 1);
 
   // Explicit ISO string representation with IST offset (+05:30)
   const startDate = `${startStr}T06:00:00+05:30`;
