@@ -1,16 +1,18 @@
 import { Order, SosAlert } from '@/types/cafe';
 
 /**
- * Normalizes phone numbers to standard E.164-compatible numbers for WhatsApp links
+ * Normalizes phone numbers to standard E.164-compatible numbers for WhatsApp links.
+ * Always ensures exactly one country code (91) followed by the 10-digit number.
+ * Strips '+' or any duplicate country code prefixes.
  */
 export function cleanPhoneNumber(phone: string): string {
   if (!phone) return '';
-  let cleaned = phone.replace(/[^0-9]/g, '');
-  // If 10-digit Indian phone without country code, prefix with 91
-  if (cleaned.length === 10) {
-    cleaned = '91' + cleaned;
-  }
-  return cleaned;
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (!digits) return '';
+
+  // Extract the 10-digit Indian mobile number from the end
+  const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+  return `91${tenDigits}`;
 }
 
 /**

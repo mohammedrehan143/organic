@@ -61,7 +61,7 @@ import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
 import { MembershipBillModal } from '@/components/MembershipBillModal';
 import { calculateMembershipTimeline } from '@/lib/membershipTimeline';
-import { generateRiderSosWhatsAppLink } from '@/lib/whatsapp';
+import { generateRiderSosWhatsAppLink, cleanPhoneNumber } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
 
 export default function AdminPage() {
@@ -1435,7 +1435,7 @@ export default function AdminPage() {
                                     <span>Call Syed</span>
                                   </a>
                                   <a
-                                    href={`https://wa.me/${(order.riderPhone || '917259635948').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`📦 *Order #${order.tokenId} Delivery Details*\nCustomer: ${order.customer.name}\nPhone: ${order.customer.phone}\nAddress: ${order.customer.address}\nAmount: ₹${order.total}\nOTP: ${order.deliveryOtp}`)}`}
+                                    href={`https://wa.me/${cleanPhoneNumber(order.riderPhone || '7259635948')}?text=${encodeURIComponent(`📦 *Order #${order.tokenId} Delivery Details*\nCustomer: ${order.customer.name}\nPhone: ${order.customer.phone}\nAddress: ${order.customer.address}\nAmount: ₹${order.total}\nOTP: ${order.deliveryOtp}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-center text-[10px] font-bold transition flex items-center justify-center gap-1"
@@ -2161,7 +2161,8 @@ export default function AdminPage() {
                 const isDue = !isCancelled && (timeline.isDue || m.paymentStatus === 'due' || m.status === 'expired');
                 const isUpcoming = !isCancelled && timeline.isUpcoming;
                 const daysRemaining = timeline.daysRemaining;
-                const cleanPhone = m.phone.replace(/[^0-9]/g, '');
+                const waPhone = cleanPhoneNumber(m.phone);
+                const tenDigitPhone = m.phone.replace(/[^0-9]/g, '').slice(-10);
                 const dailyQty = m.dailyQuantity || (m.planName.toLowerCase().includes('half') || m.planName.includes('0.5') ? 0.5 : 1);
                 const dailyQtyLabel = dailyQty === 0.5 ? 'Half Liter (0.5L)' : `${dailyQty}L`;
 
@@ -2442,7 +2443,7 @@ export default function AdminPage() {
                       {/* Left: Contact actions */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <a
-                          href={`tel:${cleanPhone}`}
+                          href={`tel:${tenDigitPhone}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cream-100 hover:bg-cream-200 text-espresso-800 text-xs font-bold transition"
                         >
                           <Phone className="w-3.5 h-3.5" />
@@ -2450,7 +2451,7 @@ export default function AdminPage() {
                         </a>
 
                         <a
-                          href={`https://wa.me/91${cleanPhone}?text=${waMessage}`}
+                          href={`https://wa.me/${waPhone}?text=${waMessage}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition"
@@ -2460,7 +2461,7 @@ export default function AdminPage() {
                         </a>
 
                         <Link
-                          href={`/track?phone=${cleanPhone}`}
+                          href={`/track?phone=${tenDigitPhone}`}
                           target="_blank"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cream-100 hover:bg-cream-200 text-espresso-800 text-xs font-bold transition"
                         >
