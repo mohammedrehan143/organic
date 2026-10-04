@@ -177,8 +177,8 @@ export function ZafirooFooter() {
             <Link href="/terms" className="hover:text-white transition">
               Zafiroo Policies
             </Link>
-            <Link href="/admin" className="text-emerald-300 hover:underline font-bold">
-              Admin KDS
+            <Link href="/admin" className="hover:text-white transition">
+               kds
             </Link>
           </div>
         </div>
