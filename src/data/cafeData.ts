@@ -180,6 +180,178 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     customizationOptions: {
       portion: ["30 Eggs Tray (₹720)", "12 Eggs Pack (₹299)"]
     }
+  },
+
+  // --- FRESH CHICKEN CATEGORY ---
+  {
+    id: "chick-skin-out-1kg",
+    name: "Skin out chicken whole (1kg)",
+    category: "Fresh Chicken",
+    description: "Fresh tender whole chicken with skin removed, cleaned and freshly dressed.",
+    detailedDescription: "Hygienically prepped skinless whole farm chicken. Thoroughly cleaned, tender, and succulent, ideal for curries, gravies, and healthy high-protein meals.",
+    price: "₹350",
+    priceNumber: 350,
+    image: "/images/chicken-skinless.jpg",
+    calories: 190,
+    dietary: "non-veg",
+    tasteNotes: ["Skin Out / Skinless", "Farm Fresh Daily", "Free Delivery"],
+    featured: true,
+    signature: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 8,
+    customizationOptions: {
+      portion: ["1Kg Whole Pack (₹350)"]
+    }
+  },
+  {
+    id: "chick-with-skin-1kg",
+    name: "With skin chicken whole (1kg)",
+    category: "Fresh Chicken",
+    description: "Fresh whole chicken with skin intact for rich flavor and natural moisture.",
+    detailedDescription: "Traditional whole farm chicken with skin carefully cleaned and dressed. Preserves natural juiciness, perfect for roasting, barbecuing, or authentic country-style curries.",
+    price: "₹280",
+    priceNumber: 280,
+    image: "/images/chicken-with-skin.jpg",
+    calories: 215,
+    dietary: "non-veg",
+    tasteNotes: ["With Skin", "Juicy & Tender", "Free Delivery"],
+    featured: false,
+    signature: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 9,
+    customizationOptions: {
+      portion: ["1Kg Whole Pack (₹280)"]
+    }
+  },
+  {
+    id: "chick-boneless-1kg",
+    name: "Chicken boneless (1kg)",
+    category: "Fresh Chicken",
+    description: "Prime boneless chicken cuts, 100% tender meat trimmed and ready to cook.",
+    detailedDescription: "Tender, succulent prime boneless chicken breast and thigh cuts. Hand-trimmed of excess fat, 100% bone-free protein perfect for tikkas, stir-fries, and gourmet curries.",
+    price: "₹430",
+    priceNumber: 430,
+    image: "/images/chicken-boneless.jpg",
+    calories: 165,
+    dietary: "non-veg",
+    tasteNotes: ["100% Boneless", "High Protein", "Free Delivery"],
+    featured: true,
+    signature: true,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 10,
+    customizationOptions: {
+      portion: ["1Kg Boneless Pack (₹430)"]
+    }
+  },
+  {
+    id: "chick-kheema-1kg",
+    name: "Chicken Kheema / mince (1kg)",
+    category: "Fresh Chicken",
+    description: "Finely minced fresh boneless chicken, ideal for kebabs, patties, and kheema curry.",
+    detailedDescription: "Freshly ground chicken mince prepared from clean boneless cuts. Exceptionally tender, juicy, and versatile for delicious kebabs, keema matar, and patties.",
+    price: "₹300",
+    priceNumber: 300,
+    image: "/images/chicken-kheema.jpg",
+    calories: 175,
+    dietary: "non-veg",
+    tasteNotes: ["Freshly Minced", "Extra Juicy", "Free Delivery"],
+    featured: false,
+    signature: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 11,
+    customizationOptions: {
+      portion: ["1Kg Kheema Pack (₹300)"]
+    }
+  },
+  {
+    id: "chick-wings-1kg",
+    name: "Chicken wings (1kg)",
+    category: "Fresh Chicken",
+    description: "Meaty and succulent fresh chicken wings, perfect for frying, baking, or barbecue.",
+    detailedDescription: "Plump, tender chicken wingettes and drumettes. Carefully trimmed, prepped fresh, and ready to absorb marinades for crispy wings, BBQ platters, and appetizers.",
+    price: "₹310",
+    priceNumber: 310,
+    image: "/images/chicken-wings.jpg",
+    calories: 203,
+    dietary: "non-veg",
+    tasteNotes: ["Crispy & Meaty", "Party Favorite", "Free Delivery"],
+    featured: false,
+    signature: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 12,
+    customizationOptions: {
+      portion: ["1Kg Wings Pack (₹310)"]
+    }
+  },
+  {
+    id: "chick-liver-1kg",
+    name: "Chicken liver (1kg)",
+    category: "Fresh Chicken",
+    description: "Fresh nutrient-rich chicken liver, high in iron and natural minerals.",
+    detailedDescription: "Farm-fresh chicken liver cleaned with precision. Soft texture and robust savory taste, ideal for traditional spicy liver fry, pepper roasts, and hearty gravies.",
+    price: "₹150",
+    priceNumber: 150,
+    image: "/images/chicken-liver.jpg",
+    calories: 167,
+    dietary: "non-veg",
+    tasteNotes: ["Iron & Nutrient Rich", "Tender & Fresh", "Free Delivery"],
+    featured: false,
+    signature: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 13,
+    customizationOptions: {
+      portion: ["1Kg Liver Pack (₹150)"]
+    }
+  },
+
+  // --- FRESH MUTTON CATEGORY ---
+  {
+    id: "fresh-mutton-1kg",
+    name: "Fresh Mutton (1kg)",
+    category: "Fresh Mutton",
+    description: "Farm-fresh pasture-raised tender mutton curry cuts, hygienically cleaned and freshly prepped.",
+    detailedDescription: "Premium pasture-raised tender mutton with prime bone-in cuts. Hand-dressed and packed fresh, perfect for slow-cooked authentic biryanis, rich roasts, and flavorful curries.",
+    price: "₹1150",
+    priceNumber: 1150,
+    image: "/images/mutton-meat.jpg",
+    calories: 250,
+    dietary: "non-veg",
+    tasteNotes: ["Pasture Raised", "Tender & Succulent", "Free Delivery"],
+    featured: true,
+    signature: true,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
+    displayOrder: 14,
+    customizationOptions: {
+      portion: ["1Kg Mutton Pack (₹1150)"]
+    }
+  },
+  {
+    id: "fresh-mutton-liver-1kg",
+    name: "Fresh Mutton Liver (1kg)",
+    category: "Fresh Mutton",
+    description: "Nutrient-dense tender mutton liver, rich in natural iron and essential minerals. (Currently Out of Stock)",
+    detailedDescription: "Freshly dressed mutton liver with a tender texture and rich savory flavor. Hygienically handled and cleaned. Currently out of stock.",
+    price: "₹650",
+    priceNumber: 650,
+    image: "/images/mutton-liver.jpg",
+    calories: 185,
+    dietary: "non-veg",
+    tasteNotes: ["Iron & Nutrient Rich", "Tender & Fresh", "Free Delivery"],
+    featured: false,
+    signature: false,
+    prepTime: "Out of Stock",
+    isAvailable: false, // KEPT OUT OF STOCK AS REQUESTED
+    displayOrder: 15,
+    customizationOptions: {
+      portion: ["1Kg Liver Pack (₹650)"]
+    }
   }
 ];
 

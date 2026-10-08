@@ -50,10 +50,10 @@ export function FarmShopSection() {
             <span>Free Doorstep Delivery On All Products</span>
           </div>
           <h2 className="text-2xl xs:text-3xl sm:text-5xl font-black uppercase text-[#0F240B] font-bebas tracking-tight">
-            Fresh Organic Milk & Farm Eggs
+            Fresh Farm Milk, Poultry, Mutton & Eggs
           </h2>
           <p className="text-xs sm:text-base text-[#173612] font-sans px-2">
-            Certified organic milk in reusable glass bottles, normal white eggs in 12 & 30 packs, and authentic pasture-raised Nati eggs delivered fresh to your doorstep with <strong>zero delivery fees</strong>.
+            Certified organic milk in reusable glass bottles, farm-fresh chicken, tender pasture mutton, table eggs, and pasture-raised Nati eggs delivered fresh to your doorstep with <strong>zero delivery fees</strong>.
           </p>
         </div>
 
@@ -62,6 +62,8 @@ export function FarmShopSection() {
           {[
             { id: 'All', label: 'All Farm Goods' },
             { id: 'Organic Milk', label: 'Organic Milk (Glass Bottle)' },
+            { id: 'Fresh Chicken', label: 'Fresh Chicken' },
+            { id: 'Fresh Mutton', label: 'Fresh Mutton' },
             { id: 'Organic Ghee', label: 'Organic Ghee' },
             { id: 'Normal Eggs', label: 'Normal White Eggs' },
             { id: 'Nati Eggs', label: 'Nati Eggs (Desi)' },

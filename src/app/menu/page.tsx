@@ -18,11 +18,15 @@ import {
   GlassWater,
   MapPin,
   ChevronDown,
+  Drumstick,
+  Beef,
 } from 'lucide-react';
 
 const CATEGORIES = [
   { id: 'All', label: 'All Farm Goods', icon: Sparkles },
   { id: 'Organic Milk', label: 'Organic Milk (Glass Bottle)', icon: Milk },
+  { id: 'Fresh Chicken', label: 'Fresh Chicken', icon: Drumstick },
+  { id: 'Fresh Mutton', label: 'Fresh Mutton', icon: Beef },
   { id: 'Organic Ghee', label: 'Organic Ghee', icon: Sparkles },
   { id: 'Normal Eggs', label: 'Normal White Eggs', icon: Egg },
   { id: 'Nati Eggs', label: 'Nati Eggs (Desi)', icon: Egg },

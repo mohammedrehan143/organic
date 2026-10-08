@@ -66,6 +66,18 @@ export function ZafirooFooter() {
               </li>
               <li>
                 <Link href="/menu" className="hover:text-emerald-300 transition flex items-center justify-between">
+                  <span>Farm-Fresh Chicken (Cuts & Whole)</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">Free Delivery</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/menu" className="hover:text-emerald-300 transition flex items-center justify-between">
+                  <span>Fresh Pasture Mutton (1kg)</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">Free Delivery</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/menu" className="hover:text-emerald-300 transition flex items-center justify-between">
                   <span>Normal White Eggs (12 & 30 Packs)</span>
                   <span className="text-[10px] text-emerald-400 font-bold">Free Delivery</span>
                 </Link>
