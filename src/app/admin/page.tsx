@@ -9,6 +9,7 @@ import {
   SosAlert,
   SosReason,
   Membership,
+  MenuItem,
 } from '@/types/cafe';
 import {
   formatFullOneLineAddress,
@@ -56,6 +57,11 @@ import {
   Copy,
   CreditCard,
   Trash2,
+  Package,
+  Tag,
+  Boxes,
+  CheckSquare,
+  SlidersHorizontal,
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
@@ -82,6 +88,11 @@ export default function AdminPage() {
     resolveSosAlert,
     playOrderChime,
     playSosSiren,
+    menuItems,
+    loadingMenu,
+    refreshMenu,
+    updateMenuItemPriceAndStock,
+    bulkUpdateStock,
   } = useOrder();
 
   // Authentication State
@@ -94,8 +105,18 @@ export default function AdminPage() {
   const [pinSuccessMsg, setPinSuccessMsg] = useState('');
   const [updatingPin, setUpdatingPin] = useState(false);
 
-  // Mode: Kitchen KDS vs Rider Mobile Mode vs Analytics vs Memberships
-  const [activeTab, setActiveTab] = useState<'kds' | 'rider' | 'analytics' | 'memberships'>('kds');
+  // Mode: Kitchen KDS vs Rider Mobile Mode vs Analytics vs Memberships vs Inventory
+  const [activeTab, setActiveTab] = useState<'kds' | 'rider' | 'analytics' | 'memberships' | 'inventory'>('kds');
+
+  // Admin Inventory & Pricing State
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryCategory, setInventoryCategory] = useState('All');
+  const [inventoryStockFilter, setInventoryStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [inventoryActionMsg, setInventoryActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [bulkStockConfirm, setBulkStockConfirm] = useState<'in_stock' | 'out_of_stock' | null>(null);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   // Admin Memberships State
   const [adminMemberships, setAdminMemberships] = useState<Membership[]>([]);
@@ -331,6 +352,7 @@ export default function AdminPage() {
     refreshDeliveryAgents();
     refreshSosAlerts();
     fetchAdminMemberships(false);
+    refreshMenu();
 
     const interval = setInterval(() => {
       refreshOrders();
@@ -340,7 +362,147 @@ export default function AdminPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts, fetchAdminMemberships]);
+  }, [isAuthenticated, refreshOrders, refreshDeliveryAgents, refreshSosAlerts, fetchAdminMemberships, refreshMenu]);
+
+  // --- INVENTORY & PRICING CONTROLLER LOGIC ---
+  const inventoryCategories = useMemo(() => {
+    const set = new Set<string>();
+    menuItems.forEach((m) => {
+      if (m.category) set.add(m.category);
+    });
+    return ['All', ...Array.from(set)];
+  }, [menuItems]);
+
+  const filteredInventoryItems = useMemo(() => {
+    return menuItems.filter((item) => {
+      if (inventoryCategory !== 'All' && item.category !== inventoryCategory) {
+        return false;
+      }
+      if (inventoryStockFilter === 'in_stock' && !item.isAvailable) {
+        return false;
+      }
+      if (inventoryStockFilter === 'out_of_stock' && item.isAvailable) {
+        return false;
+      }
+      if (inventorySearch.trim()) {
+        const q = inventorySearch.toLowerCase().trim();
+        const mName = item.name?.toLowerCase().includes(q);
+        const mCat = item.category?.toLowerCase().includes(q);
+        const mDesc = item.description?.toLowerCase().includes(q);
+        const mId = item.id?.toLowerCase().includes(q);
+        return mName || mCat || mDesc || mId;
+      }
+      return true;
+    });
+  }, [menuItems, inventoryCategory, inventoryStockFilter, inventorySearch]);
+
+  const handlePriceInputChange = (itemId: string, rawVal: string) => {
+    const cleanDigits = rawVal.replace(/[^0-9]/g, '');
+    setPriceDrafts((prev) => ({ ...prev, [itemId]: cleanDigits }));
+  };
+
+  const handleQuickPriceStep = (item: MenuItem, delta: number) => {
+    const currentVal = priceDrafts[item.id] !== undefined
+      ? parseInt(priceDrafts[item.id], 10) || 0
+      : item.priceNumber;
+    const nextVal = Math.max(0, currentVal + delta);
+    setPriceDrafts((prev) => ({ ...prev, [item.id]: String(nextVal) }));
+  };
+
+  const handleSaveItemPrice = async (item: MenuItem) => {
+    const draft = priceDrafts[item.id];
+    const targetPrice = draft !== undefined ? parseInt(draft, 10) : item.priceNumber;
+    if (isNaN(targetPrice) || targetPrice < 0) {
+      setInventoryActionMsg({ type: 'error', text: `Please enter a valid price for "${item.name}".` });
+      return;
+    }
+    setSavingItemId(item.id);
+    try {
+      const ok = await updateMenuItemPriceAndStock(item.id, {
+        priceNumber: targetPrice,
+        price: `₹${targetPrice}`,
+      });
+      if (ok) {
+        setInventoryActionMsg({
+          type: 'success',
+          text: `✓ Updated "${item.name}" price to ₹${targetPrice} (Saved to Database & Synced)`,
+        });
+        setPriceDrafts((prev) => {
+          const c = { ...prev };
+          delete c[item.id];
+          return c;
+        });
+      } else {
+        setInventoryActionMsg({
+          type: 'error',
+          text: `Failed to update price for "${item.name}". Please check database connection.`,
+        });
+      }
+    } catch {
+      setInventoryActionMsg({
+        type: 'error',
+        text: `Error updating price for "${item.name}".`,
+      });
+    } finally {
+      setSavingItemId(null);
+    }
+  };
+
+  const handleToggleStockAvailability = async (item: MenuItem) => {
+    setSavingItemId(item.id);
+    const nextStock = !item.isAvailable;
+    try {
+      const ok = await updateMenuItemPriceAndStock(item.id, {
+        isAvailable: nextStock,
+      });
+      if (ok) {
+        setInventoryActionMsg({
+          type: 'success',
+          text: `✓ "${item.name}" is now marked ${nextStock ? 'IN STOCK' : 'OUT OF STOCK'} (Saved to Database & Synced)`,
+        });
+      } else {
+        setInventoryActionMsg({
+          type: 'error',
+          text: `Failed to update stock status for "${item.name}".`,
+        });
+      }
+    } catch {
+      setInventoryActionMsg({
+        type: 'error',
+        text: `Error updating stock status for "${item.name}".`,
+      });
+    } finally {
+      setSavingItemId(null);
+    }
+  };
+
+  const handleBulkStockAction = async (inStock: boolean) => {
+    const ids = filteredInventoryItems.map((i) => i.id);
+    if (ids.length === 0) return;
+    setBulkUpdating(true);
+    try {
+      const ok = await bulkUpdateStock(ids, inStock);
+      if (ok) {
+        setInventoryActionMsg({
+          type: 'success',
+          text: `✓ Successfully set ${ids.length} product(s) to ${inStock ? 'IN STOCK' : 'OUT OF STOCK'} (Saved to Database)`,
+        });
+        setBulkStockConfirm(null);
+      } else {
+        setInventoryActionMsg({
+          type: 'error',
+          text: `Failed bulk stock update. Please retry.`,
+        });
+      }
+    } catch {
+      setInventoryActionMsg({
+        type: 'error',
+        text: `Error during bulk stock update.`,
+      });
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
 
   // Monitor latestActiveSos for Full-Screen Red Alert Takeover
   useEffect(() => {
@@ -883,6 +1045,26 @@ export default function AdminPage() {
                 {adminMemberships.filter((m) => m.status === 'cancelled').length > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs animate-pulse">
                     {adminMemberships.filter((m) => m.status === 'cancelled').length} Cancelled
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('inventory');
+                  refreshMenu();
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                  activeTab === 'inventory'
+                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                    : 'text-cream-300 hover:text-white'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Stock & Price</span>
+                {menuItems.filter((i) => !i.isAvailable).length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-espresso-950 shadow-xs">
+                    {menuItems.filter((i) => !i.isAvailable).length} Out
                   </span>
                 )}
               </button>
@@ -2525,6 +2707,495 @@ export default function AdminPage() {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 7b. TAB 5: INVENTORY & PRICING CONTROLS */}
+      {activeTab === 'inventory' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+          {/* Header Banner */}
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-800 shadow-sm shrink-0">
+                <Package className="w-6 h-6 text-emerald-700" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-black text-espresso-950 font-display tracking-tight">
+                    PRODUCT PRICING & STOCK CONTROLS
+                  </h2>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <span>Database Synced (Supabase)</span>
+                  </span>
+                </div>
+                <p className="text-xs text-espresso-600 mt-0.5">
+                  Live database editing for product price and stock availability. Changes immediately reflect across customer storefront &amp; cart.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => refreshMenu()}
+                disabled={loadingMenu}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-espresso-900 hover:bg-black text-cream-50 font-bold text-xs rounded-xl shadow transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                title="Sync latest prices and stock from Supabase Database"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingMenu ? 'animate-spin' : ''}`} />
+                <span>{loadingMenu ? 'Syncing...' : 'Sync from DB'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Action Notice / Toast */}
+          {inventoryActionMsg && (
+            <div
+              className={`p-4 rounded-2xl border-2 text-xs font-bold flex items-center justify-between shadow-xs animate-fadeIn ${
+                inventoryActionMsg.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                  : 'bg-rose-50 border-rose-300 text-rose-950'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {inventoryActionMsg.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{inventoryActionMsg.text}</span>
+              </div>
+              <button
+                onClick={() => setInventoryActionMsg(null)}
+                className="text-espresso-600 hover:text-black font-black px-2 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Stats Ribbon (4 Cards) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-cream-200 shadow-warm-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-espresso-500">Total Catalog</span>
+              <p className="text-2xl font-black text-espresso-950 font-display mt-0.5">{menuItems.length} Products</p>
+              <span className="text-[11px] text-espresso-600">Full database catalog</span>
+            </div>
+
+            <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200 shadow-warm-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">In Stock (Available)</span>
+              <p className="text-2xl font-black text-emerald-900 font-display mt-0.5">
+                {menuItems.filter((i) => i.isAvailable).length} Items
+              </p>
+              <span className="text-[11px] text-emerald-700">Customers can order</span>
+            </div>
+
+            <div className="bg-rose-50/60 p-4 rounded-2xl border border-rose-200 shadow-warm-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Out of Stock</span>
+              <p className="text-2xl font-black text-rose-900 font-display mt-0.5">
+                {menuItems.filter((i) => !i.isAvailable).length} Items
+              </p>
+              <span className="text-[11px] text-rose-700">Shown as sold out</span>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-cream-200 shadow-warm-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-espresso-500">Categories</span>
+              <p className="text-2xl font-black text-espresso-950 font-display mt-0.5">
+                {inventoryCategories.length - 1} Types
+              </p>
+              <span className="text-[11px] text-espresso-600">Milk, Poultry, Mutton, Eggs</span>
+            </div>
+          </div>
+
+          {/* Controls: Search, Category Filters, Stock Filters & Bulk Actions */}
+          <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-xs space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              {/* Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-espresso-400" />
+                <input
+                  type="text"
+                  placeholder="Search products by name, category, or ID..."
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2.5 bg-cream-50 rounded-xl text-xs font-medium border border-cream-200 focus:outline-none focus:ring-2 focus:ring-banhmi-gold/40 text-espresso-950"
+                />
+                {inventorySearch && (
+                  <button
+                    onClick={() => setInventorySearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-espresso-400 hover:text-espresso-800 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Stock Filter Segmented Control */}
+              <div className="flex items-center gap-1 bg-cream-100 p-1 rounded-2xl border border-cream-200 self-start md:self-auto">
+                <button
+                  onClick={() => setInventoryStockFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    inventoryStockFilter === 'all'
+                      ? 'bg-espresso-900 text-white shadow-xs'
+                      : 'text-espresso-700 hover:text-espresso-950'
+                  }`}
+                >
+                  All ({menuItems.length})
+                </button>
+                <button
+                  onClick={() => setInventoryStockFilter('in_stock')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                    inventoryStockFilter === 'in_stock'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'text-emerald-800 hover:text-emerald-950'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>In Stock ({menuItems.filter((i) => i.isAvailable).length})</span>
+                </button>
+                <button
+                  onClick={() => setInventoryStockFilter('out_of_stock')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                    inventoryStockFilter === 'out_of_stock'
+                      ? 'bg-rose-700 text-white shadow-xs'
+                      : 'text-rose-800 hover:text-rose-950'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />
+                  <span>Out of Stock ({menuItems.filter((i) => !i.isAvailable).length})</span>
+                </button>
+              </div>
+
+              {/* Bulk Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBulkStockConfirm('in_stock')}
+                  disabled={filteredInventoryItems.length === 0}
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40"
+                  title="Mark all shown items as In Stock"
+                >
+                  Mark All In-Stock
+                </button>
+                <button
+                  onClick={() => setBulkStockConfirm('out_of_stock')}
+                  disabled={filteredInventoryItems.length === 0}
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40"
+                  title="Mark all shown items as Out of Stock"
+                >
+                  Mark All Out-of-Stock
+                </button>
+              </div>
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-cream-100">
+              <span className="text-[11px] font-bold text-espresso-500 uppercase tracking-wider mr-1">
+                Category:
+              </span>
+              {inventoryCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setInventoryCategory(cat)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                    inventoryCategory === cat
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-xs'
+                      : 'bg-cream-50 text-espresso-700 hover:bg-cream-100 border border-cream-200'
+                  }`}
+                >
+                  {cat === 'All' ? 'All Products' : cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredInventoryItems.length === 0 ? (
+              <div className="col-span-full bg-white p-12 rounded-3xl border border-cream-200 text-center space-y-3">
+                <Package className="w-10 h-10 text-espresso-300 mx-auto" />
+                <h3 className="text-base font-bold text-espresso-900">No products match your filters</h3>
+                <p className="text-xs text-espresso-600 max-w-sm mx-auto">
+                  Try clearing your search query or switching categories to view all catalog items.
+                </p>
+                <button
+                  onClick={() => {
+                    setInventorySearch('');
+                    setInventoryCategory('All');
+                    setInventoryStockFilter('all');
+                  }}
+                  className="px-4 py-2 bg-espresso-900 text-cream-50 font-bold text-xs rounded-xl shadow transition cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              filteredInventoryItems.map((item) => {
+                const draftPrice = priceDrafts[item.id];
+                const displayPriceNumber =
+                  draftPrice !== undefined
+                    ? draftPrice
+                    : String(item.priceNumber);
+                const isPriceDirty =
+                  draftPrice !== undefined &&
+                  parseInt(draftPrice, 10) !== item.priceNumber;
+                const isSaving = savingItemId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`bg-white rounded-3xl border overflow-hidden shadow-warm-xs flex flex-col justify-between transition-all duration-200 ${
+                      item.isAvailable
+                        ? 'border-cream-200 hover:shadow-warm-md hover:border-emerald-300'
+                        : 'border-rose-200 bg-rose-50/10 hover:border-rose-300'
+                    }`}
+                  >
+                    {/* Top: Image, Category & Badges */}
+                    <div className="p-4 sm:p-5 space-y-3">
+                      <div className="flex items-start gap-3.5">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-cream-50 border border-cream-200 overflow-hidden shrink-0">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-espresso-400">
+                              <Package className="w-8 h-8" />
+                            </div>
+                          )}
+
+                          {/* Dietary dot badge */}
+                          <div
+                            className={`absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider text-white shadow-xs ${
+                              item.dietary === 'veg' ? 'bg-emerald-600' : 'bg-red-600'
+                            }`}
+                          >
+                            {item.dietary}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#43670F] bg-[#ECF5DE] px-2 py-0.5 rounded-md border border-[#CBE0A3]/50 truncate">
+                              {item.category}
+                            </span>
+                            <span className="text-[10px] font-mono text-espresso-400 truncate">
+                              #{item.id}
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-sm sm:text-base text-espresso-950 leading-snug line-clamp-1" title={item.name}>
+                            {item.name}
+                          </h3>
+
+                          <p className="text-[11px] text-espresso-600 line-clamp-2 leading-relaxed">
+                            {item.description || 'Farm-fresh certified product.'}
+                          </p>
+
+                          {item.customizationOptions?.portion && item.customizationOptions.portion.length > 0 && (
+                            <div className="pt-0.5">
+                              <span className="text-[10px] text-espresso-500 font-semibold truncate block">
+                                Pack: {item.customizationOptions.portion[0]}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Stock Availability Toggle Button */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStockAvailability(item)}
+                          disabled={isSaving}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl border-2 font-black text-xs transition active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
+                            item.isAvailable
+                              ? 'bg-emerald-50 hover:bg-emerald-100/80 border-emerald-500 text-emerald-950 shadow-xs'
+                              : 'bg-rose-50 hover:bg-rose-100/80 border-rose-400 text-rose-950 shadow-xs'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {item.isAvailable ? (
+                              <>
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span>IN STOCK (Available)</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+                                <span>OUT OF STOCK (Unavailable)</span>
+                              </>
+                            )}
+                          </div>
+
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
+                              item.isAvailable
+                                ? 'bg-white text-emerald-800 border-emerald-300'
+                                : 'bg-rose-600 text-white border-rose-600'
+                            }`}
+                          >
+                            {isSaving ? 'Updating...' : item.isAvailable ? 'Click to Mark Out' : 'Click to Mark In'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bottom: Price Editing Control */}
+                    <div className="p-4 sm:p-5 bg-cream-50/70 border-t border-cream-200 rounded-b-3xl space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-espresso-500">
+                          Price in Database
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-espresso-600">Current:</span>
+                          <span className="font-black text-espresso-950 text-sm font-mono">
+                            ₹{item.priceNumber}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick Adjust Buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-espresso-500 font-bold uppercase tracking-wider mr-0.5">
+                          Quick:
+                        </span>
+                        {[-10, -5, +5, +10].map((step) => (
+                          <button
+                            key={step}
+                            type="button"
+                            onClick={() => handleQuickPriceStep(item, step)}
+                            disabled={isSaving}
+                            className="px-2 py-1 rounded-lg bg-white border border-cream-200 hover:bg-cream-100 text-espresso-800 text-[11px] font-bold transition active:scale-95 cursor-pointer disabled:opacity-40"
+                          >
+                            {step > 0 ? `+₹${step}` : `-₹${Math.abs(step)}`}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Numeric Input & Save Button */}
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-espresso-500 font-bold text-sm">
+                            ₹
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={displayPriceNumber}
+                            onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleSaveItemPrice(item);
+                              }
+                            }}
+                            disabled={isSaving}
+                            placeholder="Price"
+                            className="w-full pl-7 pr-3 py-2 bg-white rounded-xl text-sm font-black font-mono border border-cream-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-espresso-950"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveItemPrice(item)}
+                          disabled={isSaving || (!isPriceDirty && !draftPrice)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ${
+                            isPriceDirty
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md animate-pulse'
+                              : 'bg-espresso-900 hover:bg-black text-cream-100 disabled:opacity-40'
+                          }`}
+                        >
+                          {isSaving ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>{isSaving ? 'Saving...' : isPriceDirty ? 'Save Price' : 'Saved'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Stock Change Confirmation Modal */}
+      {bulkStockConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 border border-cream-200 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-1">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto border ${
+                  bulkStockConfirm === 'in_stock'
+                    ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                    : 'bg-rose-100 border-rose-300 text-rose-700'
+                }`}
+              >
+                <Package className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-espresso-950 font-display">
+                {bulkStockConfirm === 'in_stock'
+                  ? 'Mark All Shown In Stock?'
+                  : 'Mark All Shown Out of Stock?'}
+              </h3>
+              <p className="text-xs text-espresso-600">
+                You are about to update <strong>{filteredInventoryItems.length} products</strong> in the database to{' '}
+                <strong className={bulkStockConfirm === 'in_stock' ? 'text-emerald-700' : 'text-rose-700'}>
+                  {bulkStockConfirm === 'in_stock' ? 'IN STOCK' : 'OUT OF STOCK'}
+                </strong>
+                .
+              </p>
+            </div>
+
+            <div className="max-h-48 overflow-y-auto bg-cream-50 rounded-2xl p-3 border border-cream-200 text-xs text-espresso-800 space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-espresso-500 mb-1">
+                Affected Products ({filteredInventoryItems.length}):
+              </div>
+              {filteredInventoryItems.map((item) => (
+                <div key={item.id} className="flex justify-between items-center py-0.5 border-b border-cream-100 last:border-0">
+                  <span className="truncate pr-2 font-medium">{item.name}</span>
+                  <span className="font-mono shrink-0">₹{item.priceNumber}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBulkStockConfirm(null)}
+                disabled={bulkUpdating}
+                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleBulkStockAction(bulkStockConfirm === 'in_stock')}
+                disabled={bulkUpdating}
+                className={`flex-1 py-2.5 rounded-2xl text-white text-xs font-black uppercase tracking-wider shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  bulkStockConfirm === 'in_stock'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {bulkUpdating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Updating DB...</span>
+                  </>
+                ) : (
+                  <span>Confirm & Save</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

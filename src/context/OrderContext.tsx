@@ -89,6 +89,11 @@ export interface OrderContextType {
   menuItems: MenuItem[];
   loadingMenu: boolean;
   refreshMenu: () => Promise<void>;
+  updateMenuItemPriceAndStock: (
+    id: string,
+    updates: { priceNumber?: number; price?: string; isAvailable?: boolean }
+  ) => Promise<boolean>;
+  bulkUpdateStock: (ids: string[], isAvailable: boolean) => Promise<boolean>;
   
   // Cart
   cart: CartItem[];
@@ -342,6 +347,23 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshMenu = useCallback(async () => {
+    try {
+      setLoadingMenu(true);
+      const res = await fetch('/api/menu', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.menu) && data.menu.length > 0) {
+          setMenuItems(data.menu);
+        }
+      }
+    } catch (e) {
+      console.warn('Refresh menu error:', e);
+    } finally {
+      setLoadingMenu(false);
+    }
+  }, []);
+
   // Load from localStorage on client mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -393,9 +415,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('zafiroo_kitchen_pin_v1');
       } catch {}
 
-      // 5. Fetch fresh database courier agents and active SOS alerts
+      // 5. Fetch fresh database courier agents, active SOS alerts, and live menu items
       refreshDeliveryAgents();
       refreshSosAlerts();
+      refreshMenu();
 
       // 6. Delivery Location
       const savedLocation = localStorage.getItem(USER_LOCATION_KEY);
@@ -422,7 +445,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.warn('Error reading from local storage:', err);
     }
-  }, [refreshDeliveryAgents, refreshSosAlerts]);
+  }, [refreshDeliveryAgents, refreshSosAlerts, refreshMenu]);
+
+  // Periodic Menu Sync with Database (ensures all clients see real-time price & stock updates)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshMenu();
+    }, 12000);
+    return () => clearInterval(timer);
+  }, [refreshMenu]);
 
   // Persist cart changes
   useEffect(() => {
@@ -606,10 +637,58 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         )
         .subscribe();
 
+      const menuChannel = supabase
+        .channel('realtime_menu_items_v2')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'menu_items' },
+          (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const row = payload.new as any;
+              if (!row || !row.id) return;
+              setMenuItems((prev) => {
+                const idx = prev.findIndex((m) => m.id === row.id);
+                const updatedItem: MenuItem = {
+                  id: row.id,
+                  name: row.name,
+                  category: row.category,
+                  description: row.description || '',
+                  detailedDescription: row.detailed_description || undefined,
+                  price: row.price,
+                  priceNumber: Number(row.price_number),
+                  image: row.image || '',
+                  calories: row.calories ? Number(row.calories) : undefined,
+                  dietary: row.dietary || 'veg',
+                  tasteNotes: row.taste_notes || [],
+                  featured: Boolean(row.featured),
+                  signature: Boolean(row.signature),
+                  prepTime: row.prep_time || 'Farm Fresh',
+                  customizationOptions: row.customization_options || {},
+                  isAvailable: Boolean(row.is_available),
+                  displayOrder: row.display_order ?? 0,
+                };
+                if (idx > -1) {
+                  const next = [...prev];
+                  next[idx] = updatedItem;
+                  return next;
+                }
+                return [...prev, updatedItem];
+              });
+            } else if (payload.eventType === 'DELETE') {
+              const deletedId = (payload.old as any)?.id;
+              if (deletedId) {
+                setMenuItems((prev) => prev.filter((m) => m.id !== deletedId));
+              }
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
         if (batchFlushTimeoutRef.current) clearTimeout(batchFlushTimeoutRef.current);
         supabase?.removeChannel(ordersChannel);
         supabase?.removeChannel(sosChannel);
+        supabase?.removeChannel(menuChannel);
       };
     } catch (e) {
       console.warn('Supabase subscription warning:', e);
@@ -1105,9 +1184,85 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const refreshMenu = async () => {
-    setLoadingMenu(true);
-    setTimeout(() => setLoadingMenu(false), 200);
+  const updateMenuItemPriceAndStock = async (
+    id: string,
+    updates: { priceNumber?: number; price?: string; isAvailable?: boolean }
+  ): Promise<boolean> => {
+    // 1. Instant optimistic update for 0-latency UI reaction
+    setMenuItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newPriceNumber =
+          updates.priceNumber !== undefined ? updates.priceNumber : item.priceNumber;
+        const newPrice =
+          updates.price !== undefined
+            ? updates.price
+            : updates.priceNumber !== undefined
+            ? `₹${updates.priceNumber}`
+            : item.price;
+        const newIsAvailable =
+          updates.isAvailable !== undefined ? updates.isAvailable : item.isAvailable;
+        return {
+          ...item,
+          priceNumber: newPriceNumber,
+          price: newPrice,
+          isAvailable: newIsAvailable,
+        };
+      })
+    );
+
+    // 2. Persist to API and Database
+    try {
+      const res = await fetch('/api/menu', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.updated) {
+          const item = data.updated;
+          setMenuItems((prev) =>
+            prev.map((m) => (m.id === item.id ? { ...m, ...item } : m))
+          );
+          return true;
+        }
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to update menu item price/stock in database:', err);
+      refreshMenu();
+      return false;
+    }
+  };
+
+  const bulkUpdateStock = async (ids: string[], isAvailable: boolean): Promise<boolean> => {
+    if (!ids || ids.length === 0) return true;
+    const idSet = new Set(ids);
+
+    // 1. Optimistic update
+    setMenuItems((prev) =>
+      prev.map((item) => (idSet.has(item.id) ? { ...item, isAvailable } : item))
+    );
+
+    // 2. Persist to database
+    try {
+      const payload = ids.map((id) => ({ id, isAvailable }));
+      const res = await fetch('/api/menu', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: payload }),
+      });
+      if (res.ok) {
+        return true;
+      }
+      refreshMenu();
+      return false;
+    } catch (err) {
+      console.error('Failed bulk stock update:', err);
+      refreshMenu();
+      return false;
+    }
   };
 
   const updateKitchenPin = async (newPin: string) => {
@@ -1140,6 +1295,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         menuItems,
         loadingMenu,
         refreshMenu,
+        updateMenuItemPriceAndStock,
+        bulkUpdateStock,
         cart,
         addToCart,
         removeFromCart,

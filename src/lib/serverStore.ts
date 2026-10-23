@@ -297,6 +297,20 @@ export function getLocalMenu(): MenuItem[] {
   return serverStore.menu;
 }
 
+export function updateLocalMenuItem(id: string, updates: Partial<MenuItem>): MenuItem | null {
+  const index = serverStore.menu.findIndex((m) => m.id === id);
+  if (index === -1) return null;
+  serverStore.menu[index] = {
+    ...serverStore.menu[index],
+    ...updates,
+  };
+  return serverStore.menu[index];
+}
+
+export function setLocalMenu(items: MenuItem[]): void {
+  serverStore.menu = [...items];
+}
+
 export function getLocalMemberships(phone?: string): Membership[] {
   const list = serverStore.memberships || [];
   if (!phone) return list;
