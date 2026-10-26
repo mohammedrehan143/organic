@@ -94,11 +94,12 @@ export function calculateMembershipTimeline(
   const isCancelled = membership.status === 'cancelled';
   const isPostpaid = membership.planType !== '6_months' && membership.billingType === 'postpaid';
   const isPaid = membership.paymentStatus === 'paid' || membership.billingType === 'prepaid';
-  const totalDurationDays = membership.planType === '6_months' ? 180 : 7;
 
   const todayStr = getISTDateString(refDate);
   const startStr = parseDateToISTString(membership.startDate);
   const endStr = parseDateToISTString(membership.endDate);
+  const calculatedDuration = Math.max(1, diffCalendarDays(endStr, startStr) + 1);
+  const totalDurationDays = membership.planType === '6_months' ? Math.max(180, calculatedDuration) : calculatedDuration;
 
   const diffStart = diffCalendarDays(startStr, todayStr); // > 0 if start is future
   const diffEnd = diffCalendarDays(endStr, todayStr);     // > 0 if end is future, 0 if today is end, < 0 if past
@@ -151,9 +152,9 @@ export function calculateMembershipTimeline(
     statusBadgeVariant = 'active';
   }
 
-  // Generate 7-day milk delivery timeline items (Day 1 to Day 7: e.g. Oct 3 to Oct 9)
+  // Generate milk delivery timeline items (Day 1 to Day N: e.g. Oct 3 to Oct 9)
   const timelineDays: DayTimelineItem[] = [];
-  const daysToGenerate = Math.min(7, totalDurationDays);
+  const daysToGenerate = Math.min(14, totalDurationDays);
 
   for (let i = 0; i < daysToGenerate; i++) {
     const dayDateStr = addDaysToDateString(startStr, i);

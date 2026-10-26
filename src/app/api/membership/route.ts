@@ -7,6 +7,8 @@ import {
   calculateNewEnrollmentDates,
   getISTDateString,
   addDaysToDateString,
+  parseDateToISTString,
+  diffCalendarDays,
 } from '@/lib/membershipTimeline';
 
 // Cache whether the remote Supabase project has the memberships table created
@@ -499,19 +501,73 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // Action 3: Extend membership by 7 days (or 30 days)
-    if (action === 'extend_7' || action === 'extend_30') {
-      const now = new Date();
-      const daysToAdd = action === 'extend_30' ? 30 : 7;
-      const local = getLocalMemberships(cleanPhone);
-      let currentEnd = now;
-      if (local.length > 0 && new Date(local[0].endDate).getTime() > now.getTime()) {
-        currentEnd = new Date(local[0].endDate);
+    // Action 3: Add, remove or adjust membership days (or legacy extend_7 / extend_30)
+    if (
+      action === 'adjust_days' ||
+      action === 'add_day' ||
+      action === 'remove_day' ||
+      action === 'extend_7' ||
+      action === 'extend_30' ||
+      body.days !== undefined
+    ) {
+      let daysDelta = 0;
+      if (action === 'add_day') daysDelta = 1;
+      else if (action === 'remove_day') daysDelta = -1;
+      else if (action === 'extend_7') daysDelta = 7;
+      else if (action === 'extend_30') daysDelta = 30;
+      else if (body.days !== undefined) daysDelta = parseInt(String(body.days), 10) || 0;
+
+      // Fetch existing record from database if available
+      let dbRecord: any = null;
+      if (isSupabaseConfigured && client && supabaseTableAvailable) {
+        try {
+          const { data } = await client
+            .from('memberships')
+            .select('*')
+            .or(`id.eq.${id || 'NONE'},phone.ilike.%${cleanPhone}%`)
+            .limit(1);
+          if (data && data.length > 0) {
+            dbRecord = data[0];
+          }
+        } catch (dbErr) {
+          console.warn('[Membership PATCH] db select error on adjust days:', dbErr);
+        }
       }
-      const newEndDate = new Date(currentEnd.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
+
+      const local = getLocalMemberships(cleanPhone);
+      const localItem = (id && local.find((m) => m.id === id)) || (local.length > 0 ? local[0] : null);
+
+      // Current start date and end date
+      const baseEndDate =
+        dbRecord?.end_date ||
+        localItem?.endDate ||
+        body.currentEndDate ||
+        new Date().toISOString();
+
+      const baseStartDate =
+        dbRecord?.start_date ||
+        localItem?.startDate ||
+        new Date().toISOString();
+
+      const startIST = parseDateToISTString(baseStartDate);
+      const currentEndIST = parseDateToISTString(baseEndDate);
+
+      // Compute new end date string in IST
+      let newEndIST = addDaysToDateString(currentEndIST, daysDelta);
+
+      // Guard: do not allow end date to be before start date
+      if (diffCalendarDays(newEndIST, startIST) < 0) {
+        newEndIST = startIST;
+      }
+
+      const newEndDate = `${newEndIST}T06:00:00+05:30`;
+      const now = new Date();
+      const currentStatus = dbRecord?.status || localItem?.status || 'active';
+      const newStatus = currentStatus !== 'cancelled' ? 'active' : 'cancelled';
+
       const updateData: any = {
-        status: 'active',
         end_date: newEndDate,
+        status: newStatus,
         updated_at: now.toISOString(),
       };
 
@@ -522,19 +578,28 @@ export async function PATCH(req: NextRequest) {
             .update(updateData)
             .or(`id.eq.${id || 'NONE'},phone.ilike.%${cleanPhone}%`);
         } catch (dbErr) {
-          console.warn('[Membership PATCH] db error:', dbErr);
+          console.warn('[Membership PATCH] db error on adjust days update:', dbErr);
         }
       }
 
-      if (local.length > 0) {
-        local[0].status = 'active';
-        local[0].endDate = newEndDate;
-        saveLocalMembership(local[0]);
+      if (localItem) {
+        localItem.endDate = newEndDate;
+        localItem.status = newStatus;
+        saveLocalMembership(localItem);
       }
+
+      const actionMessage =
+        daysDelta > 0
+          ? `Added ${daysDelta} ${daysDelta === 1 ? 'day' : 'days'}. New expiry date: ${newEndIST}.`
+          : daysDelta < 0
+          ? `Removed ${Math.abs(daysDelta)} ${Math.abs(daysDelta) === 1 ? 'day' : 'days'}. New expiry date: ${newEndIST}.`
+          : `Membership expiry updated to ${newEndIST}.`;
 
       return NextResponse.json({
         success: true,
-        message: `Membership extended by ${daysToAdd} days successfully.`,
+        endDate: newEndDate,
+        daysAdjusted: daysDelta,
+        message: actionMessage,
       });
     }
 

@@ -62,11 +62,19 @@ import {
   Boxes,
   CheckSquare,
   SlidersHorizontal,
+  Plus,
+  Minus,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { BillModal } from '@/components/BillModal';
 import { MembershipBillModal } from '@/components/MembershipBillModal';
-import { calculateMembershipTimeline } from '@/lib/membershipTimeline';
+import {
+  calculateMembershipTimeline,
+  addDaysToDateString,
+  parseDateToISTString,
+  formatDayDisplay,
+} from '@/lib/membershipTimeline';
 import { generateRiderSosWhatsAppLink, cleanPhoneNumber } from '@/lib/whatsapp';
 import { CAFE_METADATA } from '@/data/cafeData';
 
@@ -126,6 +134,8 @@ export default function AdminPage() {
   const [membershipActionLoading, setMembershipActionLoading] = useState<string | null>(null);
   const [membershipActionMsg, setMembershipActionMsg] = useState('');
   const [extendConfirmMembership, setExtendConfirmMembership] = useState<Membership | null>(null);
+  const [editDaysMembership, setEditDaysMembership] = useState<Membership | null>(null);
+  const [customDaysDelta, setCustomDaysDelta] = useState<number>(1);
   const [adminCancelConfirmMembership, setAdminCancelConfirmMembership] = useState<Membership | null>(null);
   const [recentCancellationNotice, setRecentCancellationNotice] = useState<Membership | null>(null);
   const knownCancelledIdsRef = useRef<Set<string>>(new Set());
@@ -219,7 +229,8 @@ export default function AdminPage() {
     }
   };
 
-  const handleExtendMembership7 = async (membership: Membership) => {
+  const handleAdjustMembershipDays = async (membership: Membership, days: number) => {
+    setEditDaysMembership(null);
     setExtendConfirmMembership(null);
     setMembershipActionLoading(membership.id);
     setMembershipActionMsg('');
@@ -230,22 +241,34 @@ export default function AdminPage() {
         body: JSON.stringify({
           id: membership.id,
           phone: membership.phone,
-          action: 'extend_7',
+          action: 'adjust_days',
+          days,
+          currentEndDate: membership.endDate,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setMembershipActionMsg(`✓ Extended membership by 7 days for ${membership.customerName}.`);
+        setMembershipActionMsg(
+          days > 0
+            ? `✓ Added ${days} ${days === 1 ? 'day' : 'days'} to ${membership.customerName}'s membership.`
+            : days < 0
+            ? `✓ Removed ${Math.abs(days)} ${Math.abs(days) === 1 ? 'day' : 'days'} from ${membership.customerName}'s membership.`
+            : `✓ Expiry date updated for ${membership.customerName}.`
+        );
         await fetchAdminMemberships(false);
       } else {
-        setMembershipActionMsg(`✗ Failed to extend membership. Please try again.`);
+        setMembershipActionMsg(`✗ Failed to adjust membership days: ${data.error || data.message || 'Please try again.'}`);
       }
     } catch (err) {
-      console.error('Error extending membership:', err);
+      console.error('Error adjusting membership days:', err);
       setMembershipActionMsg(`✗ Network error. Please try again.`);
     } finally {
       setMembershipActionLoading(null);
     }
+  };
+
+  const handleExtendMembership7 = async (membership: Membership) => {
+    return handleAdjustMembershipDays(membership, 7);
   };
 
   const handleAdminCancelMembership = async (membership: Membership) => {
@@ -850,7 +873,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-banhmi-bg">
+    <div className="min-h-screen pb-20 bg-banhmi-bg overflow-x-hidden w-full">
       {/* 1. FULL-SCREEN 5-SECOND RED ALERT TAKEOVER (Emergency SOS) */}
       {fullScreenSosAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-red-600 animate-hazard-strobe text-white shadow-2xl select-none">
@@ -959,10 +982,10 @@ export default function AdminPage() {
       )}
 
       {/* 3. ADMIN HEADER & SUB-NAVIGATION */}
-      <div className="bg-espresso-950 text-cream-50 px-6 py-4 border-b border-cream-900/40">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-espresso-950 text-cream-50 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-cream-900/40">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-banhmi-gold/20 border border-banhmi-gold/40 flex items-center justify-center text-banhmi-gold">
+            <div className="w-10 h-10 rounded-2xl bg-banhmi-gold/20 border border-banhmi-gold/40 flex items-center justify-center text-banhmi-gold shrink-0">
               <Shield className="w-5 h-5" />
             </div>
             <div>
@@ -981,10 +1004,10 @@ export default function AdminPage() {
           </div>
 
           {/* Back to Website, Tab Switcher & Logout */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between md:justify-end">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white hover:text-[#173612] text-cream-100 font-bold text-xs transition border border-white/20 shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white hover:text-[#173612] text-cream-100 font-bold text-xs transition border border-white/20 shadow-sm cursor-pointer shrink-0"
               title="Return to Customer Store Website"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -992,87 +1015,90 @@ export default function AdminPage() {
               <span className="sm:hidden">Website</span>
             </Link>
 
-            <div className="flex items-center bg-espresso-900 p-1 rounded-2xl border border-cream-800">
-              <button
-                onClick={() => setActiveTab('kds')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'kds'
-                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
-                    : 'text-cream-300 hover:text-white'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5" />
-                <span>KDS Live</span>
-              </button>
+            {/* Horizontally scrollable tab bar for mobile viewports */}
+            <div className="max-w-full overflow-x-auto scrollbar-none py-0.5">
+              <div className="flex items-center bg-espresso-900 p-1 rounded-2xl border border-cream-800 min-w-max gap-1">
+                <button
+                  onClick={() => setActiveTab('kds')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    activeTab === 'kds'
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                      : 'text-cream-300 hover:text-white'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>KDS Live</span>
+                </button>
 
-              <button
-                onClick={() => setActiveTab('rider')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'rider'
-                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
-                    : 'text-cream-300 hover:text-white'
-                }`}
-              >
-                <Bike className="w-3.5 h-3.5" />
-                <span>Rider Portal</span>
-              </button>
+                <button
+                  onClick={() => setActiveTab('rider')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    activeTab === 'rider'
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                      : 'text-cream-300 hover:text-white'
+                  }`}
+                >
+                  <Bike className="w-3.5 h-3.5" />
+                  <span>Rider Portal</span>
+                </button>
 
-              <button
-                onClick={() => setActiveTab('analytics')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'analytics'
-                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
-                    : 'text-cream-300 hover:text-white'
-                }`}
-              >
-                <BarChart3 className="w-3.5 h-3.5" />
-                <span>Analytics</span>
-              </button>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    activeTab === 'analytics'
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                      : 'text-cream-300 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Analytics</span>
+                </button>
 
-              <button
-                onClick={() => {
-                  setActiveTab('memberships');
-                  fetchAdminMemberships();
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'memberships'
-                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
-                    : 'text-cream-300 hover:text-white'
-                }`}
-              >
-                <Crown className="w-3.5 h-3.5" />
-                <span>Memberships</span>
-                {adminMemberships.filter((m) => m.status === 'cancelled').length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs animate-pulse">
-                    {adminMemberships.filter((m) => m.status === 'cancelled').length} Cancelled
-                  </span>
-                )}
-              </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('memberships');
+                    fetchAdminMemberships();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    activeTab === 'memberships'
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                      : 'text-cream-300 hover:text-white'
+                  }`}
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Memberships</span>
+                  {adminMemberships.filter((m) => m.status === 'cancelled').length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs animate-pulse">
+                      {adminMemberships.filter((m) => m.status === 'cancelled').length} Cancelled
+                    </span>
+                  )}
+                </button>
 
-              <button
-                onClick={() => {
-                  setActiveTab('inventory');
-                  refreshMenu();
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'inventory'
-                    ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
-                    : 'text-cream-300 hover:text-white'
-                }`}
-              >
-                <Package className="w-3.5 h-3.5" />
-                <span>Stock & Price</span>
-                {menuItems.filter((i) => !i.isAvailable).length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-espresso-950 shadow-xs">
-                    {menuItems.filter((i) => !i.isAvailable).length} Out
-                  </span>
-                )}
-              </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('inventory');
+                    refreshMenu();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    activeTab === 'inventory'
+                      ? 'bg-banhmi-gold text-espresso-950 shadow-sm'
+                      : 'text-cream-300 hover:text-white'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>Stock & Price</span>
+                  {menuItems.filter((i) => !i.isAvailable).length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-espresso-950 shadow-xs">
+                      {menuItems.filter((i) => !i.isAvailable).length} Out
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
               onClick={() => setIsAuthenticated(false)}
-              className="p-2.5 rounded-xl bg-espresso-900 hover:bg-rose-950 text-cream-300 hover:text-rose-400 border border-cream-800 transition cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-espresso-900 hover:bg-rose-950 text-cream-300 hover:text-rose-400 border border-cream-800 transition cursor-pointer shrink-0"
               title="Lock / Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -2676,13 +2702,46 @@ export default function AdminPage() {
                         )}
 
                         {!isCancelled && (
-                          <button
-                            onClick={() => setExtendConfirmMembership(m)}
-                            disabled={membershipActionLoading === m.id}
-                            className="px-3 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 cursor-pointer"
-                          >
-                            + Extend 7 Days
-                          </button>
+                          <div className="flex items-center gap-1.5 bg-cream-100 p-1 rounded-2xl border border-cream-200 shadow-xs flex-wrap">
+                            {/* Remove 1 Day */}
+                            <button
+                              type="button"
+                              onClick={() => handleAdjustMembershipDays(m, -1)}
+                              disabled={membershipActionLoading === m.id}
+                              className="px-2.5 py-1.5 bg-white hover:bg-rose-50 border border-cream-200 hover:border-rose-300 text-rose-700 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 flex items-center gap-1 cursor-pointer shadow-xs"
+                              title="Remove 1 day from membership"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                              <span>- 1 Day</span>
+                            </button>
+
+                            {/* Add 1 Day */}
+                            <button
+                              type="button"
+                              onClick={() => handleAdjustMembershipDays(m, 1)}
+                              disabled={membershipActionLoading === m.id}
+                              className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 border border-cream-200 hover:border-emerald-300 text-emerald-800 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 flex items-center gap-1 cursor-pointer shadow-xs"
+                              title="Add 1 day to membership"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+ 1 Day</span>
+                            </button>
+
+                            {/* Edit Days (Any amount) */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditDaysMembership(m);
+                                setCustomDaysDelta(1);
+                              }}
+                              disabled={membershipActionLoading === m.id}
+                              className="px-2.5 py-1.5 bg-cream-200 hover:bg-cream-300 text-espresso-900 text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                              title="Edit days (add or remove multiple days)"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-espresso-600" />
+                              <span>Edit Days</span>
+                            </button>
+                          </div>
                         )}
 
                         {!isCancelled ? (
@@ -2715,7 +2774,7 @@ export default function AdminPage() {
       {activeTab === 'inventory' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
           {/* Header Banner */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-3xl border border-cream-200 shadow-warm-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-800 shadow-sm shrink-0">
                 <Package className="w-6 h-6 text-emerald-700" />
@@ -2809,10 +2868,10 @@ export default function AdminPage() {
           </div>
 
           {/* Controls: Search, Category Filters, Stock Filters & Bulk Actions */}
-          <div className="bg-white p-5 rounded-3xl border border-cream-200 shadow-warm-xs space-y-4">
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-cream-200 shadow-warm-xs space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               {/* Search */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative flex-1 max-w-md w-full">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-espresso-400" />
                 <input
                   type="text"
@@ -2832,10 +2891,10 @@ export default function AdminPage() {
               </div>
 
               {/* Stock Filter Segmented Control */}
-              <div className="flex items-center gap-1 bg-cream-100 p-1 rounded-2xl border border-cream-200 self-start md:self-auto">
+              <div className="flex items-center gap-1 bg-cream-100 p-1 rounded-2xl border border-cream-200 overflow-x-auto max-w-full scrollbar-none self-start md:self-auto">
                 <button
                   onClick={() => setInventoryStockFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
                     inventoryStockFilter === 'all'
                       ? 'bg-espresso-900 text-white shadow-xs'
                       : 'text-espresso-700 hover:text-espresso-950'
@@ -2845,7 +2904,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => setInventoryStockFilter('in_stock')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap ${
                     inventoryStockFilter === 'in_stock'
                       ? 'bg-emerald-700 text-white shadow-xs'
                       : 'text-emerald-800 hover:text-emerald-950'
@@ -2856,7 +2915,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => setInventoryStockFilter('out_of_stock')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap ${
                     inventoryStockFilter === 'out_of_stock'
                       ? 'bg-rose-700 text-white shadow-xs'
                       : 'text-rose-800 hover:text-rose-950'
@@ -2868,11 +2927,11 @@ export default function AdminPage() {
               </div>
 
               {/* Bulk Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setBulkStockConfirm('in_stock')}
                   disabled={filteredInventoryItems.length === 0}
-                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40"
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40 shrink-0"
                   title="Mark all shown items as In Stock"
                 >
                   Mark All In-Stock
@@ -2880,7 +2939,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => setBulkStockConfirm('out_of_stock')}
                   disabled={filteredInventoryItems.length === 0}
-                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40"
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40 shrink-0"
                   title="Mark all shown items as Out of Stock"
                 >
                   Mark All Out-of-Stock
@@ -2889,15 +2948,15 @@ export default function AdminPage() {
             </div>
 
             {/* Category Pills */}
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-cream-100">
-              <span className="text-[11px] font-bold text-espresso-500 uppercase tracking-wider mr-1">
+            <div className="flex items-center gap-2 overflow-x-auto sm:flex-wrap pt-1 border-t border-cream-100 scrollbar-none py-1">
+              <span className="text-[11px] font-bold text-espresso-500 uppercase tracking-wider mr-1 shrink-0">
                 Category:
               </span>
               {inventoryCategories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setInventoryCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
                     inventoryCategory === cat
                       ? 'bg-banhmi-gold text-espresso-950 shadow-xs'
                       : 'bg-cream-50 text-espresso-700 hover:bg-cream-100 border border-cream-200'
@@ -3044,7 +3103,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Bottom: Price Editing Control */}
-                    <div className="p-4 sm:p-5 bg-cream-50/70 border-t border-cream-200 rounded-b-3xl space-y-2.5">
+                    <div className="p-3.5 sm:p-5 bg-cream-50/70 border-t border-cream-200 rounded-b-3xl space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-[10px] font-black uppercase tracking-wider text-espresso-500">
                           Price in Database
@@ -3058,27 +3117,29 @@ export default function AdminPage() {
                       </div>
 
                       {/* Quick Adjust Buttons */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-espresso-500 font-bold uppercase tracking-wider mr-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] text-espresso-500 font-bold uppercase tracking-wider mr-0.5 shrink-0">
                           Quick:
                         </span>
-                        {[-10, -5, +5, +10].map((step) => (
-                          <button
-                            key={step}
-                            type="button"
-                            onClick={() => handleQuickPriceStep(item, step)}
-                            disabled={isSaving}
-                            className="px-2 py-1 rounded-lg bg-white border border-cream-200 hover:bg-cream-100 text-espresso-800 text-[11px] font-bold transition active:scale-95 cursor-pointer disabled:opacity-40"
-                          >
-                            {step > 0 ? `+₹${step}` : `-₹${Math.abs(step)}`}
-                          </button>
-                        ))}
+                        <div className="flex items-center gap-1 flex-wrap flex-1">
+                          {[-10, -5, +5, +10].map((step) => (
+                            <button
+                              key={step}
+                              type="button"
+                              onClick={() => handleQuickPriceStep(item, step)}
+                              disabled={isSaving}
+                              className="px-2 py-1 rounded-lg bg-white border border-cream-200 hover:bg-cream-100 text-espresso-800 text-[11px] font-bold transition active:scale-95 cursor-pointer disabled:opacity-40 shrink-0"
+                            >
+                              {step > 0 ? `+₹${step}` : `-₹${Math.abs(step)}`}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Numeric Input & Save Button */}
                       <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-espresso-500 font-bold text-sm">
+                        <div className="relative flex-1 min-w-0">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-espresso-500 font-bold text-sm pointer-events-none">
                             ₹
                           </span>
                           <input
@@ -3095,7 +3156,7 @@ export default function AdminPage() {
                             }}
                             disabled={isSaving}
                             placeholder="Price"
-                            className="w-full pl-7 pr-3 py-2 bg-white rounded-xl text-sm font-black font-mono border border-cream-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-espresso-950"
+                            className="w-full pl-7 pr-3 py-2 bg-white rounded-xl text-sm font-black font-mono border border-cream-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-espresso-950 min-w-0"
                           />
                         </div>
 
@@ -3103,7 +3164,7 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => handleSaveItemPrice(item)}
                           disabled={isSaving || (!isPriceDirty && !draftPrice)}
-                          className={`px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ${
+                          className={`shrink-0 px-3 sm:px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed whitespace-nowrap ${
                             isPriceDirty
                               ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md animate-pulse'
                               : 'bg-espresso-900 hover:bg-black text-cream-100 disabled:opacity-40'
@@ -3200,7 +3261,145 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 8. EXTEND 7 DAYS CONFIRMATION MODAL */}
+      {/* 8. ADJUST / EDIT MEMBERSHIP DAYS MODAL */}
+      {editDaysMembership && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-5 sm:p-6 border border-cream-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center mx-auto text-amber-700">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-espresso-950 font-display">
+                Adjust Membership Days
+              </h3>
+              <p className="text-xs text-espresso-600">
+                Add or remove days for <strong>{editDaysMembership.customerName}</strong>. Admin can customize validity freely.
+              </p>
+            </div>
+
+            <div className="bg-cream-50 rounded-2xl p-3.5 border border-cream-200 text-xs text-espresso-800 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-espresso-600">Customer:</span>
+                <strong>{editDaysMembership.customerName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-espresso-600">Phone:</span>
+                <strong className="font-mono">{editDaysMembership.phone}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-espresso-600">Plan:</span>
+                <strong>{editDaysMembership.planType === '6_months' ? '6-Month VIP' : '7-Day Organic Pass'}</strong>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-cream-200">
+                <span className="text-espresso-600">Current Expiry:</span>
+                <strong className="text-espresso-900">
+                  {formatDayDisplay(parseDateToISTString(editDaysMembership.endDate)).formattedDate} ({parseDateToISTString(editDaysMembership.endDate)})
+                </strong>
+              </div>
+              <div className="flex justify-between text-emerald-800 font-bold">
+                <span>New Expiry:</span>
+                <strong>
+                  {(() => {
+                    const curStr = parseDateToISTString(editDaysMembership.endDate);
+                    const newStr = addDaysToDateString(curStr, customDaysDelta);
+                    const formatted = formatDayDisplay(newStr).formattedDate;
+                    return `${formatted} (${newStr})`;
+                  })()}
+                </strong>
+              </div>
+            </div>
+
+            {/* Stepper & Input */}
+            <div className="space-y-2.5">
+              <label className="text-[11px] font-black uppercase tracking-wider text-espresso-500 block">
+                Days to Add / Remove:
+              </label>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCustomDaysDelta((prev) => prev - 1)}
+                  className="w-10 h-10 rounded-xl bg-cream-100 hover:bg-rose-100 border border-cream-300 hover:border-rose-300 text-rose-700 font-black flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                  title="Minus 1 day"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    value={customDaysDelta}
+                    onChange={(e) => setCustomDaysDelta(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-center py-2 px-3 bg-white border border-cream-300 rounded-xl text-base font-black font-mono text-espresso-950 focus:outline-none focus:ring-2 focus:ring-banhmi-gold"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-espresso-400 pointer-events-none">
+                    {Math.abs(customDaysDelta) === 1 ? 'day' : 'days'}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCustomDaysDelta((prev) => prev + 1)}
+                  className="w-10 h-10 rounded-xl bg-cream-100 hover:bg-emerald-100 border border-cream-300 hover:border-emerald-300 text-emerald-700 font-black flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                  title="Plus 1 day"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Quick Step Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-espresso-400 font-bold uppercase tracking-wider mr-1 shrink-0">Quick:</span>
+                {[-7, -3, -1, 1, 3, 7].map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => setCustomDaysDelta(step)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer border ${
+                      customDaysDelta === step
+                        ? 'bg-espresso-900 text-cream-50 border-black shadow-xs'
+                        : 'bg-white hover:bg-cream-100 text-espresso-800 border-cream-200'
+                    }`}
+                  >
+                    {step > 0 ? `+${step}d` : `${step}d`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditDaysMembership(null)}
+                disabled={membershipActionLoading === editDaysMembership.id}
+                className="flex-1 py-2.5 rounded-2xl border border-cream-300 bg-cream-50 hover:bg-cream-100 text-espresso-800 text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAdjustMembershipDays(editDaysMembership, customDaysDelta)}
+                disabled={membershipActionLoading === editDaysMembership.id || customDaysDelta === 0}
+                className="flex-1 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black uppercase tracking-wider shadow transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {membershipActionLoading === editDaysMembership.id ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                <span>{customDaysDelta >= 0 ? `Add ${customDaysDelta} ${customDaysDelta === 1 ? 'Day' : 'Days'}` : `Remove ${Math.abs(customDaysDelta)} ${Math.abs(customDaysDelta) === 1 ? 'Day' : 'Days'}`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXTEND 7 DAYS CONFIRMATION MODAL (FALLBACK) */}
       {extendConfirmMembership && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div
