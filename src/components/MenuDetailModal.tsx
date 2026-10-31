@@ -45,7 +45,8 @@ export function MenuDetailModal() {
         (m) =>
           m.category === selectedMenuDetail.category &&
           ((portionVal.includes('30') && (m.id.includes('30') || m.name.includes('30'))) ||
-            (portionVal.includes('12') && (m.id.includes('12') || m.name.includes('12'))) ||
+            ((portionVal.includes('15') || portionVal.includes('12')) &&
+              (m.id.includes('15') || m.id.includes('12') || m.name.includes('15') || m.name.includes('12'))) ||
             (portionVal.includes('Half') && (m.id.includes('half') || m.name.includes('Half'))) ||
             (portionVal.includes('1L') && (m.id.includes('1l') || m.name.includes('1L'))) ||
             (selectedPortionPrice !== null && m.priceNumber === selectedPortionPrice))
@@ -167,12 +168,17 @@ export function MenuDetailModal() {
             </div>
 
             <p className="text-[#173612] mt-2 text-sm sm:text-base leading-relaxed">
-              {activeItem.detailedDescription || activeItem.description}
+              {activeItem.isAvailable
+                ? (activeItem.detailedDescription || activeItem.description || '')
+                    .replace(/\s*\(Currently Out of Stock\)/gi, '')
+                    .replace(/\s*Currently out of stock\./gi, '')
+                    .trim()
+                : (activeItem.detailedDescription || activeItem.description)}
             </p>
 
             {/* Meta Tags (Prep Time, Calories) */}
             <div className="flex flex-wrap items-center gap-3 mt-4 text-xs font-semibold text-[#173612]">
-              {selectedMenuDetail.prepTime && (
+              {selectedMenuDetail.prepTime && (selectedMenuDetail.isAvailable ? selectedMenuDetail.prepTime !== 'Out of Stock' : true) && (
                 <div className="flex items-center gap-1.5 bg-[#F5FAF0] px-3 py-1.5 rounded-full border border-[#CBE0A3]">
                   <Clock className="w-3.5 h-3.5 text-[#173612]" />
                   <span>Harvest & Pack: {selectedMenuDetail.prepTime}</span>

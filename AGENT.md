@@ -14,7 +14,7 @@ The platform is purpose-built for an organic dairy and farm produce business (he
 ### Core Farm Offerings:
 1. **Pure Farm A2 Cow Milk**: Fresh morning/evening harvest bottled in sterilized, reusable glass bottles.
 2. **Vedic Bilona Cow Ghee**: Hand-churned traditional curd-bilona clarified golden butter.
-3. **Farm-Fresh White Eggs**: Free-range, hormone-free eggs in 12-pack cartons and 30-egg family trays.
+3. **Farm-Fresh White Eggs**: Free-range, hormone-free eggs in 15-pack trays and 30-egg family trays.
 4. **Artisan Cultured Farm Butter**: Traditional cultured white/salted butter batches.
 5. **Cold-Chain Harvest Delivery**: Zero-preservative, chilled dispatch with live GPS and doorstep OTP validation.
 

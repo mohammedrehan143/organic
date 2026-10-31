@@ -71,13 +71,13 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     }
   },
 
-  // --- ORGANIC GHEE CATEGORY (Out of stock for now) ---
+  // --- ORGANIC GHEE CATEGORY ---
   {
     id: "org-ghee-500ml",
     name: "Pure Organic Cow Ghee (500ml)",
     category: "Organic Ghee",
-    description: "Traditional Vedic Bilona pure organic cow ghee crafted from cultured curd of grass-fed cows. (Currently Out of Stock)",
-    detailedDescription: "Handcrafted using the ancient Vedic Bilona method from cultured curd of grass-fed pasture cows. Golden, granular, and deeply aromatic. High in healthy fatty acids. Currently out of stock.",
+    description: "Traditional Vedic Bilona pure organic cow ghee crafted from cultured curd of grass-fed cows.",
+    detailedDescription: "Handcrafted using the ancient Vedic Bilona method from cultured curd of grass-fed pasture cows. Golden, granular, and deeply aromatic. High in healthy fatty acids.",
     price: "₹650",
     priceNumber: 650,
     image: "/images/organic-cow-ghee.jpg",
@@ -86,42 +86,42 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Vedic Bilona Method", "Golden Granular Texture", "Aromatic & Pure"],
     featured: true,
     signature: true,
-    prepTime: "Out of Stock",
-    isAvailable: false, // OUT OF STOCK FOR NOW
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 3,
     customizationOptions: {
       portion: ["500ml Glass Jar (₹650)"]
     }
   },
 
-  // --- NORMAL WHITE EGGS CATEGORY (Out of stock) ---
+  // --- NORMAL WHITE EGGS CATEGORY ---
   {
     id: "org-norm-12",
-    name: "Normal White Eggs (Pack of 12)",
+    name: "Normal White Eggs (Pack of 15)",
     category: "Normal Eggs",
-    description: "Daily fresh farm table white eggs, sanitized and packed in protective 12-egg cartons. (Currently Out of Stock)",
-    detailedDescription: "Fresh daily farm table white eggs with clean, smooth white shells from healthy hens. Packed in protective 12-egg cartons. Currently out of stock.",
-    price: "₹72",
-    priceNumber: 72,
+    description: "Daily fresh farm table white eggs, sanitized and packed in protective 15-egg cartons/trays.",
+    detailedDescription: "Fresh daily farm table white eggs with clean, smooth white shells from healthy hens. Packed in protective 15-egg trays. Please check eggs on the spot upon delivery for exchange.",
+    price: "₹90",
+    priceNumber: 90,
     image: "/images/eggs-12-white.jpg",
-    calories: 70,
+    calories: 88,
     dietary: "non-veg",
-    tasteNotes: ["Pure White Shells", "12-Egg Pack Carton", "Free Delivery"],
+    tasteNotes: ["Pure White Shells", "15-Egg Pack Tray", "Free Delivery"],
     featured: false,
     signature: false,
-    prepTime: "Out of Stock",
-    isAvailable: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 4,
     customizationOptions: {
-      portion: ["12 White Eggs Pack (₹72)", "30 White Eggs Tray (₹170)"]
+      portion: ["15 White Eggs Pack (₹90)", "30 White Eggs Tray (₹170)"]
     }
   },
   {
     id: "org-norm-30",
     name: "Normal White Eggs (Tray of 30)",
     category: "Normal Eggs",
-    description: "Value farm crate of 30 fresh white table eggs in molded pulp tray for everyday cooking. (Currently Out of Stock)",
-    detailedDescription: "Household monthly tray of 30 fresh farm white table eggs arranged in commercial protective molded pulp crates. Currently out of stock.",
+    description: "Value farm crate of 30 fresh white table eggs in molded pulp tray for everyday cooking.",
+    detailedDescription: "Household monthly tray of 30 fresh farm white table eggs arranged in commercial protective molded pulp crates. Please inspect eggs on the spot upon arrival for immediate exchange.",
     price: "₹170",
     priceNumber: 170,
     image: "/images/eggs-30-white.jpg",
@@ -130,42 +130,42 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Value 30-Egg Tray", "Pure White Shells", "Free Delivery"],
     featured: true,
     signature: false,
-    prepTime: "Out of Stock",
-    isAvailable: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 5,
     customizationOptions: {
-      portion: ["30 White Eggs Tray (₹170)", "12 White Eggs Pack (₹72)"]
+      portion: ["30 White Eggs Tray (₹170)", "15 White Eggs Pack (₹90)"]
     }
   },
 
-  // --- NATI EGGS CATEGORY (Out of stock) ---
+  // --- NATI EGGS CATEGORY ---
   {
     id: "org-nati-12",
-    name: "Nati Eggs (Pack of 12)",
+    name: "Nati Eggs (Pack of 15)",
     category: "Nati Eggs",
-    description: "Authentic free-range country (Nati) eggs with deep golden yolks. (Currently Out of Stock)",
-    detailedDescription: "Genuine free-range country (Nati) eggs laid by healthy heritage hens foraging freely on sunlit pastures. Rich in natural Omega-3. Currently out of stock.",
-    price: "₹299",
-    priceNumber: 299,
+    description: "Authentic free-range country (Nati) eggs with deep golden yolks.",
+    detailedDescription: "Genuine free-range country (Nati) eggs laid by healthy heritage hens foraging freely on sunlit pastures. Rich in natural Omega-3. Packed in fresh 15-egg trays. Please check on the spot upon delivery.",
+    price: "₹375",
+    priceNumber: 375,
     image: "/images/zafiroo-organic-eggs-12.png",
-    calories: 72,
+    calories: 90,
     dietary: "non-veg",
-    tasteNotes: ["100% Free-Range Nati", "Deep Golden Yolk", "Free Delivery"],
+    tasteNotes: ["100% Free-Range Nati", "Deep Golden Yolk", "15-Egg Tray Pack"],
     featured: true,
     signature: true,
-    prepTime: "Out of Stock",
-    isAvailable: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 6,
     customizationOptions: {
-      portion: ["12 Eggs Pack (₹299)", "30 Eggs Tray (₹720)"]
+      portion: ["15 Eggs Pack (₹375)", "30 Eggs Tray (₹720)"]
     }
   },
   {
     id: "org-nati-30",
     name: "Nati Eggs (Tray of 30)",
     category: "Nati Eggs",
-    description: "Value monthly tray of 30 authentic free-range country (Nati) eggs. (Currently Out of Stock)",
-    detailedDescription: "Direct-from-farm monthly crate of 30 authentic free-range country (Nati) eggs carefully cradled in protective molded pulp trays. Currently out of stock.",
+    description: "Value monthly tray of 30 authentic free-range country (Nati) eggs.",
+    detailedDescription: "Direct-from-farm monthly crate of 30 authentic free-range country (Nati) eggs carefully cradled in protective molded pulp trays. Please check on the spot upon arrival.",
     price: "₹720",
     priceNumber: 720,
     image: "/images/zafiroo-organic-eggs-30.png",
@@ -174,11 +174,11 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Family Value Pack", "100% Free-Range Nati", "Free Delivery"],
     featured: false,
     signature: true,
-    prepTime: "Out of Stock",
-    isAvailable: false,
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 7,
     customizationOptions: {
-      portion: ["30 Eggs Tray (₹720)", "12 Eggs Pack (₹299)"]
+      portion: ["30 Eggs Tray (₹720)", "15 Eggs Pack (₹375)"]
     }
   },
 
@@ -336,8 +336,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     id: "fresh-mutton-liver-1kg",
     name: "Fresh Mutton Liver (1kg)",
     category: "Fresh Mutton",
-    description: "Nutrient-dense tender mutton liver, rich in natural iron and essential minerals. (Currently Out of Stock)",
-    detailedDescription: "Freshly dressed mutton liver with a tender texture and rich savory flavor. Hygienically handled and cleaned. Currently out of stock.",
+    description: "Nutrient-dense tender mutton liver, rich in natural iron and essential minerals.",
+    detailedDescription: "Freshly dressed mutton liver with a tender texture and rich savory flavor. Hygienically handled and cleaned.",
     price: "₹650",
     priceNumber: 650,
     image: "/images/mutton-liver.jpg",
@@ -346,8 +346,8 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     tasteNotes: ["Iron & Nutrient Rich", "Tender & Fresh", "Free Delivery"],
     featured: false,
     signature: false,
-    prepTime: "Out of Stock",
-    isAvailable: false, // KEPT OUT OF STOCK AS REQUESTED
+    prepTime: "Farm Fresh",
+    isAvailable: true,
     displayOrder: 15,
     customizationOptions: {
       portion: ["1Kg Liver Pack (₹650)"]

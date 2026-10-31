@@ -155,7 +155,9 @@ export function FarmShopSection() {
                       {item.name}
                     </h3>
                     <p className="text-xs text-[#173612]/80 mt-1 sm:mt-2 line-clamp-2 leading-relaxed">
-                      {item.description}
+                      {item.isAvailable
+                        ? item.description?.replace(/\s*\(Currently Out of Stock\)/gi, '').replace(/\s*Currently out of stock\./gi, '').trim()
+                        : item.description}
                     </p>
                   </div>
 

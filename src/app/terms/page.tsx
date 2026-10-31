@@ -80,7 +80,7 @@ export default function TermsPage() {
               When your eggs order has arrived please check weather the eggs are in good condition it should not be cracked or broken please check on the spot so you can get exchange.
             </p>
             <p className="text-[11px] sm:text-xs text-emerald-800/90 leading-relaxed pl-7">
-              Open your 12-egg carton or 30-egg tray in the presence of the delivery courier. If any egg is cracked or defective, inform the rider on the spot for an immediate free exchange or replacement.
+              Open your 15-egg tray or 30-egg tray in the presence of the delivery courier. If any egg is cracked or defective, inform the rider on the spot for an immediate free exchange or replacement.
             </p>
           </div>
 

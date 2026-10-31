@@ -1254,6 +1254,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ items: payload }),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.updated)) {
+          const updatedMap = new Map<string, MenuItem>(data.updated.map((u: MenuItem) => [u.id, u]));
+          setMenuItems((prev) =>
+            prev.map((m) => {
+              const u = updatedMap.get(m.id);
+              return u ? { ...m, ...u } : m;
+            })
+          );
+        } else {
+          refreshMenu();
+        }
         return true;
       }
       refreshMenu();

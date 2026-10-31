@@ -7,24 +7,55 @@ import { INITIAL_MENU_ITEMS } from '@/data/cafeData';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+function cleanStockDescription(desc: string | undefined, isAvailable: boolean): string {
+  if (!desc) return '';
+  if (isAvailable) {
+    return desc
+      .replace(/\s*\(Currently Out of Stock\)/gi, '')
+      .replace(/\s*Currently out of stock\./gi, '')
+      .replace(/\s*\(Out of Stock\)/gi, '')
+      .trim();
+  }
+  return desc;
+}
+
 function formatRowToMenuItem(row: any): MenuItem {
+  const isAvailable = Boolean(row.is_available);
+  let prepTime = row.prep_time || (row.category === 'Organic Milk' ? 'Farm Dispatched' : 'Farm Fresh');
+  if (isAvailable && prepTime === 'Out of Stock') {
+    prepTime = row.category === 'Organic Milk' ? 'Farm Dispatched' : 'Farm Fresh';
+  } else if (!isAvailable && (prepTime === 'Farm Fresh' || prepTime === 'Farm Dispatched')) {
+    prepTime = 'Out of Stock';
+  }
+
+  // Fallback to default catalog price if database price_number was corrupted to 0
+  let priceNumber = Number(row.price_number);
+  let price = row.price;
+  if (!priceNumber || priceNumber <= 0) {
+    const defaultCatalogItem = INITIAL_MENU_ITEMS.find((m) => m.id === row.id);
+    if (defaultCatalogItem && defaultCatalogItem.priceNumber > 0) {
+      priceNumber = defaultCatalogItem.priceNumber;
+      price = defaultCatalogItem.price;
+    }
+  }
+
   return {
     id: row.id,
     name: row.name,
     category: row.category,
-    description: row.description || '',
-    detailedDescription: row.detailed_description || undefined,
-    price: row.price,
-    priceNumber: Number(row.price_number),
+    description: cleanStockDescription(row.description || '', isAvailable),
+    detailedDescription: cleanStockDescription(row.detailed_description || '', isAvailable) || undefined,
+    price: price || `₹${priceNumber}`,
+    priceNumber: priceNumber,
     image: row.image || '',
     calories: row.calories ? Number(row.calories) : undefined,
     dietary: row.dietary || 'veg',
     tasteNotes: row.taste_notes || [],
     featured: Boolean(row.featured),
     signature: Boolean(row.signature),
-    prepTime: row.prep_time || 'Farm Fresh',
+    prepTime,
     customizationOptions: row.customization_options || {},
-    isAvailable: Boolean(row.is_available),
+    isAvailable,
     displayOrder: row.display_order ?? 0,
   };
 }
@@ -134,21 +165,25 @@ export async function PATCH(req: NextRequest) {
       if (!update.id) continue;
 
       // Find current item in memory to merge
-      const existing = serverStore.menu.find((m) => m.id === update.id) ||
-        INITIAL_MENU_ITEMS.find((m) => m.id === update.id);
+      const defaultItem = INITIAL_MENU_ITEMS.find((m) => m.id === update.id);
+      const existing = serverStore.menu.find((m) => m.id === update.id) || defaultItem;
 
-      const oldPriceNumber = existing?.priceNumber || 0;
+      const oldPriceNumber = existing?.priceNumber || defaultItem?.priceNumber || 0;
       const newPriceNumber =
         typeof update.priceNumber === 'number'
           ? Math.max(0, update.priceNumber)
-          : existing?.priceNumber ?? 0;
+          : (existing?.priceNumber && existing.priceNumber > 0
+              ? existing.priceNumber
+              : defaultItem?.priceNumber ?? 0);
 
       const newPriceStr =
         update.price !== undefined
           ? update.price.trim().startsWith('₹')
             ? update.price.trim()
             : `₹${update.price.trim()}`
-          : `₹${newPriceNumber}`;
+          : (existing?.price && existing.price !== '₹0'
+              ? existing.price
+              : defaultItem?.price || `₹${newPriceNumber}`);
 
       const newIsAvailable =
         update.isAvailable !== undefined
@@ -158,7 +193,7 @@ export async function PATCH(req: NextRequest) {
       // Intelligent portion option price sync
       let newCustomizationOptions = update.customizationOptions !== undefined
         ? update.customizationOptions
-        : existing?.customizationOptions;
+        : existing?.customizationOptions || defaultItem?.customizationOptions;
 
       if (newPriceNumber !== oldPriceNumber && newCustomizationOptions) {
         newCustomizationOptions = updatePortionPrices(
@@ -172,19 +207,31 @@ export async function PATCH(req: NextRequest) {
       let newPrepTime = update.prepTime || existing?.prepTime;
       if (!newIsAvailable && (!newPrepTime || newPrepTime === 'Farm Fresh' || newPrepTime === 'Farm Dispatched')) {
         newPrepTime = 'Out of Stock';
-      } else if (newIsAvailable && newPrepTime === 'Out of Stock') {
-        newPrepTime = existing?.category === 'Organic Milk' ? 'Farm Dispatched' : 'Farm Fresh';
+      } else if (newIsAvailable && (newPrepTime === 'Out of Stock' || !newPrepTime)) {
+        newPrepTime = (existing?.category === 'Organic Milk' || defaultItem?.category === 'Organic Milk')
+          ? 'Farm Dispatched'
+          : 'Farm Fresh';
       }
 
+      // Automatically clean out-of-stock messages from description when in stock
+      const baseDesc = existing?.description || defaultItem?.description || '';
+      const baseDetailedDesc = existing?.detailedDescription || defaultItem?.detailedDescription || '';
+      const cleanDesc = cleanStockDescription(baseDesc, newIsAvailable);
+      const cleanDetailedDesc = cleanStockDescription(baseDetailedDesc, newIsAvailable);
+
       const mergedItem: MenuItem = {
-        ...(existing || {
+        ...(defaultItem || {
           id: update.id,
           name: update.id,
           category: 'Farm Goods',
-          description: '',
+          description: cleanDesc,
+          detailedDescription: cleanDetailedDesc,
           dietary: 'veg',
           image: '',
         }),
+        ...(existing || {}),
+        description: cleanDesc,
+        detailedDescription: cleanDetailedDesc,
         priceNumber: newPriceNumber,
         price: newPriceStr,
         isAvailable: newIsAvailable,
@@ -199,13 +246,21 @@ export async function PATCH(req: NextRequest) {
       // 2. Persist to Supabase Database
       if (isSupabaseConfigured && client) {
         const dbFields: any = {
-          price: newPriceStr,
-          price_number: newPriceNumber,
           is_available: newIsAvailable,
           prep_time: newPrepTime,
-          customization_options: newCustomizationOptions,
+          description: cleanDesc,
+          detailed_description: cleanDetailedDesc || null,
           updated_at: new Date().toISOString(),
         };
+
+        // Only overwrite prices in DB if explicitly provided in update payload
+        if (update.priceNumber !== undefined || update.price !== undefined) {
+          dbFields.price = newPriceStr;
+          dbFields.price_number = newPriceNumber;
+          if (newCustomizationOptions) {
+            dbFields.customization_options = newCustomizationOptions;
+          }
+        }
 
         const { error: dbErr } = await client
           .from('menu_items')
@@ -219,8 +274,8 @@ export async function PATCH(req: NextRequest) {
             id: mergedItem.id,
             name: mergedItem.name,
             category: mergedItem.category,
-            description: mergedItem.description,
-            detailed_description: mergedItem.detailedDescription || null,
+            description: cleanDesc,
+            detailed_description: cleanDetailedDesc || null,
             price: mergedItem.price,
             price_number: mergedItem.priceNumber,
             image: mergedItem.image,
